@@ -12,12 +12,24 @@ UDP port 70 is used for redirection registrations, because this port is assigned
 
 A redirection message is a space-separated text that follows the syntax below:
 
-      'REDIRECT' time [host:]port [root-path ..] [SHA-256 signature]
+      'REDIRECT' time [host:]port [TRUNCATE] [root-path ..] [SHA-256 signature]
       
 where host is a host name or IP address, time is the system time when the message was formatted (see time(2)), port is a number in the range 1..65535 and each root-path item is an URI's absolute path (which must start with '/').
 
 If the host is missing, houseportal uses the host name of the local machine.
 
+The TRUNCATE option is meant to simplify redirection rules when the original web server's URLs do not have an identifiable root. It allows the portal to rely on a URL prefix to select the redirection, but not convey that prefix to the target. For example the redirection message:
+```
+      REDIRECT 12345678 8080 TRUNCATE /app
+```
+causes the HTTP request
+```
+      http://myserver/app/complex/application/path
+```
+to be redirected as:
+```
+      http://myserver:8080/complex/application/path
+```
 An optional cryptographic signature can be used to authenticate the source of the redirection. That signature is calculated over the text of the redirection message, excluding the signature portion. The signature is defined as a SHA-256 HMAC.
 
 Houseportal will redirect to the specified port any request which absolute path starts with the specified root path. There is no response to the redirect message.
@@ -30,7 +42,7 @@ The default houseportal configuration is /etc/houseportal/houseportal.config. A 
 
 In order to support applications not designed for houseportal, a static redirection configuration is supported:
 
-      'REDIRECT' [host:]port [root-path ..]
+      'REDIRECT' [host:]port [TRUNCATE] [root-path ..]
 
 These static redirections never expire.
 
@@ -42,7 +54,7 @@ To support security in an open access network, the use of cryptographic signatur
 
        'SIGN' 'SHA-256' key [root-path ..]
 
-Where the key is an hexadecimal string (64 bytes) that must be used by client when computing their signature. The optional root-path indicate that this key must be used for the specified root paths only. The SIGN keyword may be used multiple times, with or without root-path: houseportal will try to use each applicable key until the source has been authenticated successfully.
+Where the key is an hexadecimal string (64 bytes) that must be used by clients when computing their signature. The optional root-path values indicate that this key must be used for the specified root paths only. The SIGN keyword may be used multiple times, with or without root-path: houseportal will try to use each applicable key until the source has been authenticated successfully.
 
 It is valid to combine both the local mode and cryptographic authentication. This is typically used if multiple users have access to the host and the outside network is not trusted at all.
 
