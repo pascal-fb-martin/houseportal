@@ -28,5 +28,11 @@
 
 #include "echttp.h"
 
+#define DEBUG if (echttp_isdebug())
+
 void hp_redirect_start (int argc, const char **argv);
+
+int  hp_socket_open (int port, int local);
+void hp_socket_send (const char *data, int length, int address, int port);
+int  hp_socket_receive (char *buffer, int size);
 
