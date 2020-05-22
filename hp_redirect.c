@@ -251,7 +251,7 @@ static void hp_redirect_udp (int fd, int mode) {
     int length;
     char buffer[1024];
 
-    length = hp_socket_receive (buffer, sizeof(buffer));
+    length = hp_udp_receive (fd, buffer, sizeof(buffer));
     if (length > 0) {
         buffer[length] = 0;
         DecodeMessage (buffer, 1);
@@ -262,7 +262,8 @@ void hp_redirect_start (int argc, const char **argv) {
 
     int i;
     const char *port = "70";
-    int udp;
+    int udp[16];
+    int count;
     const char *configpath = "/etc/houseportal/houseportal.config";
 
     for (i = 1; i < argc; ++i) {
@@ -272,7 +273,14 @@ void hp_redirect_start (int argc, const char **argv) {
 
     LoadConfig (configpath);
 
-    echttp_listen (hp_socket_open (atoi(port), RestrictUdp2Local),
-                   1, hp_redirect_udp, 0);
+    count = hp_udp_server (port, RestrictUdp2Local, udp, 16);
+    if (count <= 0) {
+        fprintf (stderr, "Cannot open UDP sockets.\n");
+        exit(1);
+    }
+
+    while (count > 0) {
+        echttp_listen (udp[--count], 1, hp_redirect_udp, 0);
+    }
 }
 

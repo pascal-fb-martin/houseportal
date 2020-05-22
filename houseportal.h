@@ -32,7 +32,7 @@
 
 void hp_redirect_start (int argc, const char **argv);
 
-int  hp_socket_open (int port, int local);
-void hp_socket_send (const char *data, int length, int address, int port);
-int  hp_socket_receive (char *buffer, int size);
+int  hp_udp_server (const char *service, int local, int *sockets, int size);
+int  hp_udp_receive (int socket, char *buffer, int size);
+void hp_udp_response (const char *data, int length);
 

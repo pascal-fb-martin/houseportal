@@ -1,5 +1,5 @@
 
-OBJS= hp_socket.o hp_redirect.o houseportal.o
+OBJS= hp_udp.o hp_redirect.o houseportal.o
 
 all: houseportal
 

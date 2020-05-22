@@ -6,7 +6,7 @@ Having multiple specialized web servers run on the same machine, typically web s
 This software is intended to resolve that specific issue by managing redirects in an automatic fashion:
 * A machine runs HousePortal as port 80, and applications A, B, C, etc. on different ports (including dynamic port numbers).
 * Each application periodically sends a UDP packet to the portal to register their redirection (by providing their web access port number and root path).
-* When the portal receives a request that match the root path of a registered redirection, it replies with a 301 permanent redirect indicating the full URI to use.
+* When the portal receives a request that match the root path of a registered redirection, it replies with a 302 Found redirect indicating the full URI to use.
 
 UDP port 70 is used for redirection registrations, because this port is assigned to the Gopher protocol and, let's be serious, who use Gopher nowadays?
 
