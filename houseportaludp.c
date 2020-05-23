@@ -1,4 +1,4 @@
-/* houseport - A simple Web portal for home servers.
+/* houseportal - A simple Web portal for home servers.
  *
  * Copyright 2020, Pascal Martin
  *
@@ -18,25 +18,20 @@
  * Boston, MA  02110-1301, USA.
  *
  *
- * hp_udp.c - Manage UDP communications (server side).
+ * houseportaludp.c - Manage UDP communications.
  *
  * This module opens a UDP server socket, hiding the IP structure details.
  *
  * SYNOPSYS:
  *
- * int hp_udp_server (const char *service, int local, int *sockets, int size)
+ * int hp_udp_client (const char *destination, const char *service);
  *
- *    Open as many UDP sockets as needed and returns the list. If local is
- *    not 0, all sockets are bound to the loopback addresses, preventing
- *    from receiving data from remote machines.
+ *    Open UDP sockets for the specified destination and returns the count
+ *    of sockets that was opened (0 indicates failure).
  *
- * int hp_udp_receive (int socket, char *buffer, int size)
+ * void hp_udp_send (const char *data, int length)
  *
- *    Receive a UDP packet. Returns the length of the data, or -1.
- *
- * void hp_udp_response (const char *data, int length)
- *
- *    Send a data packet to the source address of the last received message.
+ *    Send a data packet.
  *
  * LIMITATIONS:
  *
@@ -49,7 +44,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <ctype.h>
+//#include <ctype.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -57,29 +52,21 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
-#include "houseportal.h"
+#include "houseportalclient.h"
 
-static union {
-    struct sockaddr_in  ipv4;
-    struct sockaddr_in6 ipv6;
-} UdpReceived;
-int UdpReceivedLength;
+int UdpClient[16];
+int UdpClientCount = 0;
 
-int UdpReceivedSocket = -1;
-
-
-int hp_udp_server (const char *service, int local, int *sockets, int size) {
+int hp_udp_client (const char *destination, const char *service) {
 
     int value;
-    int flags;
-    int count = 0;
     int s;
 
     static struct addrinfo hints;
     struct addrinfo *resolved;
     struct addrinfo *cursor;
 
-    hints.ai_flags = (local?0:AI_PASSIVE) | AI_ADDRCONFIG;
+    hints.ai_flags = AI_ADDRCONFIG;
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
     if (getaddrinfo (0, service, &hints, &resolved)) return 0;
@@ -89,26 +76,20 @@ int hp_udp_server (const char *service, int local, int *sockets, int size) {
         if (cursor->ai_family != AF_INET && cursor->ai_family != AF_INET6)
             continue;
 
-        DEBUG printf ("Opening socket for port %s (%s)\n",
-                      service, (cursor->ai_family==AF_INET6)?"ipv6":"ipv4");
-
         s = socket(cursor->ai_family, cursor->ai_socktype, cursor->ai_protocol);
         if (s < 0) {
-           fprintf (stderr, "cannot open socket for port %s: %s\n",
-                    service, strerror(errno));
+           fprintf (stderr, "cannot open socket for port %s (%s): %s\n",
+                    service,
+                    (cursor->ai_family==AF_INET6)?"ipv6":"ipv4",
+                    strerror(errno));
            continue;
         }
 
-        if (cursor->ai_family == AF_INET6) {
-            value = 1;
-            if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, &value, sizeof(value)) < 0) {
-                fprintf (stderr, "cannot set IPV6_V6ONLY: %s\n", strerror(errno));
-            }
-        }
-
-        if (bind(s, cursor->ai_addr, cursor->ai_addrlen) < 0) {
-           fprintf (stderr, "cannot bind to port %s (%s): %s\n",
-                    service, (cursor->ai_family==AF_INET6)?"ipv6":"ipv4", strerror(errno));
+        if (connect(s, cursor->ai_addr, cursor->ai_addrlen) < 0) {
+           fprintf (stderr, "cannot connect to port %s (%s): %s\n",
+                    service,
+                    (cursor->ai_family==AF_INET6)?"ipv6":"ipv4",
+                    strerror(errno));
            close(s);
            continue;
         }
@@ -124,26 +105,18 @@ int hp_udp_server (const char *service, int local, int *sockets, int size) {
                     value, strerror(errno));
         }
 
-        DEBUG printf ("Opened UDP socket port %s (%s)\n",
-                      service, (cursor->ai_family==AF_INET6)?"ipv6":"ipv4");
-        sockets[count++] = s;
-        if (count >= size) break;
+        UdpClient[UdpClientCount++] = s;
+        if (UdpClientCount >= 16) break;
     }
-    return count;
+    return UdpClientCount;
 }
 
 
-int hp_udp_receive (int socket, char *buffer, int size) {
+void hp_udp_send (const char *data, int length) {
 
-    UdpReceivedSocket = socket;
-    return recvfrom (socket, buffer, size, 0,
-		             (struct sockaddr *)(&UdpReceived), &UdpReceivedLength);
-}
-
-
-void hp_udp_response (const char *data, int length) {
-
-    sendto (UdpReceivedSocket, data, length, 0,
-            (struct sockaddr *)(&UdpReceived), UdpReceivedLength);
+    int i;
+    for (i = 0; i < UdpClientCount; ++i) {
+        send (UdpClient[i], data, length, 0);
+    }
 }
 

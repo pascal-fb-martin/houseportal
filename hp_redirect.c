@@ -239,7 +239,7 @@ static void LoadConfig (const char *name) {
     while (!feof(f)) {
         buffer[0] = 0;
         fgets (buffer, sizeof(buffer), f);
-        if (buffer[0] > ' ') {
+        if (buffer[0] != '#' && buffer[0] > ' ') {
             DecodeMessage (buffer, 0);
         }
     }
@@ -254,6 +254,7 @@ static void hp_redirect_udp (int fd, int mode) {
     length = hp_udp_receive (fd, buffer, sizeof(buffer));
     if (length > 0) {
         buffer[length] = 0;
+        DEBUG printf ("Received: %s\n", buffer);
         DecodeMessage (buffer, 1);
     }
 }
