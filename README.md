@@ -70,9 +70,9 @@ A simple form of security is possible by accepting only local UDP packets, i.e. 
 
 To support security in an open access network, the use of cryptographic signatures may be required by specifying cryptographic keys:
 
-       'SIGN' 'SHA-256' key [root-path ..]
+       'SIGN' 'SHA-256' key
 
-Where the key is an hexadecimal string (64 bytes) that must be used by clients when computing their signature. The optional root-path values indicate that this key must be used for the specified root paths only. The SIGN keyword may be used multiple times, with or without root-path: HousePortal will try to use each applicable key until the source has been authenticated successfully.
+Where the key is an hexadecimal string (64 bytes) that must be used by clients when computing their signature. The SIGN keyword may be used multiple times: houseportal will try to use each key matching the cypher used by the client until the source has been authenticated successfully. If no match was found, for any reason, the packet is ignored. It is valid to declare a key for an unknown cypher, but it will never get used.
 
 It is valid to combine both the local mode and cryptographic authentication. This is typically used if multiple users have access to the host and the outside network is not trusted at all.
 
@@ -89,6 +89,10 @@ First the application must include the client header file:
 The client must then initialize the client interface:
 ```
 void houseportal_initialize (int argc, const char **argv);
+```
+If any cryptographic signature is required, the key must be provided:
+```
+void houseportal_signature (const char *cypher, const char *key);
 ```
 The next step is to register the various paths:
 ```

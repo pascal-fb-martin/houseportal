@@ -1,6 +1,6 @@
 
-OBJS= hp_udp.o hp_redirect.o houseportal.o
-LIBOJS= houseportalclient.o houseportaludp.o
+OBJS= hp_udp.o hp_redirect.o houseportal.o houseportalhmac.o
+LIBOJS= houseportalclient.o houseportaludp.o houseportalhmac.o
 
 all: houseportal libhouseportal.a
 
@@ -9,7 +9,7 @@ main: houseportal.c
 redirect: hp_redirect.c
 
 clean:
-	rm -f *.o houseportal
+	rm -f *.o *.a houseportal
 
 rebuild: clean all
 
@@ -17,11 +17,11 @@ rebuild: clean all
 	gcc -c -g -O -o $@ $<
 
 libhouseportal.a: $(LIBOJS)
-	ar ru $@ $^
+	ar r $@ $^
 	ranlib $@
 
 houseportal: $(OBJS)
-	gcc -g -O -o houseportal $(OBJS) -lechttp -lrt
+	gcc -g -O -o houseportal $(OBJS) -lechttp -lcrypto -lrt
 
 package:
 	mkdir -p packages

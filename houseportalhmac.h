@@ -18,15 +18,9 @@
  * Boston, MA  02110-1301, USA.
  *
  *
- * houseportalclient.c - The houseportal program's client API.
+ * houseportalhmac.c - The houseportal program's client API for crypto.
  */
 
-void houseportal_initialize    (int argc, const char **argv);
-void houseportal_signature     (const char *cypher, const char *key);
-void houseportal_register      (int webport, const char **paths, int count);
-void houseportal_register_more (int webport, const char **paths, int count);
-void houseportal_renew         (void);
-
-int  hp_udp_client (const char *destination, const char *service);
-void hp_udp_send   (const char *data, int length);
+const char *houseportalhmac (const char *cypher,
+                             const char *hexkey, const char *data);
 

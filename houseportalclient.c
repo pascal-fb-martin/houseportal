@@ -26,6 +26,12 @@
  *
  *    Initialize the environment required to register redirections.
  *
+ * void houseportal_signature (const char *cypher, const char *key);
+ *
+ *    Set a secret key for message signature. This call causes the client
+ *    code to sign all messages to houseportal. The key must match the key
+ *    in the houseportal's configuration for the provided paths.
+ *
  * void houseportal_register (int webport, const char **path, int count);
  *
  *    Register a specific list of redirections. This erase any previous
@@ -48,6 +54,7 @@
 
 #include "echttp.h"
 #include "houseportalclient.h"
+#include "houseportalhmac.h"
 
 
 #define HOUSEPORTALPACKET 1400
@@ -56,6 +63,9 @@ static char *HousePortalRegistration[256];
 static int   HousePortalRegistrationLength[256];
 static int   HousePortalRegistrationCount = 0;
 
+static char HousePortalTemporaryBuffer[256]; // Don't make the name obvious.
+static char HousePortalSecondaryBuffer[256]; // Don't make the name obvious.
+static int  HousePortalTemporaryLength;
 
 void houseportal_initialize (int argc, const char **argv) {
 
@@ -75,6 +85,16 @@ void houseportal_initialize (int argc, const char **argv) {
                  destination, service);
         exit(1);
     }
+}
+
+void houseportal_signature (const char *cypher, const char *key) {
+    strncpy (HousePortalSecondaryBuffer,
+             cypher, sizeof(HousePortalSecondaryBuffer));
+    HousePortalSecondaryBuffer[128] = 0;
+    strncpy (HousePortalTemporaryBuffer,
+             key, sizeof(HousePortalTemporaryBuffer));
+    HousePortalTemporaryBuffer[128] = 0;
+    HousePortalTemporaryLength = strlen(key) / 16; // Key must be long enough
 }
 
 void houseportal_register (int webport, const char **path, int count) {
@@ -144,7 +164,9 @@ void houseportal_renew (void) {
 
     int i;
     int blen;
+    int total;
     char buffer[HOUSEPORTALPACKET];
+    char signature[HOUSEPORTALPACKET];
 
     snprintf (buffer, HOUSEPORTALPACKET, "REDIRECT %ld ", (long)time(0));
     blen = strlen(buffer);
@@ -152,7 +174,23 @@ void houseportal_renew (void) {
     for (i = 0; i < HousePortalRegistrationCount; ++i) {
         memcpy (buffer+blen,
                 HousePortalRegistration[i], HousePortalRegistrationLength[i]);
-        hp_udp_send (buffer, blen+HousePortalRegistrationLength[i]);
+        total = blen+HousePortalRegistrationLength[i];
+        buffer[total] = 0; // Needed for HMAC.
+
+        if (HousePortalTemporaryLength) {
+            const char *signature =
+                houseportalhmac (HousePortalSecondaryBuffer,
+                                 HousePortalTemporaryBuffer, buffer);
+            if (signature) {
+                const char *cypher = " SHA-256 ";
+                int cypherlen = sizeof(cypher)-1;
+                int signlen = strlen(signature);
+                memcpy (buffer+total, " SHA-256 ", cypherlen);
+                memcpy (buffer+total+cypherlen, signature, signlen);
+                total += (cypherlen + signlen);
+            }
+        }
+        hp_udp_send (buffer, total);
     }
 }
 

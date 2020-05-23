@@ -40,6 +40,7 @@
 #include <stdio.h>
 
 #include "houseportal.h"
+#include "houseportalhmac.h"
 
 
 static int RestrictUdp2Local = 0;
@@ -57,6 +58,15 @@ typedef struct {
 
 static int RedirectionCount = 0;
 static HttpRedirection Redirections[REDIRECT_MAX];
+
+// Cryptographic keys.
+//
+typedef struct {
+    char *method;
+    char *value;
+} HttpRequest;
+static HttpRequest IntermediateDecode[128]; // Don't make the name obvious.
+static int IntermediateDecodeLength = 0;
 
 static const char *HostName = 0;
 
@@ -217,7 +227,12 @@ static void DecodeMessage (char *buffer, int live) {
         RestrictUdp2Local = 1;
 
     } else if (strcmp("SIGN", token[0]) == 0) {
-        // TBD
+
+        if (count == 3 && IntermediateDecodeLength < 128) {
+            int index = IntermediateDecodeLength++;
+            IntermediateDecode[index].method = strdup(token[1]);
+            IntermediateDecode[index].value = strdup(token[2]);
+        }
 
     } else {
         fprintf (stderr, "invalid keyword %s\n", token[0]);
@@ -247,16 +262,63 @@ static void LoadConfig (const char *name) {
     fclose(f);
 }
 
+static int hp_redirect_inspect2 (const char *data,
+                                 const char *method, const char *value) {
+
+    int i;
+    const char *signature;
+
+    for (i = 0; i < IntermediateDecodeLength; ++i) {
+
+        if (strcmp(IntermediateDecode[i].method, method)) continue;
+
+        signature = houseportalhmac (IntermediateDecode[i].method,
+                                     IntermediateDecode[i].value, data);
+
+        if (strcmp(signature, value) == 0) return 1; // Passed.
+    }
+
+    return 0; // Failed all available keys.
+}
+
+static int hp_redirect_inspect (char *data, int length) {
+
+    char *cypher = 0;
+    char *crypto = 0;
+    const char *sha256mark = " SHA-256 ";
+
+    data[length] = 0;
+
+    cypher = strstr (data, sha256mark);
+    if (cypher) {
+        crypto = cypher + strlen(sha256mark);
+        *(cypher++) = 0; // remove signature from registration data.
+    }
+
+    // All future cyphers names checked here..
+
+    if (IntermediateDecodeLength <= 0) return 1; // No key. Accept all.
+
+    if (crypto) {
+        crypto[-1] = 0; // Split cypher from signature.
+        return hp_redirect_inspect2 (data, cypher, crypto);
+    }
+
+    return 0; // Not signed, but signature was required.
+}
+
 static void hp_redirect_udp (int fd, int mode) {
 
-    int length;
-    char buffer[1024];
+    int   length;
+    char  buffer[1024];
 
     length = hp_udp_receive (fd, buffer, sizeof(buffer));
     if (length > 0) {
         buffer[length] = 0;
         DEBUG printf ("Received: %s\n", buffer);
-        DecodeMessage (buffer, 1);
+        if (hp_redirect_inspect (buffer, length)) {
+            DecodeMessage (buffer, 1);
+        }
     }
 }
 
@@ -269,7 +331,8 @@ void hp_redirect_list_json (char *buffer, int size) {
     const char *prefix = "";
     time_t now = time(0);
 
-    snprintf (buffer, size, "{\"portal\":{\"redirect\":[");
+    snprintf (buffer, size,
+             "{\"portal\":{\"timestamp\":%d,\"redirect\":[", now);
     length = strlen(buffer);
     cursor = buffer + length;
 
