@@ -11,6 +11,15 @@ This software is intended to resolve that specific issue by managing redirects i
 * Each application periodically sends a UDP packet to the portal to register their redirection (by providing their web access port number and root path).
 * When the portal receives a request that match the root path of a registered redirection, it replies with a 302 Found redirect indicating the full URI to use.
 
+# Installation
+
+* Clone this GitHub repository.
+* make
+* sudo make install
+* Edit /etc/houseportal/houseportal.config
+
+# Protocol.
+
 UDP port 70 is used for redirection registrations, because this port is assigned to the Gopher protocol and, let's be serious, who use Gopher nowadays?
 
 A redirection message is a space-separated text that follows the syntax below:
@@ -22,15 +31,6 @@ where host is a host name or IP address, time is the system time when the messag
 The "/portal" path name is reserved for houseportal's own status.
 
 If the host is missing, HousePortal uses the host name of the local machine.
-
-# Installation
-
-* Clone this GitHub repository.
-* make
-* sudo make install
-* Edit /etc/houseportal/houseportal.config
-
-# Protocol.
 
 The HIDE option is meant to simplify redirection rules when the original web server's URLs do not have an identifiable root. It allows the portal to rely on a URL prefix to select the redirection, but not convey that prefix to the target. For example the redirection message:
 ```
