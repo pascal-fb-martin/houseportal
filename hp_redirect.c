@@ -48,7 +48,7 @@ typedef struct {
     char *path;
     char *target;
     int length;
-    int truncate;
+    int hide;
     time_t expiration;
 } HttpRedirection;
 
@@ -90,7 +90,7 @@ static const char *RedirectRoute (const char *method, const char *uri,
     if (r) {
         static char url[2048]; // Accessed once after return.
         char parameters[1024];
-        if (r->truncate) {
+        if (r->hide) {
             uri += r->length;
             if (uri[0] == 0) uri = "/";
         }
@@ -108,7 +108,7 @@ static const char *RedirectRoute (const char *method, const char *uri,
 }
 
 
-static void AddSingleRedirect (int live, int truncate,
+static void AddSingleRedirect (int live, int hide,
                                const char *target, const char *path) {
 
     int i;
@@ -127,15 +127,16 @@ static void AddSingleRedirect (int live, int truncate,
 
     // First search if this is just a renewal.
     // It is OK to renew an obsolete entry. A renewal may change everything
-    // but the path: target, permanent/live, truncate option, etc..
+    // but the path: target, permanent/live, hide option, etc..
     //
     for (i = 0; i < RedirectionCount; ++i) {
         if (strcmp (Redirections[i].path, path) == 0) {
+            if (Redirections[i].expiration == 0) return; // Permanent..
             if (strcmp (Redirections[i].target, target)) {
                 free (Redirections[i].target);
                 Redirections[i].target = strdup(target);
             }
-            Redirections[i].truncate = truncate;
+            Redirections[i].hide = hide;
             Redirections[i].expiration = expiration;
             return;
         }
@@ -149,12 +150,12 @@ static void AddSingleRedirect (int live, int truncate,
         char *p = strdup(path);
         DEBUG
            printf ("Add %s route for %s, redirected to %s%s\n",
-                   live?"live":"permanent",p,target,truncate?" (truncate)":"");
+                   live?"live":"permanent",p,target,hide?" (hide)":"");
         echttp_route_match (p, RedirectRoute);
         Redirections[RedirectionCount].path = p;
         Redirections[RedirectionCount].target = strdup(target);
         Redirections[RedirectionCount].length = strlen(path);
-        Redirections[RedirectionCount].truncate = truncate;
+        Redirections[RedirectionCount].hide = hide;
         Redirections[RedirectionCount].expiration = expiration;
         RedirectionCount += 1;
     }
@@ -163,15 +164,15 @@ static void AddSingleRedirect (int live, int truncate,
 static void AddRedirect (int live, char **token, int count) {
 
     int i = 1;
-    int truncate = 0;
+    int hide = 0;
     const char *target = token[0];
 
-    if (strcmp ("TRUNCATE", token[1]) == 0) {
-        truncate = 1;
+    if (strcmp ("HIDE", token[1]) == 0) {
+        hide = 1;
         i = 2;
     }
     for (; i < count; ++i) {
-        AddSingleRedirect (live, truncate, target, token[i]);
+        AddSingleRedirect (live, hide, target, token[i]);
     }
 }
 

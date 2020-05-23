@@ -12,15 +12,15 @@ UDP port 70 is used for redirection registrations, because this port is assigned
 
 A redirection message is a space-separated text that follows the syntax below:
 
-      'REDIRECT' time [host:]port [TRUNCATE] [root-path ..] [SHA-256 signature]
+      'REDIRECT' time [host:]port [HIDE] [root-path ..] [SHA-256 signature]
       
 where host is a host name or IP address, time is the system time when the message was formatted (see time(2)), port is a number in the range 1..65535 and each root-path item is an URI's absolute path (which must start with '/').
 
 If the host is missing, HousePortal uses the host name of the local machine.
 
-The TRUNCATE option is meant to simplify redirection rules when the original web server's URLs do not have an identifiable root. It allows the portal to rely on a URL prefix to select the redirection, but not convey that prefix to the target. For example the redirection message:
+The HIDE option is meant to simplify redirection rules when the original web server's URLs do not have an identifiable root. It allows the portal to rely on a URL prefix to select the redirection, but not convey that prefix to the target. For example the redirection message:
 ```
-      REDIRECT 12345678 8080 TRUNCATE /app
+      REDIRECT 12345678 8080 HIDE /app
 ```
 causes the HTTP request
 ```
@@ -42,7 +42,7 @@ The default HousePortal configuration is /etc/houseportal/houseportal.config. A 
 
 In order to support applications not designed to interact with HousePortal, a static redirection configuration is supported:
 
-      'REDIRECT' [host:]port [TRUNCATE] [root-path ..]
+      'REDIRECT' [host:]port [HIDE] [root-path ..]
 
 These static redirections never expire.
 
