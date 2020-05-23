@@ -1,5 +1,8 @@
 # HousePortal
-A web server to redirect to multiple specialized web servers. This project depends on [echttp](https://github.com/pascal-fb-martin/echttp).
+
+# Overview
+
+This is a web server to redirect HTTP requests to multiple specialized web servers. This project depends on [echttp](https://github.com/pascal-fb-martin/echttp).
 
 Having multiple specialized web servers run on the same machine, typically web servers embedded in applications, causes a port conflict situation: which application will claim port 80?
 
@@ -12,11 +15,22 @@ UDP port 70 is used for redirection registrations, because this port is assigned
 
 A redirection message is a space-separated text that follows the syntax below:
 
-      'REDIRECT' time [host:]port [HIDE] [root-path ..] [SHA-256 signature]
+      'REDIRECT' time [host:]port [HIDE] [path ..] [SHA-256 signature]
       
-where host is a host name or IP address, time is the system time when the message was formatted (see time(2)), port is a number in the range 1..65535 and each root-path item is an URI's absolute path (which must start with '/').
+where host is a host name or IP address, time is the system time when the message was formatted (see time(2)), port is a number in the range 1..65535 and each path item is an URI's absolute path (which must start with '/').
+
+The "/portal" path name is reserved for houseportal's own status.
 
 If the host is missing, HousePortal uses the host name of the local machine.
+
+# Installation
+
+* Clone this GitHub repository.
+* make
+* sudo make install
+* Edit /etc/houseportal/houseportal.config
+
+# Protocol.
 
 The HIDE option is meant to simplify redirection rules when the original web server's URLs do not have an identifiable root. It allows the portal to rely on a URL prefix to select the redirection, but not convey that prefix to the target. For example the redirection message:
 ```
@@ -38,6 +52,8 @@ The registration must be periodic:
 * This allows HousePortal to detect applications that are no longer active.
 * This allows redirections to recover from a HousePortal restart.
 
+# Configuration File
+
 The default HousePortal configuration is /etc/houseportal/houseportal.config. A different configuration file can be specified using the -config=path option. The configuration file is a list of directives, one directive per line. Each directive starts with a keyword, with a variable count of space-separated arguments.
 
 In order to support applications not designed to interact with HousePortal, a static redirection configuration is supported:
@@ -45,6 +61,8 @@ In order to support applications not designed to interact with HousePortal, a st
       'REDIRECT' [host:]port [HIDE] [root-path ..]
 
 These static redirections never expire.
+
+# Security
 
 A simple form of security is possible by accepting only local UDP packets, i.e. HousePortal to bind its UDP socket to IP address 127.0.0.1. This is typically used when all local applications are trusted, usually because the local machine's access is strictly restricted. That mode is activated when the LOCAL keyword is present in the HousePortal configuration:
 
@@ -59,3 +77,26 @@ Where the key is an hexadecimal string (64 bytes) that must be used by clients w
 It is valid to combine both the local mode and cryptographic authentication. This is typically used if multiple users have access to the host and the outside network is not trusted at all.
 
 If no cryptographic key is provided, HousePortal will accept all redirection messages, with or without signature. If at least one cryptographic key is provided, HousePortal will require every redirection message to be signed: if no signature matches, or if no key is applicable to the provided root path, the redirection message is ignored.
+
+# Client API
+
+A web server can be coded to advertize its port number to houseportal using the houseportal client API.
+
+First the application must include the client header file:
+```
+#include "houseportalclient.h"
+```
+The client must then initialize the client interface:
+```
+void houseportal_initialize (int argc, const char **argv);
+```
+The next step is to register the various paths:
+```
+void houseportal_register (int webport, const char **paths, int count);
+void houseportal_register_more (int webport, const char **paths, int count);
+```
+Once all this was done, the application must periodically renew its paths:
+```
+void houseportal_renew (void);
+```
+

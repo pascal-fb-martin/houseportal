@@ -260,6 +260,44 @@ static void hp_redirect_udp (int fd, int mode) {
     }
 }
 
+void hp_redirect_list_json (char *buffer, int size) {
+
+    int i;
+    int length;
+    int reclen;
+    char *cursor;
+    const char *prefix = "";
+    time_t now = time(0);
+
+    snprintf (buffer, size, "{\"portal\":{\"redirect\":[");
+    length = strlen(buffer);
+    cursor = buffer + length;
+
+    for (i = 0; i < RedirectionCount; ++i) {
+
+        time_t expiration = Redirections[i].expiration;
+
+        if (expiration < now && expiration > 0) continue;
+
+        snprintf (cursor, size-length,
+                  "%s{\"path\":\"%*.*s\",\"expire\":%d,\"target\":\"%s\",\"hide\":%s}",
+                  prefix,
+                  Redirections[i].length, Redirections[i].length,
+                  Redirections[i].path,
+                  expiration,
+                  Redirections[i].target,
+                  Redirections[i].hide?"true":"false");
+        reclen = strlen(cursor);
+        prefix = ",";
+        if (length + reclen >= size) break;
+        length += reclen;
+        cursor += reclen;
+    }
+    cursor[0] = 0;
+    snprintf (cursor, size-length, "]}}");
+    buffer[size-1] = 0;
+}
+
 void hp_redirect_start (int argc, const char **argv) {
 
     int i;

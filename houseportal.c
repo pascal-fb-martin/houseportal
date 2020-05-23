@@ -52,6 +52,15 @@ static void hp_help (const char *argv0) {
     exit (0);
 }
 
+static const char *hp_portal_json (const char *method, const char *uri,
+                                   const char *data, int length) {
+    static char buffer[8192];
+
+    buffer[0] = 0;
+    hp_redirect_list_json (buffer, sizeof(buffer));
+    return buffer;
+}
+
 int main (int argc, const char **argv) {
 
     // These strange statements are to make sure that fds 0 to 2 are
@@ -69,6 +78,7 @@ int main (int argc, const char **argv) {
     }
 
     echttp_open (argc, argv);
+    echttp_route_uri ("/portal", hp_portal_json);
     echttp_static_route ("/", "/usr/share/houseportal/public");
     hp_redirect_start (argc, argv);
     echttp_loop();

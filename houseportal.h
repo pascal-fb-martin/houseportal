@@ -31,6 +31,7 @@
 #define DEBUG if (echttp_isdebug())
 
 void hp_redirect_start (int argc, const char **argv);
+void hp_redirect_list_json (char *buffer, int size);
 
 int  hp_udp_server (const char *service, int local, int *sockets, int size);
 int  hp_udp_receive (int socket, char *buffer, int size);
