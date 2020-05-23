@@ -17,6 +17,7 @@ This software is intended to resolve that specific issue by managing redirects i
 * make
 * sudo make install
 * Edit /etc/houseportal/houseportal.config
+* Restart houseportal.
 
 # Protocol.
 
