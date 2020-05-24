@@ -55,7 +55,7 @@ The registration must be periodic:
 
 # Configuration File
 
-The default HousePortal configuration is /etc/houseportal/houseportal.config. A different configuration file can be specified using the -config=path option. The configuration file is a list of directives, one directive per line. Each directive starts with a keyword, with a variable count of space-separated arguments.
+The default HousePortal configuration is /etc/houseportal/houseportal.config. A different configuration file can be specified using the -config=path option. The configuration file is a list of directives, one directive per line. Each directive starts with a keyword, with a variable count of space-separated arguments. Lines starting with character '#' are comments and ignored.
 
 In order to support applications not designed to interact with HousePortal, a static redirection configuration is supported:
 
