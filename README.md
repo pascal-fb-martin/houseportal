@@ -17,6 +17,7 @@ This makes houseportal a discovery service that is compatible with the HTTP prot
 
 # Installation
 
+* Install the openssl development package(s)
 * Clone this GitHub repository.
 * make
 * sudo make install
