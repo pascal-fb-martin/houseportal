@@ -276,6 +276,8 @@ static int hp_redirect_inspect2 (const char *data,
                                      IntermediateDecode[i].value, data);
 
         if (strcmp(signature, value) == 0) return 1; // Passed.
+        DEBUG printf ("Signature %s did not match client signature %s\n",
+                      signature, value);
     }
 
     return 0; // Failed all available keys.

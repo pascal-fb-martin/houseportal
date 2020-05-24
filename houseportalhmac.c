@@ -62,14 +62,15 @@ static int hex2bin (char value) {
 static int hmac_hex2bin (const char *hex, unsigned char *bin, int size) {
 
     int i;
-    int length = strlen(hex) / 2;
+    int length = strlen(hex);
 
+    length = length & (~1); // Force even length by truncating.
     if (length > 2 * size) length = 2 * size;
 
-    for (i = 0; i < length; i += 2) {
+    for (i = 0; i <= length; i += 2) {
         bin[i/2] = (char)(hex2bin(hex[i+1]) + 16 * hex2bin(hex[i]));
     }
-    return length;
+    return length / 2;
 }
 
 const char *houseportalhmac (const char *cypher,

@@ -28,6 +28,7 @@
  */
 
 #include <unistd.h>
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -40,8 +41,26 @@ int main (int argc, const char **argv) {
     const char *path[1024];
     int count = 0;
     int i;
+    FILE *f;
 
     houseportal_initialize (argc, argv);
+
+    // Retrieve the signature key, if any.
+    //
+    f = fopen ("test.key", "r");
+    if (f) {
+        char buffer[512];
+        if (fgets (buffer, sizeof(buffer), f)) {
+            char *p = strchr(buffer, '\n');
+            if (p) *p = 0;
+            if (p = strchr(buffer, ' ')) {
+                *(p++) = 0;
+                printf ("Signing registrations with %s key %s\n", buffer, p);
+                houseportal_signature (buffer, p);
+            }
+        }
+        fclose(f);
+    }
 
     for (i = 1; i < argc; ++i) {
         if (argv[i][0] == '-') continue;

@@ -182,7 +182,7 @@ void houseportal_renew (void) {
                 houseportalhmac (HousePortalSecondaryBuffer,
                                  HousePortalTemporaryBuffer, buffer);
             if (signature) {
-                const char *cypher = " SHA-256 ";
+                const char cypher[] = " SHA-256 ";
                 int cypherlen = sizeof(cypher)-1;
                 int signlen = strlen(signature);
                 memcpy (buffer+total, " SHA-256 ", cypherlen);
