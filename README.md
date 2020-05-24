@@ -11,6 +11,8 @@ This software is intended to resolve that specific issue by managing redirects i
 * Each application periodically sends a UDP packet to the portal to register their redirection (by providing their web access port number and root path).
 * When the portal receives a request that match the root path of a registered redirection, it replies with a 302 Found redirect indicating the full URI to use.
 
+This makes houseportal a discovery service that is compatible with the HTTP protocol and web browsers.
+
 # Installation
 
 * Clone this GitHub repository.
