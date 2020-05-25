@@ -11,8 +11,13 @@ This software is intended to resolve that specific issue by managing redirects i
 * Each application periodically sends a UDP packet to the portal to register their redirection (by providing their web access port number and root path).
 * When the portal receives a request that match the root path of a registered redirection, it replies with a 302 Found redirect indicating the full URI to use.
 
+A static configuration files allows houseportal to be compatible with existing web applications not designed to support this scheme.
+
+This makes houseportal a discovery service that is compatible with the HTTP protocol, web servers and web browsers.
+
 # Installation
 
+* Install the openssl development package(s)
 * Clone this GitHub repository.
 * make
 * sudo make install
@@ -55,7 +60,7 @@ The registration must be periodic:
 
 # Configuration File
 
-The default HousePortal configuration is /etc/houseportal/houseportal.config. A different configuration file can be specified using the -config=path option. The configuration file is a list of directives, one directive per line. Each directive starts with a keyword, with a variable count of space-separated arguments.
+The default HousePortal configuration is /etc/houseportal/houseportal.config. A different configuration file can be specified using the -config=path option. The configuration file is a list of directives, one directive per line. Each directive starts with a keyword, with a variable count of space-separated arguments. Lines starting with character '#' are comments and ignored.
 
 In order to support applications not designed to interact with HousePortal, a static redirection configuration is supported:
 
