@@ -61,6 +61,10 @@ static const char *hp_portal_json (const char *method, const char *uri,
     return buffer;
 }
 
+static void hp_background (int fd, int mode) {
+    hp_redirect_background();
+}
+
 int main (int argc, const char **argv) {
 
     // These strange statements are to make sure that fds 0 to 2 are
@@ -81,6 +85,7 @@ int main (int argc, const char **argv) {
     echttp_route_uri ("/portal", hp_portal_json);
     echttp_static_route ("/", "/usr/share/houseportal/public");
     hp_redirect_start (argc, argv);
+    echttp_background (&hp_background);
     echttp_loop();
 }
 

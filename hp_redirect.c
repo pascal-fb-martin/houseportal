@@ -28,8 +28,8 @@
  */
 
 #include <sys/mman.h>
-#include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <signal.h>
 #include <unistd.h>
 #include <errno.h>
@@ -43,6 +43,8 @@
 #include "houseportalhmac.h"
 
 
+static const char *ConfigurationPath = "/etc/houseportal/houseportal.config";
+static time_t ConfigurationTime = 0;
 static int RestrictUdp2Local = 0;
 
 typedef struct {
@@ -94,6 +96,57 @@ static const HttpRedirection *SearchBestRedirect (const char *path) {
     return found;
 }
 
+static void DeprecatePermanentConfiguration (void) {
+    int i;
+
+    for (i = 0; i < RedirectionCount; ++i) {
+        if (Redirections[i].expiration == 0) Redirections[i].expiration = 1;
+    }
+    for (i = 0; i < IntermediateDecodeLength; ++i) {
+        if (IntermediateDecode[i].method) {
+            free(IntermediateDecode[i].method);
+            IntermediateDecode[i].method = 0;
+        }
+        if (IntermediateDecode[i].value) {
+            free(IntermediateDecode[i].value);
+            IntermediateDecode[i].value = 0;
+        }
+    }
+    IntermediateDecodeLength = 0;
+}
+
+static void PruneRedirect (time_t deadline) {
+    int i, j;
+
+    for (i = 0; i < RedirectionCount; ++i) {
+        time_t expiration = Redirections[i].expiration;
+        if (expiration == 0 || expiration > deadline) continue;
+
+        for (j = i + 1; j < RedirectionCount; ++j) {
+            expiration = Redirections[j].expiration;
+            if (expiration == 0 || expiration > deadline) break;
+        }
+        if (j < RedirectionCount) {
+            Redirections[i] = Redirections[j];
+            Redirections[j].path = 0;
+            Redirections[j].target = 0;
+            Redirections[j].expiration = 1;
+        } else {
+            RedirectionCount = i;
+        }
+    }
+    DEBUG {
+        printf ("After pruning:\n");
+        for (i = 0; i < RedirectionCount; ++i) {
+            printf ("REDIRECT %ld%s %s -> %s\n",
+                    Redirections[i].expiration,
+                    Redirections[i].hide?" HIDE":"",
+                    Redirections[i].path,
+                    Redirections[i].target);
+        }
+    }
+}
+
 static const char *RedirectRoute (const char *method, const char *uri,
                                   const char *data, int length) {
     const HttpRedirection *r = SearchBestRedirect (uri);
@@ -141,7 +194,7 @@ static void AddSingleRedirect (int live, int hide,
     //
     for (i = 0; i < RedirectionCount; ++i) {
         if (strcmp (Redirections[i].path, path) == 0) {
-            if (Redirections[i].expiration == 0) return; // Permanent..
+            if (live && Redirections[i].expiration == 0) return; // Permanent..
             if (strcmp (Redirections[i].target, target)) {
                 free (Redirections[i].target);
                 Redirections[i].target = strdup(target);
@@ -219,7 +272,7 @@ static void DecodeMessage (char *buffer, int live) {
 
     } else if (live) {
 
-        return; // Ignore unknown messages.
+        return; // Ignore other messages below.
 
     } else if (strcmp("LOCAL", token[0]) == 0) {
 
@@ -232,6 +285,7 @@ static void DecodeMessage (char *buffer, int live) {
             int index = IntermediateDecodeLength++;
             IntermediateDecode[index].method = strdup(token[1]);
             IntermediateDecode[index].value = strdup(token[2]);
+            DEBUG printf ("%s signature key\n", token[1]);
         }
 
     } else {
@@ -245,6 +299,11 @@ static void LoadConfig (const char *name) {
     int i, start, count, line = 0;
     char buffer[1024];
     char *token[16];
+    struct stat fileinfo;
+
+    if (stat (name, &fileinfo) == 0) {
+        ConfigurationTime = fileinfo.st_mtim.tv_sec;
+    }
 
     FILE *f = fopen (name, "r");
     if (f == 0) {
@@ -260,6 +319,9 @@ static void LoadConfig (const char *name) {
         }
     }
     fclose(f);
+    DEBUG {
+        if (IntermediateDecodeLength) printf ("Registrations must be signed\n");
+    }
 }
 
 static int hp_redirect_inspect2 (const char *data,
@@ -324,6 +386,28 @@ static void hp_redirect_udp (int fd, int mode) {
     }
 }
 
+void hp_redirect_background (void) {
+
+    static time_t LastCheck = 0;
+    time_t now = time(0);
+    struct stat fileinfo;
+
+    if (now > LastCheck + 30) {
+        if (stat (ConfigurationPath, &fileinfo) == 0) {
+            if (ConfigurationTime != fileinfo.st_mtim.tv_sec) {
+                DEBUG printf ("Configuration file %s changed\n",
+                              ConfigurationPath);
+                DeprecatePermanentConfiguration();
+                LoadConfig (ConfigurationPath);
+                PruneRedirect (now-3000);
+            } else if ((now % 600) == 0) {
+                PruneRedirect (now-3000);
+            }
+        }
+        LastCheck = now;
+    }
+}
+
 void hp_redirect_list_json (char *buffer, int size) {
 
     int i;
@@ -369,14 +453,13 @@ void hp_redirect_start (int argc, const char **argv) {
     const char *port = "70";
     int udp[16];
     int count;
-    const char *configpath = "/etc/houseportal/houseportal.config";
 
     for (i = 1; i < argc; ++i) {
-        echttp_option_match ("-config=", argv[i], &configpath);
+        echttp_option_match ("-config=", argv[i], &ConfigurationPath);
         echttp_option_match ("-portal-port=", argv[i], &port);
     }
 
-    LoadConfig (configpath);
+    LoadConfig (ConfigurationPath);
 
     count = hp_udp_server (port, RestrictUdp2Local, udp, 16);
     if (count <= 0) {
