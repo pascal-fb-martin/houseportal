@@ -11,9 +11,9 @@ This software is intended to resolve that specific issue by managing redirects i
 * Each application periodically sends a UDP packet to the portal to register their redirection (by providing their web access port number and root path).
 * When the portal receives a request that match the root path of a registered redirection, it replies with a 302 Found redirect indicating the full URI to use.
 
-A static configuration files allows houseportal to be compatible with existing web applications not designed to support this scheme.
+A static configuration files allows HousePortal to be compatible with existing web applications not designed to support this scheme.
 
-This makes houseportal a discovery service that is compatible with the HTTP protocol, web servers and web browsers.
+This makes HousePortal a discovery service that is compatible with the HTTP protocol, web servers and web browsers.
 
 # Installation
 
@@ -22,7 +22,6 @@ This makes houseportal a discovery service that is compatible with the HTTP prot
 * make
 * sudo make install
 * Edit /etc/houseportal/houseportal.config
-* Restart houseportal.
 
 # Protocol.
 
@@ -34,7 +33,7 @@ A redirection message is a space-separated text that follows the syntax below:
       
 where host is a host name or IP address, time is the system time when the message was formatted (see time(2)), port is a number in the range 1..65535 and each path item is an URI's absolute path (which must start with '/').
 
-The "/portal" path name is reserved for houseportal's own status.
+The "/portal" path name is reserved for HousePortal's own status.
 
 If the host is missing, HousePortal uses the host name of the local machine.
 
@@ -62,6 +61,8 @@ The registration must be periodic:
 
 The default HousePortal configuration is /etc/houseportal/houseportal.config. A different configuration file can be specified using the -config=path option. The configuration file is a list of directives, one directive per line. Each directive starts with a keyword, with a variable count of space-separated arguments. Lines starting with character '#' are comments and ignored.
 
+If the configuration file is modified while HousePortal is running, the current HousePortal configuration will be updated within 30 seconds (except for the LOCAL option, which remains unchanged--see below).
+
 In order to support applications not designed to interact with HousePortal, a static redirection configuration is supported:
 
       'REDIRECT' [host:]port [HIDE] [root-path ..]
@@ -70,7 +71,7 @@ These static redirections never expire.
 
 # Security
 
-A simple form of security is possible by accepting only local UDP packets, i.e. HousePortal to bind its UDP socket to IP address 127.0.0.1. This is typically used when all local applications are trusted, usually because the local machine's access is strictly restricted. That mode is activated when the LOCAL keyword is present in the HousePortal configuration:
+A simple form of security is possible by accepting only local UDP packets, i.e. HousePortal to bind its UDP socket to IP address 127.0.0.1. This is typically used when all local applications are trusted, usually because the local machine's access is strictly restricted. That mode is activated when the LOCAL keyword is present in the HousePortal configuration at the time HousePortal starts:
 
        'LOCAL'
 
@@ -78,7 +79,7 @@ To support security in an open access network, the use of cryptographic signatur
 
        'SIGN' 'SHA-256' key
 
-Where the key is an hexadecimal string (64 bytes) that must be used by clients when computing their signature. The SIGN keyword may be used multiple times: houseportal will try to use each key matching the cypher used by the client until the source has been authenticated successfully. If no match was found, for any reason, the packet is ignored. It is valid to declare a key for an unknown cypher, but it will never get used.
+Where the key is an hexadecimal string (64 bytes) that must be used by clients when computing their signature. The SIGN keyword may be used multiple times: HousePortal will try to use each key matching the cypher used by the client until the source has been authenticated successfully. If no match was found, for any reason, the packet is ignored. It is valid to declare a key for an unknown cypher, but it will never get used.
 
 It is valid to combine both the local mode and cryptographic authentication. This is typically used if multiple users have access to the host and the outside network is not trusted at all.
 
@@ -86,7 +87,7 @@ If no cryptographic key is provided, HousePortal will accept all redirection mes
 
 # Client API
 
-A web server can be coded to advertize its port number to houseportal using the houseportal client API.
+A web server can be coded to advertize its port number to HousePortal using the HousePortal client API.
 
 First the application must include the client header file:
 ```
