@@ -25,6 +25,16 @@
  * void hp_redirect_start (int argc, const char **argv);
  *
  *    Initialize the HTTP request redirector.
+ *
+ * void hp_redirect_background (void);
+ *
+ *    This function should be called periodically. It checks for
+ *    and applies configuration changes, prune obsolete items, etc.
+ *
+ * void hp_redirect_list_json (char *buffer, int size);
+ *
+ *    This function returns a string that represents the current redirect
+ *    database, dumped in the JSON format.
  */
 
 #include <sys/mman.h>
