@@ -35,6 +35,8 @@ dev:
 
 install: dev
 	if [ -e /etc/init.d/houseportal ] ; then systemctl stop houseportal ; fi
+	mkdir -p /etc/house
+	if [ -e /etc/houseportal/houseportal.config] ; then mv /etc/houseportal/houseportal.config /etc/house/portal.config; fi
 	mkdir -p /usr/local/bin
 	rm -f /usr/local/bin/houseportal /etc/init.d/houseportal
 	cp houseportal /usr/local/bin
@@ -43,7 +45,7 @@ install: dev
 	chmod 755 /usr/local/bin/houseportal /etc/init.d/houseportal
 	touch /etc/default/houseportal
 	mkdir -p /etc/houseportal
-	touch /etc/houseportal/houseportal.config
+	touch /etc/house/portal.config
 	systemctl daemon-reload
 	systemctl enable houseportal
 	systemctl start houseportal

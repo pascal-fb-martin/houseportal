@@ -21,7 +21,7 @@ This makes HousePortal a discovery service that is compatible with the HTTP prot
 * Clone this GitHub repository.
 * make
 * sudo make install
-* Edit /etc/houseportal/houseportal.config
+* Edit /etc/house/portal.config
 
 # Protocol.
 
@@ -59,7 +59,7 @@ The registration must be periodic:
 
 # Configuration File
 
-The default HousePortal configuration is /etc/houseportal/houseportal.config. A different configuration file can be specified using the -config=path option. The configuration file is a list of directives, one directive per line. Each directive starts with a keyword, with a variable count of space-separated arguments. Lines starting with character '#' are comments and ignored.
+The default HousePortal configuration is /etc/house/portal.config. A different configuration file can be specified using the -config=path option. The configuration file is a list of directives, one directive per line. Each directive starts with a keyword, with a variable count of space-separated arguments. Lines starting with character '#' are comments and ignored.
 
 If the configuration file is modified while HousePortal is running, the current HousePortal configuration will be updated within 30 seconds (except for the LOCAL option, which remains unchanged--see below).
 

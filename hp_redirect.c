@@ -53,7 +53,7 @@
 #include "houseportalhmac.h"
 
 
-static const char *ConfigurationPath = "/etc/houseportal/houseportal.config";
+static const char *ConfigurationPath = "/etc/house/portal.config";
 static time_t ConfigurationTime = 0;
 static int RestrictUdp2Local = 0;
 
@@ -251,7 +251,7 @@ static void AddRedirect (int live, char **token, int count) {
 
 static void DecodeMessage (char *buffer, int live) {
 
-    int i, start, count, line = 0;
+    int i, start, count;
     char *token[16];
 
     // Split the line
@@ -306,7 +306,7 @@ static void DecodeMessage (char *buffer, int live) {
 
 static void LoadConfig (const char *name) {
 
-    int i, start, count, line = 0;
+    int i, start, count;
     char buffer[1024];
     char *token[16];
     struct stat fileinfo;
