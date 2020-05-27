@@ -36,7 +36,7 @@ dev:
 install: dev
 	if [ -e /etc/init.d/houseportal ] ; then systemctl stop houseportal ; fi
 	mkdir -p /etc/house
-	if [ -e /etc/houseportal/houseportal.config] ; then mv /etc/houseportal/houseportal.config /etc/house/portal.config; fi
+	if [ -e /etc/houseportal/houseportal.config ] ; then mv /etc/houseportal/houseportal.config /etc/house/portal.config; fi
 	mkdir -p /usr/local/bin
 	rm -f /usr/local/bin/houseportal /etc/init.d/houseportal
 	cp houseportal /usr/local/bin
