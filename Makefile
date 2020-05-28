@@ -57,3 +57,6 @@ uninstall:
 	rm -f /etc/init.d/houseportal /usr/local/include/houseportalclient.h
 	systemctl daemon-reload
 
+purge: uninstall
+	rm -f /etc/default/houseportal /etc/house/portal.config
+
