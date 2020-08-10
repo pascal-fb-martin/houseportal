@@ -18,6 +18,7 @@ This makes HousePortal a discovery service that is compatible with the HTTP prot
 # Installation
 
 * Install the openssl development package(s)
+* install [echttp](https://github.com/pascal-fb-martin/echttp).
 * Clone this GitHub repository.
 * make
 * sudo make install
