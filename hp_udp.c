@@ -58,6 +58,7 @@
 #include <arpa/inet.h>
 
 #include "houseportal.h"
+#include "housetrace.h"
 
 static union {
     struct sockaddr_in  ipv4;
@@ -94,38 +95,48 @@ int hp_udp_server (const char *service, int local, int *sockets, int size) {
 
         s = socket(cursor->ai_family, cursor->ai_socktype, cursor->ai_protocol);
         if (s < 0) {
-           fprintf (stderr, "cannot open socket for port %s: %s\n",
-                    service, strerror(errno));
+           housetrace_record (HOUSE_FAILURE, "HousePortal",
+                              "cannot open socket for port %s: %s\n",
+                              service, strerror(errno));
            continue;
         }
 
         if (cursor->ai_family == AF_INET6) {
             value = 1;
             if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, &value, sizeof(value)) < 0) {
-                fprintf (stderr, "cannot set IPV6_V6ONLY: %s\n", strerror(errno));
+                housetrace_record (HOUSE_FAILURE, "HousePortal",
+                                   "Cannot set IPV6_V6ONLY: %s",
+                                   strerror(errno));
             }
         }
 
         if (bind(s, cursor->ai_addr, cursor->ai_addrlen) < 0) {
-           fprintf (stderr, "cannot bind to port %s (%s): %s\n",
-                    service, (cursor->ai_family==AF_INET6)?"ipv6":"ipv4", strerror(errno));
+            housetrace_record (HOUSE_FAILURE, "HousePortal",
+                               "Cannot bind to port %s (%s): %s",
+                               service,
+                               (cursor->ai_family==AF_INET6)?"ipv6":"ipv4",
+                               strerror(errno));
            close(s);
            continue;
         }
 
         value = 256 * 1024;
         if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, &value, sizeof(value)) < 0) {
-           fprintf (stderr, "cannot set receive buffer to %d: %s\n",
-                    value, strerror(errno));
+            housetrace_record (HOUSE_FAILURE, "HousePortal",
+                               "Cannot set receive buffer to %d: %s",
+                               value, strerror(errno));
         }
         value = 256 * 1024;
         if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, &value, sizeof(value)) < 0) {
-           fprintf (stderr, "cannot set send buffer to %d: %s\n",
-                    value, strerror(errno));
+            housetrace_record (HOUSE_FAILURE, "HousePortal",
+                               "Cannot set send buffer to %d: %s",
+                               value, strerror(errno));
         }
 
-        DEBUG printf ("Opened UDP socket port %s (%s)\n",
-                      service, (cursor->ai_family==AF_INET6)?"ipv6":"ipv4");
+        housetrace_record (HOUSE_INFO, "HousePortal",
+                           "UDP socket port %s is open (%s)",
+                           service,
+                           (cursor->ai_family==AF_INET6)?"ipv6":"ipv4");
         sockets[count++] = s;
         if (count >= size) break;
     }

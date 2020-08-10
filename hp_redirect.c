@@ -50,6 +50,7 @@
 #include <stdio.h>
 
 #include "houseportal.h"
+#include "housetrace.h"
 #include "houseportalhmac.h"
 
 
@@ -221,9 +222,9 @@ static void AddSingleRedirect (int live, int hide,
     //
     if (RedirectionCount < REDIRECT_MAX) {
         char *p = strdup(path);
-        DEBUG
-           printf ("Add %s route for %s, redirected to %s%s\n",
-                   live?"live":"permanent",p,target,hide?" (hide)":"");
+        housetrace_record (HOUSE_INFO, p,
+                           "Add %s route to %s%s",
+                           live?"live":"permanent",target,hide?" (hide)":"");
         echttp_route_match (p, RedirectRoute);
         Redirections[RedirectionCount].path = p;
         Redirections[RedirectionCount].target = strdup(target);
@@ -258,8 +259,10 @@ static void DecodeMessage (char *buffer, int live) {
     for (i = start = count = 0; buffer[i] >= ' '; ++i) {
         if (buffer[i] == ' ') {
             if (count >= 16) {
-                fprintf (stderr, "too many tokens at %s\n", buffer+i);
-                exit(1);
+                housetrace_record (HOUSE_WARNING, "HousePortal",
+                                   "Too many tokens at %s", buffer+i);
+                if (!live) exit(1);
+                return;
             }
             token[count++] = buffer + start;
             do {
@@ -275,8 +278,10 @@ static void DecodeMessage (char *buffer, int live) {
 
         if (live) count -= 1; // Do not count the timestamp.
         if (count < 3) {
-            fprintf (stderr, "incomplete redirect (%d arguments)\n", count);
-            exit(1);
+            housetrace_record (HOUSE_WARNING, "HousePortal",
+                               "Incomplete redirect (%d arguments)", count);
+            if (!live) exit(1);
+            return;
         }
         AddRedirect (live, token+live+1, count-1); // Remove the timestamp.
 
@@ -286,7 +291,7 @@ static void DecodeMessage (char *buffer, int live) {
 
     } else if (strcmp("LOCAL", token[0]) == 0) {
 
-        DEBUG printf ("LOCAL mode\n");
+        housetrace_record (HOUSE_INFO, "HousePortal", "LOCAL mode");
         RestrictUdp2Local = 1;
 
     } else if (strcmp("SIGN", token[0]) == 0) {
@@ -299,8 +304,9 @@ static void DecodeMessage (char *buffer, int live) {
         }
 
     } else {
-        fprintf (stderr, "invalid keyword %s\n", token[0]);
-        exit(1);
+        housetrace_record (HOUSE_WARNING, "HousePortal",
+                           "Invalid keyword %s", token[0]);
+        if (!live) exit(1);
     }
 }
 
@@ -317,7 +323,8 @@ static void LoadConfig (const char *name) {
 
     FILE *f = fopen (name, "r");
     if (f == 0) {
-        fprintf (stderr, "cannot access configuration file %s\n", name);
+        housetrace_record (HOUSE_FAILURE, "HousePortal",
+                           "Cannot access configuration file %s", name);
         exit(0);
     }
 
@@ -329,9 +336,10 @@ static void LoadConfig (const char *name) {
         }
     }
     fclose(f);
-    DEBUG {
-        if (IntermediateDecodeLength) printf ("Registrations must be signed\n");
-    }
+
+    if (IntermediateDecodeLength)
+        housetrace_record (HOUSE_INFO,
+                           "HousePortal", "Registrations must be signed");
 }
 
 static int hp_redirect_inspect2 (const char *data,
@@ -351,6 +359,9 @@ static int hp_redirect_inspect2 (const char *data,
         DEBUG printf ("Signature %s did not match client signature %s\n",
                       signature, value);
     }
+
+    housetrace_record (HOUSE_WARNING,
+                       "HousePortal", "No signature match for %s", data);
 
     return 0; // Failed all available keys.
 }
@@ -405,8 +416,9 @@ void hp_redirect_background (void) {
     if (now > LastCheck + 30) {
         if (stat (ConfigurationPath, &fileinfo) == 0) {
             if (ConfigurationTime != fileinfo.st_mtim.tv_sec) {
-                DEBUG printf ("Configuration file %s changed\n",
-                              ConfigurationPath);
+                housetrace_record (HOUSE_INFO, "HousePortal",
+                                   "Configuration file %s changed",
+                                   ConfigurationPath);
                 DeprecatePermanentConfiguration();
                 LoadConfig (ConfigurationPath);
                 PruneRedirect (now-3000);
@@ -473,7 +485,8 @@ void hp_redirect_start (int argc, const char **argv) {
 
     count = hp_udp_server (port, RestrictUdp2Local, udp, 16);
     if (count <= 0) {
-        fprintf (stderr, "Cannot open UDP sockets.\n");
+        housetrace_record (HOUSE_FAILURE, "HousePortal",
+                           "Cannot open UDP sockets for port %s", port);
         exit(1);
     }
 

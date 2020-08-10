@@ -1,8 +1,8 @@
 
 OBJS= hp_udp.o hp_redirect.o houseportal.o houseportalhmac.o
-LIBOJS= houseportalclient.o houseportaludp.o houseportalhmac.o
+LIBOJS= houseportalclient.o houseportaludp.o houseportalhmac.o housetrace.o
 
-all: houseportal libhouseportal.a
+all: libhouseportal.a houseportal
 
 main: houseportal.c
 
@@ -20,8 +20,8 @@ libhouseportal.a: $(LIBOJS)
 	ar r $@ $^
 	ranlib $@
 
-houseportal: $(OBJS)
-	gcc -g -O -o houseportal $(OBJS) -lechttp -lcrypto -lrt
+houseportal: $(OBJS) libhouseportal.a
+	gcc -g -O -o houseportal $(OBJS) libhouseportal.a -lechttp -lcrypto -lrt
 
 package:
 	mkdir -p packages
