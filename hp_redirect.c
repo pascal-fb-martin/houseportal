@@ -50,7 +50,7 @@
 #include <stdio.h>
 
 #include "houseportal.h"
-#include "housetrace.h"
+#include "houselog.h"
 #include "houseportalhmac.h"
 
 
@@ -128,24 +128,25 @@ static void DeprecatePermanentConfiguration (void) {
 
 static void PruneRedirect (time_t deadline) {
     int i, j;
+    int pruned = 0;
 
-    for (i = 0; i < RedirectionCount; ++i) {
+    for (i = RedirectionCount-1; i >= 0; --i) {
         time_t expiration = Redirections[i].expiration;
         if (expiration == 0 || expiration > deadline) continue;
 
-        for (j = i + 1; j < RedirectionCount; ++j) {
-            expiration = Redirections[j].expiration;
-            if (expiration == 0 || expiration > deadline) break;
-        }
-        if (j < RedirectionCount) {
-            Redirections[i] = Redirections[j];
-            Redirections[j].path = 0;
-            Redirections[j].target = 0;
-            Redirections[j].expiration = 1;
+        houselog_event (time(0), "route", Redirections[i].path, "expired",
+                        "%s", Redirections[i].target);
+
+        if (i < RedirectionCount-1) {
+            Redirections[i] = Redirections[RedirectionCount-1];
+            RedirectionCount -= 1;
         } else {
             RedirectionCount = i;
         }
+        pruned = 1;
     }
+    if (!pruned) return;
+
     DEBUG {
         printf ("After pruning:\n");
         for (i = 0; i < RedirectionCount; ++i) {
@@ -222,9 +223,11 @@ static void AddSingleRedirect (int live, int hide,
     //
     if (RedirectionCount < REDIRECT_MAX) {
         char *p = strdup(path);
-        housetrace_record (HOUSE_INFO, p,
-                           "Add %s route to %s%s",
-                           live?"live":"permanent",target,hide?" (hide)":"");
+        houselog_trace (HOUSE_INFO, p,
+                        "add %s route %s to %s%s",
+                        live?"live":"permanent",p,target,hide?" (hide)":"");
+        houselog_event (time(0), "route", p, "add",
+                        "%s (%s)", target, live?"live":"permanent");
         echttp_route_match (p, RedirectRoute);
         Redirections[RedirectionCount].path = p;
         Redirections[RedirectionCount].target = strdup(target);
@@ -259,8 +262,8 @@ static void DecodeMessage (char *buffer, int live) {
     for (i = start = count = 0; buffer[i] >= ' '; ++i) {
         if (buffer[i] == ' ') {
             if (count >= 16) {
-                housetrace_record (HOUSE_WARNING, "HousePortal",
-                                   "Too many tokens at %s", buffer+i);
+                houselog_trace (HOUSE_WARNING, "HousePortal",
+                                "Too many tokens at %s", buffer+i);
                 if (!live) exit(1);
                 return;
             }
@@ -278,8 +281,8 @@ static void DecodeMessage (char *buffer, int live) {
 
         if (live) count -= 1; // Do not count the timestamp.
         if (count < 3) {
-            housetrace_record (HOUSE_WARNING, "HousePortal",
-                               "Incomplete redirect (%d arguments)", count);
+            houselog_trace (HOUSE_WARNING, "HousePortal",
+                            "Incomplete redirect (%d arguments)", count);
             if (!live) exit(1);
             return;
         }
@@ -291,7 +294,7 @@ static void DecodeMessage (char *buffer, int live) {
 
     } else if (strcmp("LOCAL", token[0]) == 0) {
 
-        housetrace_record (HOUSE_INFO, "HousePortal", "LOCAL mode");
+        houselog_trace (HOUSE_INFO, "HousePortal", "LOCAL mode");
         RestrictUdp2Local = 1;
 
     } else if (strcmp("SIGN", token[0]) == 0) {
@@ -304,8 +307,8 @@ static void DecodeMessage (char *buffer, int live) {
         }
 
     } else {
-        housetrace_record (HOUSE_WARNING, "HousePortal",
-                           "Invalid keyword %s", token[0]);
+        houselog_trace (HOUSE_WARNING, "HousePortal",
+                        "Invalid keyword %s", token[0]);
         if (!live) exit(1);
     }
 }
@@ -323,8 +326,8 @@ static void LoadConfig (const char *name) {
 
     FILE *f = fopen (name, "r");
     if (f == 0) {
-        housetrace_record (HOUSE_FAILURE, "HousePortal",
-                           "Cannot access configuration file %s", name);
+        houselog_trace (HOUSE_FAILURE, "HousePortal",
+                        "Cannot access configuration file %s", name);
         exit(0);
     }
 
@@ -338,8 +341,8 @@ static void LoadConfig (const char *name) {
     fclose(f);
 
     if (IntermediateDecodeLength)
-        housetrace_record (HOUSE_INFO,
-                           "HousePortal", "Registrations must be signed");
+        houselog_trace (HOUSE_INFO,
+                        "HousePortal", "Registrations must be signed");
 }
 
 static int hp_redirect_inspect2 (const char *data,
@@ -360,8 +363,8 @@ static int hp_redirect_inspect2 (const char *data,
                       signature, value);
     }
 
-    housetrace_record (HOUSE_WARNING,
-                       "HousePortal", "No signature match for %s", data);
+    houselog_trace (HOUSE_WARNING,
+                    "HousePortal", "No signature match for %s", data);
 
     return 0; // Failed all available keys.
 }
@@ -412,20 +415,21 @@ void hp_redirect_background (void) {
     static time_t LastCheck = 0;
     time_t now = time(0);
     struct stat fileinfo;
+    int pruned = 0;
 
     if (now > LastCheck + 30) {
         if (stat (ConfigurationPath, &fileinfo) == 0) {
             if (ConfigurationTime != fileinfo.st_mtim.tv_sec) {
-                housetrace_record (HOUSE_INFO, "HousePortal",
-                                   "Configuration file %s changed",
-                                   ConfigurationPath);
+                houselog_trace (HOUSE_INFO, "HousePortal",
+                                "Configuration file %s changed",
+                                ConfigurationPath);
                 DeprecatePermanentConfiguration();
                 LoadConfig (ConfigurationPath);
                 PruneRedirect (now-3000);
-            } else if ((now % 600) == 0) {
-                PruneRedirect (now-3000);
+                pruned = 1;
             }
         }
+        if (!pruned) PruneRedirect (now-3000);
         LastCheck = now;
     }
 }
@@ -448,16 +452,15 @@ void hp_redirect_list_json (char *buffer, int size) {
 
         time_t expiration = Redirections[i].expiration;
 
-        if (expiration < now && expiration > 0) continue;
-
         snprintf (cursor, size-length,
-                  "%s{\"path\":\"%*.*s\",\"expire\":%d,\"target\":\"%s\",\"hide\":%s}",
+                  "%s{\"path\":\"%*.*s\",\"expire\":%d,\"target\":\"%s\",\"hide\":%s,\"active\":%s}",
                   prefix,
                   Redirections[i].length, Redirections[i].length,
                   Redirections[i].path,
                   expiration,
                   Redirections[i].target,
-                  Redirections[i].hide?"true":"false");
+                  Redirections[i].hide?"true":"false",
+                  (expiration == 0 || expiration > now)?"true":"false");
         reclen = strlen(cursor);
         prefix = ",";
         if (length + reclen >= size) break;
@@ -485,8 +488,8 @@ void hp_redirect_start (int argc, const char **argv) {
 
     count = hp_udp_server (port, RestrictUdp2Local, udp, 16);
     if (count <= 0) {
-        housetrace_record (HOUSE_FAILURE, "HousePortal",
-                           "Cannot open UDP sockets for port %s", port);
+        houselog_trace (HOUSE_FAILURE, "HousePortal",
+                        "Cannot open UDP sockets for port %s", port);
         exit(1);
     }
 

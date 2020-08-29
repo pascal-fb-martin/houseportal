@@ -31,7 +31,7 @@
 #include <time.h>
 
 #include "houseportal.h"
-#include "housetrace.h"
+#include "houselog.h"
 #include "echttp_static.h"
 
 
@@ -66,7 +66,7 @@ static const char *hp_portal_json (const char *method, const char *uri,
 
 static void hp_background (int fd, int mode) {
     time_t now = time(0);
-    housetrace_periodic (now);
+    houselog_background (now);
     hp_redirect_background();
 }
 
@@ -87,12 +87,12 @@ int main (int argc, const char **argv) {
     }
 
     echttp_open (argc, argv);
-    housetrace_initialize ("portal", argc, argv);
+    houselog_initialize ("portal", argc, argv);
     echttp_route_uri ("/portal/list", hp_portal_json);
     echttp_static_route ("/", "/usr/share/house/public");
     hp_redirect_start (argc, argv);
     echttp_background (&hp_background);
-    housetrace_record (HOUSE_INFO, "HousePortal", "Started");
+    houselog_trace (HOUSE_INFO, "HousePortal", "Started");
     echttp_loop();
 }
 

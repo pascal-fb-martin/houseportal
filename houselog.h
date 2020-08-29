@@ -18,21 +18,27 @@
  * Boston, MA  02110-1301, USA.
  *
  *
- * housetrace.h - A generic application trace recording modules.
+ * houselog.h - A generic application log recording modules.
  *
- * housetrace_record() should be used with the predefined constant, as in:
- *    housetrace_record (HOUSE_INFO, "myobject", "my message is %s", "this");
+ * houselog_trace() should be used with the predefined constant, as in:
+ *    houselog_trace (HOUSE_INFO, "myobject", "my message is %s", "this");
  */
-void housetrace_initialize (const char *application,
+void houselog_initialize (const char *application,
                             int argc, const char **argv);
 
-void housetrace_record (const char *file, int line, const char *level,
-                        const char *object,
-                        const char *format, ...);
+void houselog_trace (const char *file, int line, const char *level,
+                     const char *object,
+                     const char *format, ...);
 
 #define HOUSE_INFO    __FILE__, __LINE__, "INFO"
 #define HOUSE_WARNING __FILE__, __LINE__, "WARN"
 #define HOUSE_FAILURE __FILE__, __LINE__, "FAIL"
 
-void housetrace_periodic (time_t now);
+void houselog_event (time_t timestamp,
+                     const char *category,
+                     const char *object,
+                     const char *action,
+                     const char *format, ...);
+
+void houselog_background (time_t now);
 

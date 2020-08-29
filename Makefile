@@ -1,6 +1,6 @@
 
 OBJS= hp_udp.o hp_redirect.o houseportal.o houseportalhmac.o
-LIBOJS= houseportalclient.o houseportaludp.o houseportalhmac.o housetrace.o
+LIBOJS= houselog.o houseportalclient.o houseportaludp.o houseportalhmac.o
 
 all: libhouseportal.a houseportal
 
@@ -29,9 +29,11 @@ package:
 
 dev:
 	cp libhouseportal.a /usr/local/lib
-	cp houseportalclient.h /usr/local/include
-	chown root:root /usr/local/lib/libhouseportal.a /usr/local/include/houseportalclient.h
-	chmod 644 /usr/local/lib/libhouseportal.a /usr/local/include/houseportalclient.h
+	chown root:root /usr/local/lib/libhouseportal.a
+	chmod 644 /usr/local/lib/libhouseportal.a
+	cp houselog.h houseportalclient.h /usr/local/include
+	chown root:root /usr/local/include/houselog.h /usr/local/include/houseportalclient.h
+	chmod 644 /usr/local/include/houselog.h /usr/local/include/houseportalclient.h
 
 install: dev
 	if [ -e /etc/init.d/houseportal ] ; then systemctl stop houseportal ; fi
