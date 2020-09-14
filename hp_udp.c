@@ -139,6 +139,8 @@ int hp_udp_server (const char *service, int local, int *sockets, int size) {
         sockets[count++] = s;
         if (count >= size) break;
     }
+    freeaddrinfo(resolved);
+
     return count;
 }
 

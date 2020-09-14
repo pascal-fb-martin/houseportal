@@ -108,6 +108,8 @@ int hp_udp_client (const char *destination, const char *service) {
         UdpClient[UdpClientCount++] = s;
         if (UdpClientCount >= 16) break;
     }
+    freeaddrinfo(resolved);
+
     return UdpClientCount;
 }
 
