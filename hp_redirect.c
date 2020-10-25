@@ -143,7 +143,7 @@ static void PruneRedirect (time_t deadline) {
         houselog_event (time(0), "route", Redirections[i].path, "expired",
                         "%s", Redirections[i].target);
 
-        free (Redirections[i].path);
+        // Do not free path: the echhtp route still uses it.
         free (Redirections[i].target);
         if (Redirections[i].service) free (Redirections[i].service);
 
@@ -479,6 +479,7 @@ void hp_redirect_list_json (char *buffer, int size) {
     char *cursor;
     const char *prefix = "";
     time_t now = time(0);
+    char service[256];
 
     length = hp_redirect_preamble (now, buffer, size);
     cursor = buffer + length;
@@ -491,11 +492,18 @@ void hp_redirect_list_json (char *buffer, int size) {
 
         time_t expiration = Redirections[i].expiration;
 
+        if (Redirections[i].service)
+            snprintf (service, sizeof(service),
+                      "\"service\":\"%s\",",Redirections[i].service);
+        else
+            service[0] = 0;
+
         snprintf (cursor, size-length,
-                  "%s{\"path\":\"%*.*s\",\"expire\":%d,\"target\":\"%s\",\"hide\":%s,\"active\":%s}",
+                  "%s{\"path\":\"%*.*s\",%s\"expire\":%d,\"target\":\"%s\",\"hide\":%s,\"active\":%s}",
                   prefix,
                   Redirections[i].length, Redirections[i].length,
                   Redirections[i].path,
+                  service,
                   expiration,
                   Redirections[i].target,
                   Redirections[i].hide?"true":"false",
@@ -544,8 +552,8 @@ void hp_redirect_service_json (const char *name, char *buffer, int size) {
         if (!Redirections[i].service) continue;
         if (strcmp(Redirections[i].service, name)) continue;
 
-        snprintf (cursor, size-length,
-                  "%s\"http://%s%s\"", hostaddress, Redirections[i].target);
+        snprintf (cursor, size-length, "%s\"http://%s%s\"",
+                  prefix, hostaddress, Redirections[i].path);
         length += strlen(cursor);
         prefix = ",";
         cursor = buffer + length;
