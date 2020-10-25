@@ -35,6 +35,11 @@
  *
  *    This function returns a string that represents the current redirect
  *    database, dumped in the JSON format.
+ *
+ * void hp_redirect_service_json (const char *service, char *buffer, int size);
+ *
+ *    This function returns a string that represents the current targets
+ *    for the specified service.
  */
 
 #include <sys/mman.h>
@@ -60,6 +65,7 @@ static int RestrictUdp2Local = 0;
 
 typedef struct {
     char *path;
+    char *service;
     char *target;
     int length;
     int hide;
@@ -137,6 +143,10 @@ static void PruneRedirect (time_t deadline) {
         houselog_event (time(0), "route", Redirections[i].path, "expired",
                         "%s", Redirections[i].target);
 
+        free (Redirections[i].path);
+        free (Redirections[i].target);
+        if (Redirections[i].service) free (Redirections[i].service);
+
         if (i < RedirectionCount-1) {
             Redirections[i] = Redirections[RedirectionCount-1];
             RedirectionCount -= 1;
@@ -184,18 +194,14 @@ static const char *RedirectRoute (const char *method, const char *uri,
 
 
 static void AddSingleRedirect (int live, int hide,
-                               const char *target, const char *path) {
+                               const char *target,
+                               const char *service, const char *path) {
 
     int i;
     char buffer[1024];
     time_t expiration = (live)?time(0)+REDIRECT_LIFETIME:0;
 
     if (!strchr(target, ':')) {
-       if (!HostName) {
-           char hostname[1000];
-           gethostname (hostname, sizeof(hostname));
-           HostName = strdup(hostname);
-       }
        snprintf (buffer, sizeof(buffer), "%s:%s", HostName, target);
        target = buffer;
     }
@@ -211,6 +217,18 @@ static void AddSingleRedirect (int live, int hide,
                 free (Redirections[i].target);
                 Redirections[i].target = strdup(target);
             }
+            if (service) {
+                if (!Redirections[i].service) {
+                    Redirections[i].service = strdup(service);
+                } else if (strcmp (Redirections[i].service, service)) {
+                    free (Redirections[i].service);
+                    Redirections[i].service = strdup(service);
+                }
+            } else if (Redirections[i].service) {
+                free (Redirections[i].service);
+                Redirections[i].service = 0;
+            }
+
             Redirections[i].hide = hide;
             Redirections[i].expiration = expiration;
             return;
@@ -231,6 +249,10 @@ static void AddSingleRedirect (int live, int hide,
         echttp_route_match (p, RedirectRoute);
         Redirections[RedirectionCount].path = p;
         Redirections[RedirectionCount].target = strdup(target);
+        if (service)
+            Redirections[RedirectionCount].service = strdup(service);
+        else
+            Redirections[RedirectionCount].service = 0;
         Redirections[RedirectionCount].length = strlen(path);
         Redirections[RedirectionCount].hide = hide;
         Redirections[RedirectionCount].expiration = expiration;
@@ -249,7 +271,15 @@ static void AddRedirect (int live, char **token, int count) {
         i = 2;
     }
     for (; i < count; ++i) {
-        AddSingleRedirect (live, hide, target, token[i]);
+        char *service = 0;
+        char *path = token[i];
+        char *s = strchr (path, ':');
+        if (s) {
+            *s = 0;
+            service = path;
+            path = s+1;
+        }
+        AddSingleRedirect (live, hide, target, service, path);
     }
 }
 
@@ -434,6 +464,13 @@ void hp_redirect_background (void) {
     }
 }
 
+static int hp_redirect_preamble (time_t now, char *buffer, int size) {
+
+    snprintf (buffer, size,
+             "{\"portal\":{\"host\":\"%s\",\"timestamp\":%d,", HostName, now);
+    return strlen(buffer);
+}
+
 void hp_redirect_list_json (char *buffer, int size) {
 
     int i;
@@ -443,9 +480,11 @@ void hp_redirect_list_json (char *buffer, int size) {
     const char *prefix = "";
     time_t now = time(0);
 
-    snprintf (buffer, size,
-             "{\"portal\":{\"timestamp\":%d,\"redirect\":[", now);
-    length = strlen(buffer);
+    length = hp_redirect_preamble (now, buffer, size);
+    cursor = buffer + length;
+
+    snprintf (cursor, size-length, "\"redirect\":[");
+    length += strlen(cursor);
     cursor = buffer + length;
 
     for (i = 0; i < RedirectionCount; ++i) {
@@ -467,8 +506,51 @@ void hp_redirect_list_json (char *buffer, int size) {
         length += reclen;
         cursor += reclen;
     }
-    cursor[0] = 0;
     snprintf (cursor, size-length, "]}}");
+    buffer[size-1] = 0;
+}
+
+void hp_redirect_service_json (const char *name, char *buffer, int size) {
+
+    int i;
+    int length;
+    int port = echttp_port(4);
+    char hostaddress[1024];
+    char *cursor;
+    const char *prefix = "";
+    time_t now = time(0);
+
+    length = hp_redirect_preamble (now, buffer, size);
+    cursor = buffer + length;
+
+    snprintf (cursor, size-length,
+              "\"service\":{\"name\":\"%s\",\"url\":[", name);
+    length += strlen(cursor);
+    cursor = buffer + length;
+
+    if (port == 80) {
+        strncpy (hostaddress, HostName, sizeof(hostaddress));
+        hostaddress[sizeof(hostaddress)-1] = 0;
+    } else {
+        snprintf (hostaddress, sizeof(hostaddress), "%s:%d", HostName, port);
+    }
+
+    for (i = 0; i < RedirectionCount; ++i) {
+
+        time_t expiration = Redirections[i].expiration;
+
+        if (expiration && expiration <= now) continue;
+
+        if (!Redirections[i].service) continue;
+        if (strcmp(Redirections[i].service, name)) continue;
+
+        snprintf (cursor, size-length,
+                  "%s\"http://%s%s\"", hostaddress, Redirections[i].target);
+        length += strlen(cursor);
+        prefix = ",";
+        cursor = buffer + length;
+    }
+    snprintf (cursor, size-length, "]}}}");
     buffer[size-1] = 0;
 }
 
@@ -478,6 +560,11 @@ void hp_redirect_start (int argc, const char **argv) {
     const char *port = "70";
     int udp[16];
     int count;
+
+    char hostname[1000];
+
+    gethostname (hostname, sizeof(hostname));
+    HostName = strdup(hostname);
 
     for (i = 1; i < argc; ++i) {
         echttp_option_match ("-config=", argv[i], &ConfigurationPath);

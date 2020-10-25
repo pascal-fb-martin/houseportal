@@ -54,12 +54,28 @@ static void hp_help (const char *argv0) {
     exit (0);
 }
 
-static const char *hp_portal_json (const char *method, const char *uri,
+static const char *hp_portal_list (const char *method, const char *uri,
                                    const char *data, int length) {
     static char buffer[8192];
 
     buffer[0] = 0;
     hp_redirect_list_json (buffer, sizeof(buffer));
+    echttp_content_type_json ();
+    return buffer;
+}
+
+static const char *hp_portal_service (const char *method, const char *uri,
+                                      const char *data, int length) {
+    static char buffer[8192];
+
+    const char *name = echttp_parameter_get ("name");
+    if (!name) {
+        echttp_error (404, "service name is missing");
+        return "";
+    }
+
+    buffer[0] = 0;
+    hp_redirect_service_json (name, buffer, sizeof(buffer));
     echttp_content_type_json ();
     return buffer;
 }
@@ -88,7 +104,8 @@ int main (int argc, const char **argv) {
 
     echttp_open (argc, argv);
     houselog_initialize ("portal", argc, argv);
-    echttp_route_uri ("/portal/list", hp_portal_json);
+    echttp_route_uri ("/portal/list", hp_portal_list);
+    echttp_route_uri ("/portal/service", hp_portal_service);
     echttp_static_route ("/", "/usr/share/house/public");
     hp_redirect_start (argc, argv);
     echttp_background (&hp_background);

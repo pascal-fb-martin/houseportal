@@ -15,6 +15,8 @@ A static configuration files allows HousePortal to be compatible with existing w
 
 This makes HousePortal a discovery service that is compatible with the HTTP protocol, web servers and web browsers.
 
+HousePortal may register targets from remote machines, but this is not the main goal. HousePortal was intended as a single endpoint from which multiple independent local service can be accessed, hiding the local machine configuration and presenting a single web interface to the outside.
+
 ## Installation
 
 * Install the openssl development package(s)
@@ -32,7 +34,7 @@ If the configuration file is modified while HousePortal is running, the current 
 
 In order to support applications not designed to interact with HousePortal, a static redirection configuration is supported:
 
-      'REDIRECT' [host:]port [HIDE] [root-path ..]
+      'REDIRECT' [host:]port [HIDE] [[service:]root-path ..]
 
 These static redirections never expire.
 
@@ -58,9 +60,9 @@ UDP port 70 is used for redirection registrations, because this port is assigned
 
 A redirection message is a space-separated text that follows the syntax below:
 
-      'REDIRECT' time [host:]port [HIDE] [path ..] [SHA-256 signature]
+      'REDIRECT' time [host:]port [HIDE] [[service:]path ..] [SHA-256 signature]
       
-where host is a host name or IP address, time is the system time when the message was formatted (see time(2)), port is a number in the range 1..65535 and each path item is an URI's absolute path (which must start with '/').
+where host is a host name or IP address, time is the system time when the message was formatted (see time(2)), port is a number in the range 1..65535 and each path item is an URI's absolute path (which must start with '/'), optionally prefixed with a service name (see the service section later).
 
 The "/portal" path name is reserved for HousePortal's own status.
 
@@ -85,6 +87,35 @@ HousePortal will redirect to the specified port any request which absolute path 
 The registration must be periodic:
 * This allows HousePortal to detect applications that are no longer active.
 * This allows redirections to recover from a HousePortal restart.
+
+## Service Discovery
+
+A redirection may define the target as a service. HousePortal maintains a list of active targets for each service name. That list can be queried by outside clients that need to discover which URL to use for these services.
+
+A service is a generic name that uniquely identify the web API supported by the target. For example a service may define how to access sensors, external controls (relays, triac, etc), or how to control of a sprinkler system. A target may be an implementation of the service for a certain type of resource, for example the control service may be associated with two targets, one implementing an interface to a relay boards, and the other using the OpenSprinkler Triac interface.
+
+This service discovery is not concerned with parallelism or clustering: the client needs to query each target to discover more details about the service.
+
+The intent of the HousePortal service discovery is to provide a single endpoint on each server from which services hosted by this server can be discovered. For example a client would query all known servers to find on which servers reside the services it need to access. HousePortal is not intended to act as a global service discovery service, i.e. a single endpoint that will consolidate all the service configuration information for a complete network.
+
+The service discovery web API was made simple to keep it simple to use:
+```
+GET /portal/service?name=...
+```
+The name parameter is mandatory. The response is a JSON data structure as shown below:
+```
+{
+    portal : {
+        host : "...",
+        timestamp : ...,
+        service : {
+            name : "...",
+            url : ["...", ..]
+        }
+    }
+}
+```
+The url item is a list of root URL for the service's endpoints. HousePortal will typically point each URL to itself, with the proper path associated with the target. This way the client may not need to refresh the service's URL list as often as if the URL strings were denoting the actual targets.
 
 ## House Library API
 
