@@ -69,7 +69,7 @@ int hp_udp_client (const char *destination, const char *service) {
     hints.ai_flags = AI_ADDRCONFIG;
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
-    if (getaddrinfo (0, service, &hints, &resolved)) return 0;
+    if (getaddrinfo (destination, service, &hints, &resolved)) return 0;
 
     for (cursor = resolved; cursor; cursor = cursor->ai_next) {
 

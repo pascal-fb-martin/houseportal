@@ -38,6 +38,12 @@ In order to support applications not designed to interact with HousePortal, a st
 
 These static redirections never expire.
 
+The HousePortal servers discover each other within the local subnet, using broadcast. However it is necessary to configure at least one static peer when there are multiple subnets and the broadcast packet will not reach all servers:
+
+      'PEER' host ..
+
+These static declarations never expire.
+
 ## Security
 
 A simple form of security is possible by accepting only local UDP packets, i.e. HousePortal to bind its UDP socket to IP address 127.0.0.1. This is typically used when all local applications are trusted, usually because the local machine's access is strictly restricted. That mode is activated when the LOCAL keyword is present in the HousePortal configuration at the time HousePortal starts:
@@ -87,6 +93,19 @@ HousePortal will redirect to the specified port any request which absolute path 
 The registration must be periodic:
 * This allows HousePortal to detect applications that are no longer active.
 * This allows redirections to recover from a HousePortal restart.
+
+All HousePortal servers talk to each other through the PEER message, which follows the syntax below:
+
+      'PEER' time host host[=expiration] .. [SHA-256 signature]
+
+Each instance reports all the peer hosts it knows about, listing itself first. The message is sent as a broadcast, and as a unicast to each statically declared peer. This makes it possible to do discovery even through a router:
+
+* Declare a static peer (or two for redundancy) across the router, on both sides of the router.
+* The static peers declared will receive the unicast message and discover the other peers known to this instance.
+
+The expiration time must be specified when the peer host was not statically configured: this is so that the actual expiration time shared by all instances match an actual detection of this host, not just a second hand report.
+
+Hosts that are statically configured on an instance will be maintained as live as long as this instance is live, even if these hosts are not actually live themselves.
 
 ## Service Discovery
 

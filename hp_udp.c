@@ -38,6 +38,16 @@
  *
  *    Send a data packet to the source address of the last received message.
  *
+ * void hp_udp_broadcast (const char *data, int length) {
+ *
+ *    Send a broadcast packet. Uses IPv4 only (no broadcast on IPv6).
+ *
+ * void hp_udp_unicast (const char *destination, const char *data, int length);
+ *
+ *    Send a unicast packet to the specified destination. This might send
+ *    the packet multiple times if the destination name matches multiple
+ *    addresses, including IPv4 and IPv6 addresses.
+ *
  * LIMITATIONS:
  *
  * Only supports IPv4 addresses for the time being.
@@ -64,9 +74,15 @@ static union {
     struct sockaddr_in  ipv4;
     struct sockaddr_in6 ipv6;
 } UdpReceived;
-int UdpReceivedLength;
+static int UdpReceivedLength;
 
-int UdpReceivedSocket = -1;
+static int UdpReceivedSocket = -1;
+
+static const char *UdpService = 0;
+
+static int Ipv6UdpSocket = -1;
+static int BroadcastUdpSocket = -1;
+static struct sockaddr_in BroadcastAddress;
 
 
 int hp_udp_server (const char *service, int local, int *sockets, int size) {
@@ -76,7 +92,7 @@ int hp_udp_server (const char *service, int local, int *sockets, int size) {
     int count = 0;
     int s;
 
-    static struct addrinfo hints;
+    struct addrinfo hints = {0};
     struct addrinfo *resolved;
     struct addrinfo *cursor;
 
@@ -131,6 +147,22 @@ int hp_udp_server (const char *service, int local, int *sockets, int size) {
                             "Cannot set send buffer to %d: %s",
                             value, strerror(errno));
         }
+        if (!local && cursor->ai_family == AF_INET && BroadcastUdpSocket < 0) {
+            value = 1;
+            if (setsockopt(s, SOL_SOCKET, SO_BROADCAST, &value, sizeof(value)) < 0) {
+                houselog_trace (HOUSE_FAILURE, "HousePortal",
+                                "Cannot enable broadcast: %s", strerror(errno));
+            }
+            BroadcastUdpSocket = s;
+            BroadcastAddress.sin_family = AF_INET;
+            BroadcastAddress.sin_addr.s_addr = INADDR_BROADCAST;
+            BroadcastAddress.sin_port =
+                ((struct sockaddr_in *)(cursor->ai_addr))->sin_port;
+        }
+        if (!local && cursor->ai_family == AF_INET6 && Ipv6UdpSocket < 0) {
+            Ipv6UdpSocket = s;
+            UdpService = strdup(service);
+        }
 
         houselog_trace (HOUSE_INFO, "HousePortal",
                         "UDP socket port %s is open (%s)",
@@ -157,5 +189,40 @@ void hp_udp_response (const char *data, int length) {
 
     sendto (UdpReceivedSocket, data, length, 0,
             (struct sockaddr *)(&UdpReceived), UdpReceivedLength);
+}
+
+void hp_udp_broadcast (const char *data, int length) {
+
+    if (BroadcastUdpSocket < 0) return;
+
+    DEBUG printf ("IPv4 broadcast port %d\n", ntohs(BroadcastAddress.sin_port));
+    sendto (BroadcastUdpSocket, data, length, 0,
+            (struct sockaddr *)(&BroadcastAddress), sizeof(BroadcastAddress));
+}
+
+void hp_udp_unicast (const char *destination, const char *data, int length) {
+
+    struct addrinfo hints = {0};
+    struct addrinfo *resolved;
+    struct addrinfo *cursor;
+
+    hints.ai_flags = AI_ADDRCONFIG;
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+    if (getaddrinfo (destination, UdpService, &hints, &resolved)) return;
+
+    for (cursor = resolved; cursor; cursor = cursor->ai_next) {
+
+        if (cursor->ai_family == AF_INET && BroadcastUdpSocket >= 0) {
+            DEBUG printf ("IPv4 to %s:%s\n", destination, UdpService);
+            sendto (BroadcastUdpSocket, data, length, 0,
+                    cursor->ai_addr, cursor->ai_addrlen);
+        } else if (cursor->ai_family == AF_INET6 && Ipv6UdpSocket >= 0) {
+            DEBUG printf ("IPv6 to %s:%s\n", destination, UdpService);
+            sendto (Ipv6UdpSocket, data, length, 0,
+                    cursor->ai_addr, cursor->ai_addrlen);
+        }
+    }
+    freeaddrinfo (resolved);
 }
 

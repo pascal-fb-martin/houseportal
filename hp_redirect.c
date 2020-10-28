@@ -33,13 +33,18 @@
  *
  * void hp_redirect_list_json (char *buffer, int size);
  *
- *    This function returns a string that represents the current redirect
- *    database, dumped in the JSON format.
+ *    This function populates the buffer with a JSON string that represents
+ *    the current redirect database.
+ *
+ * void hp_redirect_peers_json (char *buffer, int size);
+ *
+ *    This function populates the buffer with a JSON string that represents
+ *    the active peers.
  *
  * void hp_redirect_service_json (const char *service, char *buffer, int size);
  *
- *    This function returns a string that represents the current targets
- *    for the specified service.
+ *    This function populates the buffer with a JSON string that represents
+ *    the active targets for the specified service.
  */
 
 #include <sys/mman.h>
@@ -72,11 +77,19 @@ typedef struct {
     time_t expiration;
 } HttpRedirection;
 
-#define REDIRECT_MAX 1024
+#define REDIRECT_MAX 128
 #define REDIRECT_LIFETIME 600
 
 static int RedirectionCount = 0;
 static HttpRedirection Redirections[REDIRECT_MAX];
+
+typedef struct {
+    char *name;
+    time_t expiration;
+} PortalPeers;
+
+static int PeerCount = 0;
+static PortalPeers Peers[REDIRECT_MAX];
 
 // Cryptographic keys.
 //
@@ -283,6 +296,50 @@ static void AddRedirect (int live, char **token, int count) {
     }
 }
 
+static void AddOnePeer (const char *name, time_t expiration) {
+
+    int i;
+
+    for (i = 0; i < PeerCount; ++i) {
+        if (!strcmp(Peers[i].name, name)) {
+            if (Peers[i].expiration > 0 &&
+                Peers[i].expiration < expiration) { // No downgrade.
+                Peers[i].expiration = expiration;
+                DEBUG printf ("Peer %s updated to %ld\n", name, expiration);
+            }
+            return;
+        }
+    }
+
+    // This is a new peer: add to the list.
+    if (PeerCount < REDIRECT_MAX) {
+        Peers[PeerCount].name = strdup(name);
+        Peers[PeerCount].expiration = expiration;
+        PeerCount += 1;
+    }
+}
+
+static void AddPeers (int live, char **token, int count) {
+
+    int i;
+    time_t default_expiration = (live)?time(0)+REDIRECT_LIFETIME:0;
+
+    if (!strcmp(HostName, token[0])) return; // Got our own packet.
+
+    for (i = 0; i < count; ++i) {
+        time_t expiration = default_expiration;
+        if (live) {
+            // Extract the sender's expiration time.
+            char *s = strchr (token[i], '=');
+            if (s) {
+                expiration = atol(s+1);
+                *s = 0;
+            }
+        }
+        AddOnePeer (token[i], expiration);
+    }
+}
+
 static void DecodeMessage (char *buffer, int live) {
 
     int i, start, count;
@@ -316,7 +373,18 @@ static void DecodeMessage (char *buffer, int live) {
             if (!live) exit(1);
             return;
         }
-        AddRedirect (live, token+live+1, count-1); // Remove the timestamp.
+        AddRedirect (live, token+live+1, count-1); // Remove the keyword.
+
+    } else if (strcmp("PEER", token[0]) == 0) {
+
+        if (live) count -= 1; // Do not count the timestamp.
+        if (count < 2) {
+            houselog_trace (HOUSE_WARNING, "HousePortal",
+                            "Incomplete peer (%d argument)", count);
+            if (!live) exit(1);
+            return;
+        }
+        AddPeers (live, token+live+1, count-1); // remove the keyword
 
     } else if (live) {
 
@@ -440,6 +508,45 @@ static void hp_redirect_udp (int fd, int mode) {
     }
 }
 
+static void hp_redirect_publish (time_t now) {
+
+    int i;
+    int length;
+    char buffer[1400];
+
+    snprintf (buffer, sizeof(buffer), "PEER %ld", now);
+    length = strlen(buffer);
+
+    for (i = 0; i < PeerCount; ++i) {
+        int expiration = Peers[i].expiration;
+        if (expiration >= now)
+            snprintf (buffer+length, sizeof(buffer)-length,
+                      " %s=%ld", Peers[i].name, expiration);
+        else if (!expiration)
+            snprintf (buffer+length, sizeof(buffer)-length,
+                      " %s", Peers[i].name);
+        length += strlen(buffer+length);
+    }
+
+    if (IntermediateDecodeLength) {
+        const char *signature =
+            houseportalhmac (IntermediateDecode[0].method,
+                             IntermediateDecode[0].value,
+                             buffer);
+        if (!signature) return;
+        snprintf (buffer+length, sizeof(buffer)-length,
+                  " %s %s", IntermediateDecode[0].method, signature);
+        length += strlen(buffer+length);
+    }
+
+    DEBUG printf ("Publish: %s\n", buffer);
+    hp_udp_broadcast (buffer, length);
+    for (i = 1; i < PeerCount; ++i) { // Do not send to ourself.
+        if (Peers[i].expiration == 0)
+            hp_udp_unicast (Peers[i].name, buffer, length);
+    }
+}
+
 void hp_redirect_background (void) {
 
     static time_t LastCheck = 0;
@@ -460,6 +567,7 @@ void hp_redirect_background (void) {
             }
         }
         if (!pruned) PruneRedirect (now-3000);
+        hp_redirect_publish (now);
         LastCheck = now;
     }
 }
@@ -513,6 +621,36 @@ void hp_redirect_list_json (char *buffer, int size) {
         if (length + reclen >= size) break;
         length += reclen;
         cursor += reclen;
+    }
+    snprintf (cursor, size-length, "]}}");
+    buffer[size-1] = 0;
+}
+
+void hp_redirect_peers_json (char *buffer, int size) {
+
+    int i;
+    int length;
+    char *cursor;
+    const char *prefix = "";
+    time_t now = time(0);
+
+    length = hp_redirect_preamble (now, buffer, size);
+    cursor = buffer + length;
+
+    snprintf (cursor, size-length, "\"peers\":[");
+    length += strlen(cursor);
+    cursor = buffer + length;
+
+    for (i = 0; i < PeerCount; ++i) {
+
+        time_t expiration = Peers[i].expiration;
+
+        if (expiration && expiration <= now) continue;
+
+        snprintf (cursor, size-length, "%s\"%s\"", prefix, Peers[i].name);
+        length += strlen(cursor);
+        prefix = ",";
+        cursor = buffer + length;
     }
     snprintf (cursor, size-length, "]}}");
     buffer[size-1] = 0;
@@ -579,6 +717,7 @@ void hp_redirect_start (int argc, const char **argv) {
         echttp_option_match ("-portal-port=", argv[i], &port);
     }
 
+    AddOnePeer (HostName, 0); // List ourself first.
     LoadConfig (ConfigurationPath);
 
     count = hp_udp_server (port, RestrictUdp2Local, udp, 16);

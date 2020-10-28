@@ -64,6 +64,16 @@ static const char *hp_portal_list (const char *method, const char *uri,
     return buffer;
 }
 
+static const char *hp_portal_peers (const char *method, const char *uri,
+                                    const char *data, int length) {
+    static char buffer[8192];
+
+    buffer[0] = 0;
+    hp_redirect_peers_json (buffer, sizeof(buffer));
+    echttp_content_type_json ();
+    return buffer;
+}
+
 static const char *hp_portal_service (const char *method, const char *uri,
                                       const char *data, int length) {
     static char buffer[8192];
@@ -105,6 +115,7 @@ int main (int argc, const char **argv) {
     echttp_open (argc, argv);
     houselog_initialize ("portal", argc, argv);
     echttp_route_uri ("/portal/list", hp_portal_list);
+    echttp_route_uri ("/portal/peers", hp_portal_peers);
     echttp_route_uri ("/portal/service", hp_portal_service);
     echttp_static_route ("/", "/usr/share/house/public");
     hp_redirect_start (argc, argv);
