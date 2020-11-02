@@ -117,11 +117,26 @@ This service discovery is not concerned with parallelism or clustering: the clie
 
 The intent of the HousePortal service discovery is to provide a single endpoint on each server from which services hosted by this server can be discovered. For example a client would query all known servers to find on which servers reside the services it need to access. HousePortal is not intended to act as a global service discovery service, i.e. a single endpoint that will consolidate all the service configuration information for a complete network.
 
-The service discovery web API was made simple to keep it simple to use:
+The list of server to query can itself be discovered by sending a request to the local HousePortal server (See the description of the PEER message in a previous section). Thus any discovery takes two phase:
+* The first phase is to request the list of known HousePortal servers to the local one:
+```
+GET /portal/peers
+```
+The response is a JSON object with the list of known HousePortal server names:
+```
+{
+    portal : {
+        host : "...",
+        timestamp : ...,
+        peers : ["...", ..]
+    }
+}
+```
+* The second phase is to request the list of known services to each of the listed HousePortal servers:
 ```
 GET /portal/service?name=...
 ```
-The name parameter is mandatory. The response is a JSON data structure as shown below:
+The name parameter is mandatory. The response is a JSON object as shown below:
 ```
 {
     portal : {
@@ -148,7 +163,7 @@ First the application must include the client header file:
 ```
 #include "houseportalclient.h"
 ```
-The client must then initialize the client interface:
+The application must then initialize the client interface:
 ```
 void houseportal_initialize (int argc, const char **argv);
 ```
@@ -165,6 +180,36 @@ Once all this was done, the application must periodically renew its paths:
 ```
 void houseportal_renew (void);
 ```
+
+### Discovery client API
+
+The HousePortal web API for discovery can be used raw, or else through a discovery client module that hides the complete data flow, performs the discovery in an asynchronous mode and caches the result.
+
+First the application must include the client header file:
+```
+#include "housediscover.h"
+```
+The application must then initialize the client interface:
+```
+void housediscover_initialize (int argc, const char **argv);
+```
+The application must then proceed with the background discovery, either periodically or, whenever possible, at least 10 seconds before the result is needed:
+```
+void house_discover (const char *service);
+```
+This function must be called for each service that the application needs. It is asynchronous: the result of the discovery wil be available later, when the HousePortal servers responses have been received.
+
+The application gets the result of the discovery by walking through the local discovery cache:
+```
+typedef void house_discover_consumer (void *context, const char *url);
+
+void house_discovered (const char *service, void *context,
+                       house_discover_consumer *consumer);
+```
+
+Note that there is no indication of when  the discovery is complete, since some HousePortal may never answer. No matter the pending discovery status, the local cache always contains the latest up-to-date information, but this result might be incomplete if a discovery is pending.
+
+Because the discovery mechanism involves multiple HTTP queries, it is recommended not to proceed with the discovery too frequently.
 
 ### Log API
 

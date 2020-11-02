@@ -1,6 +1,12 @@
 
 OBJS= hp_udp.o hp_redirect.o houseportal.o houseportalhmac.o
-LIBOJS= houselog.o houseportalclient.o houseportaludp.o houseportalhmac.o
+LIBOJS= houselog.o \
+        houseportalclient.o \
+        houseportaludp.o \
+        houseportalhmac.o \
+        housediscover.o
+
+EXPORT_INCLUDE=houselog.h houseportalclient.h housediscover.h
 
 all: libhouseportal.a houseportal
 
@@ -31,9 +37,9 @@ dev:
 	cp libhouseportal.a /usr/local/lib
 	chown root:root /usr/local/lib/libhouseportal.a
 	chmod 644 /usr/local/lib/libhouseportal.a
-	cp houselog.h houseportalclient.h /usr/local/include
-	chown root:root /usr/local/include/houselog.h /usr/local/include/houseportalclient.h
-	chmod 644 /usr/local/include/houselog.h /usr/local/include/houseportalclient.h
+	cp $(EXPORT_INCLUDE) /usr/local/include
+	for i in $(EXPORT_INCLUDE) ; do chown root:root /usr/local/include/$$i ; done
+	for i in $(EXPORT_INCLUDE) ; do chmod 644 /usr/local/include/$$i ; done
 
 install: dev
 	if [ -e /etc/init.d/houseportal ] ; then systemctl stop houseportal ; fi
@@ -55,8 +61,9 @@ install: dev
 uninstall:
 	systemctl stop houseportal
 	systemctl disable houseportal
+	for i in $(EXPORT_INCLUDE) ; do rm -f /usr/local/include/$$i ; done
 	rm -f /usr/local/bin/houseportal /usr/local/lib/libhouseportal.a
-	rm -f /etc/init.d/houseportal /usr/local/include/houseportalclient.h
+	rm -f /etc/init.d/houseportal
 	systemctl daemon-reload
 
 purge: uninstall
