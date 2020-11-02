@@ -195,16 +195,17 @@ void housediscover_initialize (int argc, const char **argv);
 ```
 The application must then proceed with the background discovery, either periodically or, whenever possible, at least 10 seconds before the result is needed:
 ```
-void house_discover (const char *service);
+void housediscover (const char *service);
 ```
 This function must be called for each service that the application needs. It is asynchronous: the result of the discovery wil be available later, when the HousePortal servers responses have been received.
 
 The application gets the result of the discovery by walking through the local discovery cache:
 ```
-typedef void house_discover_consumer (void *context, const char *url);
+typedef void housediscover_consumer
+                 (const char *service, void *context, const char *url);
 
-void house_discovered (const char *service, void *context,
-                       house_discover_consumer *consumer);
+void housediscovered (const char *service, void *context,
+                      housediscover_consumer *consumer);
 ```
 
 Note that there is no indication of when  the discovery is complete, since some HousePortal may never answer. No matter the pending discovery status, the local cache always contains the latest up-to-date information, but this result might be incomplete if a discovery is pending.

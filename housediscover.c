@@ -22,11 +22,11 @@
  *
  * SYNOPSYS:
  *
- * void house_discover_initialize (int argc, const char **argv);
+ * void housediscover_initialize (int argc, const char **argv);
  *
  *    Must be called first, with the command line arguments.
  *
- * void house_discover (const char *service);
+ * void housediscover (const char *service);
  *
  *    Search for all providers for the specified service on the network.
  *    This is an asynchronous process: the actual discovery will take place
@@ -36,8 +36,8 @@
  *    Note that doing a discovery is expensive (it involves multiple HTTP
  *    queries), so doing it only when needed might be a good idea..
  *
- * void house_discovered (const char *service, void *context,
- *                        house_discover_consumer *consumer);
+ * void housediscovered (const char *service, void *context,
+ *                       housediscover_consumer *consumer);
  *
  *    Retrieve the result of the latest discovery. This is a classic iterator
  *    design: the consumer function is called for each matching item found.
@@ -55,32 +55,32 @@
 #include "houselog.h"
 #include "housediscover.h"
 
-
 static const char *LocalPortalServer = "localhost";
-static echttp_catalog PortalServices;
 
-static time_t PortalServiceTimestamp = 0;
+static echttp_catalog DiscoveryCache;
 
+static time_t DiscoveryTimestamp = 0;
 
-void house_discover_initialize (int argc, const char **argv) {
+#define DEBUG if (echttp_isdebug()) printf
 
-    const char *service = "70";
-    int debug = 0;
+void housediscover_initialize (int argc, const char **argv) {
+
     int i;
 
     for (i = 1; i < argc; ++i) {
         if (echttp_option_match("-portal-server=", argv[i], &LocalPortalServer))
             continue;
     }
+    DEBUG ("local portal server: %s\n", LocalPortalServer);
 }
 
-static void houseportal_service_response (void *origin,
-                                          int status, char *data, int length) {
+static void housediscover_service_response
+                (void *origin, int status, char *data, int length) {
 
     const char *service = (char *)origin;
     ParserToken tokens[100];
+    int count = 100;
     int innerlist[100];
-    int count;
     int i;
 
     if (status != 200) {
@@ -111,6 +111,7 @@ static void houseportal_service_response (void *origin,
 
     // Update the list of services.
     //
+    DEBUG ("processing list of providers for %s.\n", service);
     time_t now = time(0);
 
     for (i = 0; i < n; ++i) {
@@ -121,70 +122,78 @@ static void houseportal_service_response (void *origin,
             continue;
         }
         const char *old =
-            echttp_catalog_refresh (&PortalServices,
+            echttp_catalog_refresh (&DiscoveryCache,
                                     strdup(inner->value.string), service, now);
         if (old) free((char *)old);
     }
 }
 
-static void houseportal_peers_query (const char *service) {
+static void housediscover_peers_query (const char *service) {
 
     int i;
 
-    for (i = 1; i < PortalServices.count; ++i) {
-        if (PortalServices.item[i].timestamp < PortalServiceTimestamp) continue;
-        if (strcmp (PortalServices.item[i].value, "portal")) continue;
+    for (i = 1; i <= DiscoveryCache.count; ++i) {
+        if (DiscoveryCache.item[i].timestamp < DiscoveryTimestamp) continue;
+        if (strcmp (DiscoveryCache.item[i].value, "portal")) continue;
 
         char url[300];
         snprintf (url, sizeof(url),
-                  "%s?name=%s", PortalServices.item[i].name, service);
+                  "%s?name=%s", DiscoveryCache.item[i].name, service);
         const char *error = echttp_client ("GET", url);
         if (error) {
-            houselog_trace (HOUSE_FAILURE, PortalServices.item[i].name, "%s", error);
+            DEBUG ("error on %s: %s.\n", url, error);
+            houselog_trace (HOUSE_FAILURE, DiscoveryCache.item[i].name, "%s", error);
             continue;
         }
-        echttp_submit (0, 0, houseportal_service_response, (void *)service);
+        echttp_submit (0, 0, housediscover_service_response, (void *)service);
+        DEBUG ("service request %s submited.\n", url);
     }
 }
 
-static void houseportal_peers_response (void *origin,
-                                        int status, char *data, int length) {
+static void housediscover_peers_response (void *origin,
+                                          int status, char *data, int length) {
 
     ParserToken tokens[100];
     int innerlist[100];
-    int count;
+    int count = 100;
     int i;
 
     time_t now = time(0);
 
     if (status != 200) {
+        DEBUG ("HTTP error %d on peers request\n", status);
         houselog_trace (HOUSE_FAILURE, "peers", "HTTP error %d", status);
         return;
     }
 
     const char *error = echttp_json_parse (data, tokens, &count);
     if (error) {
+        DEBUG ("JSON error on peers request: %s\n", error);
         houselog_trace (HOUSE_FAILURE, "peers", "JSON syntax error, %s", error);
         return;
     }
     if (count <= 0) {
+        DEBUG ("JSON empty %d on peers request\n", error);
         houselog_trace (HOUSE_FAILURE, "peers", "no data");
         return;
     }
     int peers = echttp_json_search (tokens, ".portal.peers");
     int n = tokens[peers].length;
     if (n <= 0 || n > 100) {
+        DEBUG ("no data %d on peers request\n", error);
         houselog_trace (HOUSE_FAILURE, "peers", "empty zone data");
         return;
     }
 
     error = echttp_json_enumerate (tokens+peers, innerlist);
     if (error) {
+        DEBUG ("no peers array %d on peers request\n", error);
         houselog_trace (HOUSE_FAILURE, "peers", "%s", error);
         return;
     }
 
-    PortalServiceTimestamp = time(0);
+    DEBUG ("processing peers result.\n");
+    DiscoveryTimestamp = time(0);
 
     for (i = 0; i < n; ++i) {
         ParserToken *inner = tokens + peers + innerlist[i];
@@ -197,53 +206,57 @@ static void houseportal_peers_response (void *origin,
         snprintf (url, sizeof(url),
                   "http://%s/portal/service", inner->value.string);
         const char *old =
-            echttp_catalog_refresh (&PortalServices,
+            echttp_catalog_refresh (&DiscoveryCache,
                                     strdup(url), "portal",
-                                    PortalServiceTimestamp);
+                                    DiscoveryTimestamp);
         if (old) free((char *)old);
+        DEBUG ("peer %s found.\n", url);
     }
 
     // Now that we have received a new list of portal servers, query them.
-    houseportal_peers_query ((const char *)origin);
+    housediscover_peers_query ((const char *)origin);
 }
 
-void house_discover (const char *service) {
+void housediscover (const char *service) {
 
-    static time_t PortalServiceRequest = 0;
+    static time_t DiscoveryRequest = 0;
     time_t now = time(0);
 
-    if (PortalServiceRequest + 60 < now) {
+    if (DiscoveryRequest + 60 < now) {
 
         // The last query for portal servers is old enough: renew the list.
         char url[100];
-        snprintf (url, sizeof(url), "http://%s/portal/peers");
+        snprintf (url, sizeof(url),
+                  "http://%s/portal/peers", LocalPortalServer);
         const char *error = echttp_client ("GET", url);
         if (error) {
+            DEBUG ("cannot access %s: %s\n", url, error);
             houselog_trace (HOUSE_FAILURE, "peers",
-                            "cannot access %s", LocalPortalServer);
+                            "cannot access %s: %s", url, error);
             return;
         }
-        echttp_submit (0, 0, houseportal_peers_response, (void *)service);
+        echttp_submit (0, 0, housediscover_peers_response, (void *)service);
+        DEBUG ("peer request %s submited\n", url);
 
-        PortalServiceRequest = now;
+        DiscoveryRequest = now;
 
     } else {
 
         // Reuse the list of portal servers we already have.
-        houseportal_peers_query (service);
+        housediscover_peers_query (service);
     }
 }
 
-void house_discovered (const char *service, void *context,
-                       house_discover_consumer *consumer) {
+void housediscovered (const char *service, void *context,
+                      housediscover_consumer *consumer) {
 
     int i;
 
-    for (i = 1; i < PortalServices.count; ++i) {
-        if (PortalServices.item[i].timestamp < PortalServiceTimestamp) continue;
-        if (strcmp (PortalServices.item[i].value, service)) continue;
+    for (i = 1; i <= DiscoveryCache.count; ++i) {
+        if (DiscoveryCache.item[i].timestamp < DiscoveryTimestamp) continue;
+        if (strcmp (DiscoveryCache.item[i].value, service)) continue;
 
-        consumer (context, PortalServices.item[i].name);
+        consumer (service, context, DiscoveryCache.item[i].name);
     }
 }
 

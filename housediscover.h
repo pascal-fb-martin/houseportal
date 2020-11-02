@@ -21,12 +21,13 @@
  * housediscover.h - The client side of the houseportal discovery.
  */
 
-typedef void house_discover_consumer (void *context, const char *url);
+void housediscover_initialize (int argc, const char **argv);
 
-void house_discover_initialize (int argc, const char **argv);
+void housediscover (const char *service);
 
-void house_discover (const char *service);
+typedef void housediscover_consumer
+                 (const char *service, void *context, const char *url);
 
-void house_discovered (const char *service, void *context,
-                       house_discover_consumer *consumer);
+void housediscovered (const char *service, void *context,
+                      housediscover_consumer *consumer);
 

@@ -23,6 +23,8 @@
  * houselog_trace() should be used with the predefined constant, as in:
  *    houselog_trace (HOUSE_INFO, "myobject", "my message is %s", "this");
  */
+#include <time.h>
+
 void houselog_initialize (const char *application,
                             int argc, const char **argv);
 

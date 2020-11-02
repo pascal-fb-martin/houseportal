@@ -8,7 +8,7 @@ LIBOJS= houselog.o \
 
 EXPORT_INCLUDE=houselog.h houseportalclient.h housediscover.h
 
-all: libhouseportal.a houseportal
+all: libhouseportal.a houseportal housediscover
 
 main: houseportal.c
 
@@ -29,6 +29,9 @@ libhouseportal.a: $(LIBOJS)
 houseportal: $(OBJS) libhouseportal.a
 	gcc -g -O -o houseportal $(OBJS) libhouseportal.a -lechttp -lcrypto -lrt
 
+housediscover: housediscoverclient.c libhouseportal.a
+	gcc -g -O -o housediscover housediscoverclient.c libhouseportal.a -lechttp -lcrypto -lrt
+
 package:
 	mkdir -p packages
 	tar -cf packages/houseportal-`date +%F`.tgz houseportal init.debian Makefile
@@ -37,6 +40,9 @@ dev:
 	cp libhouseportal.a /usr/local/lib
 	chown root:root /usr/local/lib/libhouseportal.a
 	chmod 644 /usr/local/lib/libhouseportal.a
+	cp housediscover /usr/local/bin
+	chown root:root /usr/local/bin/housediscover
+	chmod 755 /usr/local/bin/housediscover
 	cp $(EXPORT_INCLUDE) /usr/local/include
 	for i in $(EXPORT_INCLUDE) ; do chown root:root /usr/local/include/$$i ; done
 	for i in $(EXPORT_INCLUDE) ; do chmod 644 /usr/local/include/$$i ; done
@@ -59,10 +65,11 @@ install: dev
 	systemctl start houseportal
 
 uninstall:
+	for i in $(EXPORT_INCLUDE) ; do rm -f /usr/local/include/$$i ; done
+	rm -f /usr/local/bin/housediscover /usr/local/lib/libhouseportal.a
+	rm -f /usr/local/bin/houseportal
 	systemctl stop houseportal
 	systemctl disable houseportal
-	for i in $(EXPORT_INCLUDE) ; do rm -f /usr/local/include/$$i ; done
-	rm -f /usr/local/bin/houseportal /usr/local/lib/libhouseportal.a
 	rm -f /etc/init.d/houseportal
 	systemctl daemon-reload
 
