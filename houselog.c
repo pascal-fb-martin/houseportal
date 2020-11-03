@@ -428,7 +428,7 @@ static void houselog_backup (char id, const char *method) {
         const char *archivename = houselog_name (&oldfile, id, 1);
 
         snprintf (command, sizeof(command),
-                  "/bin/%s -u %s %s", method, tempname, archivename);
+                  "/bin/%s -f -u %s %s", method, tempname, archivename);
         system (command);
     }
 }
