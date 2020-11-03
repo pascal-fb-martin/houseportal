@@ -121,7 +121,7 @@ static const char *houselog_name (const struct tm *local, char id, int write) {
               local->tm_year + 1900, local->tm_mon + 1, local->tm_mday);
 
     if (write) {
-        snprintf (buffer, sizeof(buffer), "mkdir -p %s", path);
+        snprintf (buffer, sizeof(buffer), "/bin/mkdir -p %s", path);
         system (buffer);
     }
 
@@ -428,7 +428,7 @@ static void houselog_backup (char id, const char *method) {
         const char *archivename = houselog_name (&oldfile, id, 1);
 
         snprintf (command, sizeof(command),
-                  "%s -u %s %s", method, tempname, archivename);
+                  "/bin/%s -u %s %s", method, tempname, archivename);
         system (command);
     }
 }
@@ -444,7 +444,7 @@ static void houselog_restore (const struct tm *local, char id) {
     if (stat (archivename, &buffer) == 0) {
         char command[1024];
         snprintf (command, sizeof(command),
-                  "cp -u %s %s", archivename, tempname);
+                  "/bin/cp -u %s %s", archivename, tempname);
         system (command);
     }
 }
