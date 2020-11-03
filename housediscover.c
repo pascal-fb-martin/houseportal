@@ -122,10 +122,12 @@ static void housediscover_service_response
                             "unexpected type %d", inner->type);
             continue;
         }
+        char *url = strdup(inner->value.string);
         const char *old =
-            echttp_catalog_refresh (&DiscoveryCache,
-                                    strdup(inner->value.string), service, now);
-        if (old) free((char *)old);
+            echttp_catalog_refresh (&DiscoveryCache, url, service, now);
+
+        // The url storage is no longer used if there was an entry already.
+        if (old) free((char *)url);
     }
 }
 
@@ -203,15 +205,16 @@ static void housediscover_peers_response (void *origin,
                             "unexpected type %d", inner->type);
             continue;
         }
-        char url[256];
-        snprintf (url, sizeof(url),
+        char buffer[256];
+        snprintf (buffer, sizeof(buffer),
                   "http://%s/portal/service", inner->value.string);
+        char *url = strdup(buffer);
         const char *old =
             echttp_catalog_refresh (&DiscoveryCache,
-                                    strdup(url), "portal",
-                                    DiscoveryTimestamp);
-        if (old) free((char *)old);
-        DEBUG ("peer %s found.\n", url);
+                                    url, "portal", DiscoveryTimestamp);
+        // The url storage is no longer used if there was an entry already.
+        if (old) free((char *)url);
+        DEBUG ("peer %s found.\n", buffer);
     }
 
     // Now that we have received a new list of portal servers, query them.
