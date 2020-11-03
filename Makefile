@@ -58,7 +58,6 @@ install: dev
 	chown root:root /usr/local/bin/houseportal /etc/init.d/houseportal
 	chmod 755 /usr/local/bin/houseportal /etc/init.d/houseportal
 	touch /etc/default/houseportal
-	mkdir -p /etc/houseportal
 	touch /etc/house/portal.config
 	systemctl daemon-reload
 	systemctl enable houseportal
