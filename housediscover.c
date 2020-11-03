@@ -99,7 +99,8 @@ static void housediscover_service_response
     }
     int list = echttp_json_search (tokens, ".portal.service.url");
     int n = tokens[list].length;
-    if (n <= 0 || n > 100) {
+    if (n == 0) return; // That is a normal case (no service on that server)
+    if (n < 0 || n > 100) {
         houselog_trace (HOUSE_FAILURE, service, "empty zone data");
         return;
     }
