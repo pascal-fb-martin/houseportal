@@ -117,7 +117,7 @@ int main (int argc, const char **argv) {
     echttp_route_uri ("/portal/list", hp_portal_list);
     echttp_route_uri ("/portal/peers", hp_portal_peers);
     echttp_route_uri ("/portal/service", hp_portal_service);
-    echttp_static_route ("/", "/usr/share/house/public");
+    echttp_static_route ("/", "/usr/local/share/house/public");
     hp_redirect_start (argc, argv);
     echttp_background (&hp_background);
     houselog_trace (HOUSE_INFO, "HousePortal", "Started");

@@ -96,6 +96,7 @@ struct EventHistory {
 
 static struct EventHistory History[HISTORY_DEPTH];
 static int HistoryCursor = 0;
+static long HistoryLatestId = 0;
 
 FILE *EventFile = 0;
 FILE *TraceFile = 0;
@@ -170,6 +171,17 @@ static void safecpy (char *t, const char *s, int size) {
     t[size-1] = 0;
 }
 
+static void houselog_updated (void) {
+
+    if (HistoryLatestId == 0) {
+        // Seed the latest event ID based on the first event's time.
+        // This makes it random enough to make its value change after
+        // a restart.
+        HistoryLatestId = (long) (time(0) & 0xffff);
+    }
+    HistoryLatestId += 1;
+}
+
 void houselog_trace (const char *file, int line, const char *level,
                      const char *object,
                      const char *format, ...) {
@@ -207,6 +219,7 @@ void houselog_trace (const char *file, int line, const char *level,
                  (long) timestamp, level, file, line, object, text);
         fflush (TraceFile);
     }
+    houselog_updated();
 }
 
 void houselog_event (time_t timestamp,
@@ -253,6 +266,14 @@ void houselog_event (time_t timestamp,
         fprintf (EventFile, "%ld,\"%s\",\"%s\",\"%s\",\"%s\"\n",
                  (long) timestamp, category, object, action, text);
     }
+    houselog_updated();
+}
+
+static int houselog_getheader (time_t now, char *buffer, int size) {
+
+    return snprintf (buffer, sizeof(buffer),
+                    "{\"%s\":{\"timestamp\":%ld,\"host\":\"%s\",\"latest\":%ld",
+                    LogName, (long)now, LocalHost, HistoryLatestId);
 }
 
 static const char *houselog_get (struct tm *local, const char *id) {
@@ -264,10 +285,8 @@ static const char *houselog_get (struct tm *local, const char *id) {
     char *eol;
     const char *prefix = "";
 
-    snprintf (buffer, sizeof(buffer),
-              "{\"%s\":{\"timestamp\":%d,\"host\":\"%s\",\"%s\":[",
-              LogName, time(0), LocalHost, id);
-    length = strlen(buffer);
+    length = houselog_getheader (time(0), buffer, sizeof(buffer));
+    length += snprintf (buffer+length, sizeof(buffer)-length, ",\"%s\":[", id);
 
     houselog_backup (id[0], "cp"); // Make sure the file is up-to-date.
     FILE *fd = houselog_access (local, id[0]);
@@ -308,10 +327,8 @@ static const char *houselog_live (time_t now) {
     int length;
     int i;
 
-    snprintf (buffer, sizeof(buffer),
-              "{\"%s\":{\"timestamp\":%ld,\"host\":\"%s\",\"event\":[",
-              LogName, (long)now, LocalHost);
-    length = strlen(buffer);
+    length = houselog_getheader (now, buffer, sizeof(buffer));
+    length += snprintf (buffer+length, sizeof(buffer)-length, ",\"events\":[");
 
     for (i = HistoryCursor + 1; i != HistoryCursor; ++i) {
         if (i >= HISTORY_DEPTH) {
@@ -334,10 +351,19 @@ static const char *houselog_live (time_t now) {
             buffer[length] = 0;
             break;
         }
-        length += strlen(buffer+length);
+        length += wrote;
         prefix = ",";
     }
     snprintf (buffer+length, sizeof(buffer)-length, "]}}");
+    return buffer;
+}
+
+static const char *houselog_weblatest (const char *method, const char *uri,
+                                       const char *data, int length) {
+
+    static char buffer[256];
+    int written = houselog_getheader (time(0), buffer, sizeof(buffer));
+    snprintf (buffer+written, sizeof(buffer)-written, "}}");
     return buffer;
 }
 
@@ -467,6 +493,10 @@ void houselog_initialize (const char *name, int argc, const char **argv) {
     snprintf (uri, sizeof(uri), "/%s/log/events", LogName);
     echttp_route_uri (strdup(uri), houselog_webget);
 
+    snprintf (uri, sizeof(uri), "/%s/log/latest", LogName);
+    echttp_route_uri (strdup(uri), houselog_weblatest);
+
+    snprintf (uri, sizeof(uri), "/%s/log/files", LogName);
     snprintf (uri, sizeof(uri), "/%s/log/files", LogName);
     echttp_static_route (strdup(uri), LogFolder);
 
