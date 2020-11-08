@@ -89,7 +89,7 @@ struct EventHistory {
     char   category[32];
     char   object[32];
     char   action[16];
-    char   description[48];
+    char   description[128];
 };
 
 #define HISTORY_DEPTH 256
