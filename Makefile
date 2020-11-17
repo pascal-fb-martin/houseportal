@@ -60,7 +60,7 @@ install: dev
 	mkdir -p /usr/local/share/house/public
 	cp public/* /usr/local/share/house/public
 	chown root:root /usr/local/share/house/public/*
-	chmod 755 /usr/local/share/house/public/*
+	chmod 644 /usr/local/share/house/public/*
 	touch /etc/default/houseportal
 	touch /etc/house/portal.config
 	systemctl daemon-reload
