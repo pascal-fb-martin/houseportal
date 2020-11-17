@@ -57,6 +57,10 @@ install: dev
 	cp init.debian /etc/init.d/houseportal
 	chown root:root /usr/local/bin/houseportal /etc/init.d/houseportal
 	chmod 755 /usr/local/bin/houseportal /etc/init.d/houseportal
+	mkdir -p /usr/local/share/house/public
+	cp public/* /usr/local/share/house/public
+	chown root:root /usr/local/share/house/public/*
+	chmod 755 /usr/local/share/house/public/*
 	touch /etc/default/houseportal
 	touch /etc/house/portal.config
 	systemctl daemon-reload
