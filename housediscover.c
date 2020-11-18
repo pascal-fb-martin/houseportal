@@ -124,7 +124,7 @@ static void housediscover_service_response
 
     // Update the list of services.
     //
-    DEBUG ("processing list of service providers");
+    DEBUG ("processing list of service providers\n");
     time_t now = time(0);
 
     for (i = 0; i < n; ++i) {
@@ -134,9 +134,16 @@ static void housediscover_service_response
                             "unexpected type %d", inner->type);
             continue;
         }
-        int service = echttp_json_search (tokens, ".service");
-        int path = echttp_json_search (tokens, ".path");
-        if (service <= 0 || path <= 0) continue;
+        int service = echttp_json_search (inner, ".service");
+        if (service <= 0) continue; // Not declared as a service.
+        int path = echttp_json_search (inner, ".path");
+        if (path <= 0) {
+            houselog_trace (HOUSE_FAILURE, hostname,
+                            "invalid redirect (no path)");
+            DEBUG ("invalid redirect entry %d (no path) from %s\n",
+                   i, hostname);
+            continue;
+        }
 
         char fullurl[256];
         snprintf (fullurl, sizeof(fullurl),
