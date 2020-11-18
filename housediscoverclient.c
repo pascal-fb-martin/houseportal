@@ -59,7 +59,7 @@ static void background (int fd, int mode) {
 
     if (Counter == 1) {
         DEBUG ("Starting the discovery\n");
-        housediscover ();
+        housediscover (now);
     }
     Counter += 1;
 

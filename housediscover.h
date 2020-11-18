@@ -23,7 +23,7 @@
 
 void housediscover_initialize (int argc, const char **argv);
 
-void housediscover (void);
+void housediscover (time_t now);
 
 typedef void housediscover_consumer
                  (const char *service, void *context, const char *url);

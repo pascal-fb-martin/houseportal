@@ -29,12 +29,9 @@
  * void housediscover (void);
  *
  *    Search for all providers for all service on the network.
- *    This is an asynchronous process: the actual discovery will take place
- *    later, when receiving responses. One way to use this function is to
- *    call it periodically, or a minute before the results is needed.
- *
- *    Note that doing a discovery is expensive (it involves multiple HTTP
- *    queries), so doing it only when needed might be a good idea..
+ *    This is an asynchronous process: the actual discovery will take
+ *    place later, when receiving responses. This function must be called
+ *    periodically.
  *
  * void housediscovered (const char *service, void *context,
  *                       housediscover_consumer *consumer);
@@ -147,7 +144,7 @@ static void housediscover_service_response
 
         char *name = strdup(inner[service].value.string);
         char *url = strdup(fullurl);
-        DEBUG ("detected new service %s: %s\n", name, url);
+        DEBUG ("detected new service %s at %s\n", name, url);
         const char *old =
             echttp_catalog_refresh (&DiscoveryCache, url, name, now);
 
@@ -250,34 +247,31 @@ static void housediscover_peers_response (void *origin,
     housediscover_peers_query ();
 }
 
-void housediscover (void) {
+void housediscover (time_t now) {
 
     static time_t DiscoveryRequest = 0;
-    time_t now = time(0);
 
-    if (DiscoveryRequest + 60 < now) {
-
-        // The last query for portal servers is old enough: renew the list.
-        char url[100];
-        snprintf (url, sizeof(url),
-                  "http://%s/portal/peers", LocalPortalServer);
-        const char *error = echttp_client ("GET", url);
-        if (error) {
-            DEBUG ("cannot access %s: %s\n", url, error);
-            houselog_trace (HOUSE_FAILURE, "peers",
-                            "cannot access %s: %s", url, error);
-            return;
-        }
-        echttp_submit (0, 0, housediscover_peers_response, 0);
-        DEBUG ("peer request %s submited\n", url);
-
-        DiscoveryRequest = now;
-
+    if (DiscoveryPendingTimestamp) {
+        // Settled time: do discovery once every 10 minutes.
+        if (now < DiscoveryRequest + 600) return;
     } else {
-
-        // Reuse the list of portal servers we already have.
-        housediscover_peers_query ();
+        // Initialization time: fast speed (1 mn) until we get a response.
+        if (now < DiscoveryRequest + 60) return;
     }
+
+    char url[100];
+    snprintf (url, sizeof(url), "http://%s/portal/peers", LocalPortalServer);
+    const char *error = echttp_client ("GET", url);
+    if (error) {
+        DEBUG ("cannot access %s: %s\n", url, error);
+        houselog_trace (HOUSE_FAILURE, "peers",
+                        "cannot access %s: %s", url, error);
+        return;
+    }
+    echttp_submit (0, 0, housediscover_peers_response, 0);
+    DEBUG ("peer request %s submitted\n", url);
+
+    DiscoveryRequest = now;
 }
 
 void housediscovered (const char *service, void *context,
