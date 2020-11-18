@@ -59,9 +59,7 @@ static void background (int fd, int mode) {
 
     if (Counter == 1) {
         DEBUG ("Starting the discovery\n");
-        for (i = 0; i < ServiceCount; ++i) {
-            housediscover (Services[i]);
-        }
+        housediscover ();
     }
     Counter += 1;
 

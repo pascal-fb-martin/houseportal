@@ -59,7 +59,7 @@ static const char *hp_portal_list (const char *method, const char *uri,
     static char buffer[8192];
 
     buffer[0] = 0;
-    hp_redirect_list_json (buffer, sizeof(buffer));
+    hp_redirect_list_json (0, buffer, sizeof(buffer));
     echttp_content_type_json ();
     return buffer;
 }
@@ -79,13 +79,12 @@ static const char *hp_portal_service (const char *method, const char *uri,
     static char buffer[8192];
 
     const char *name = echttp_parameter_get ("name");
-    if (!name) {
-        echttp_error (404, "service name is missing");
-        return "";
-    }
 
     buffer[0] = 0;
-    hp_redirect_service_json (name, buffer, sizeof(buffer));
+    if (name)
+        hp_redirect_service_json (name, buffer, sizeof(buffer));
+    else
+        hp_redirect_list_json (1, buffer, sizeof(buffer));
     echttp_content_type_json ();
     return buffer;
 }

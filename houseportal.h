@@ -31,7 +31,7 @@
 #define DEBUG if (echttp_isdebug())
 
 void hp_redirect_start (int argc, const char **argv);
-void hp_redirect_list_json (char *buffer, int size);
+void hp_redirect_list_json (int services, char *buffer, int size);
 void hp_redirect_peers_json (char *buffer, int size);
 void hp_redirect_service_json (const char *service, char *buffer, int size);
 void hp_redirect_background (void);

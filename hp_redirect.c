@@ -31,10 +31,11 @@
  *    This function should be called periodically. It checks for
  *    and applies configuration changes, prune obsolete items, etc.
  *
- * void hp_redirect_list_json (char *buffer, int size);
+ * void hp_redirect_list_json (int services, char *buffer, int size);
  *
  *    This function populates the buffer with a JSON string that represents
- *    the current redirect database.
+ *    the current redirect database. If services is not 0, only entries
+ *    mapping to a service are listed.
  *
  * void hp_redirect_peers_json (char *buffer, int size);
  *
@@ -44,7 +45,8 @@
  * void hp_redirect_service_json (const char *service, char *buffer, int size);
  *
  *    This function populates the buffer with a JSON string that represents
- *    the active targets for the specified service.
+ *    the active targets for the specified service. If service is null, all
+ *    services are reported.
  */
 
 #include <sys/mman.h>
@@ -579,7 +581,7 @@ static int hp_redirect_preamble (time_t now, char *buffer, int size) {
     return strlen(buffer);
 }
 
-void hp_redirect_list_json (char *buffer, int size) {
+void hp_redirect_list_json (int services, char *buffer, int size) {
 
     int i;
     int length;
@@ -603,6 +605,8 @@ void hp_redirect_list_json (char *buffer, int size) {
         if (Redirections[i].service)
             snprintf (service, sizeof(service),
                       "\"service\":\"%s\",",Redirections[i].service);
+        else if (services)
+            continue; // Skip if no service was declared.
         else
             service[0] = 0;
 
