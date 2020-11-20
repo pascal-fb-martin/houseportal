@@ -1,6 +1,30 @@
 @import url(http://fonts.googleapis.com/css?family=Metrophobic);
 
-.houseevent {
+.housetopcontainer {
+   float: top;
+   width: 100%;
+}
+.housetop {
+   text-align: center;
+   float: top;
+   width: 100%;
+   background-color: #2f2f2f;
+}
+.housetop a {
+   font-family:'Metrophobic', sans-serif;
+   font-size: 30px;
+   color: #f5f5f5;
+   text-decoration: none;
+}
+.housetop span {
+   font-family:'Metrophobic', sans-serif;
+   font-size: 30px;
+   color: #858585;
+   text-decoration: none;
+}
+
+
+.housewidetable {
    font-family: 'Metrophobic', sans-serif;
    text-align: left;
    width: 100%;
