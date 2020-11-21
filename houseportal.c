@@ -95,6 +95,23 @@ static void hp_background (int fd, int mode) {
     hp_redirect_background();
 }
 
+static void hp_portal_protect (const char *method, const char *uri) {
+
+    const char *origin = echttp_attribute_get ("Origin");
+    if (!origin) return; // Not a cross-domain request.
+
+    if (!strcmp (method, "GET")) {
+        echttp_attribute_set ("Access-Control-Allow-Origin", "*");
+        return;
+    }
+    if (!strcmp (method, "OPTIONS")) {
+        echttp_attribute_set ("Access-Control-Allow-Origin", "*");
+        echttp_error (204, "No Content"); // Not an error, but don't process.
+        return;
+    }
+    echttp_error (403, "Forbidden Cross-Domain");
+}
+
 int main (int argc, const char **argv) {
 
     // These strange statements are to make sure that fds 0 to 2 are
@@ -113,6 +130,7 @@ int main (int argc, const char **argv) {
 
     echttp_open (argc, argv);
     houselog_initialize ("portal", argc, argv);
+    echttp_protect (0, hp_portal_protect);
     echttp_route_uri ("/portal/list", hp_portal_list);
     echttp_route_uri ("/portal/peers", hp_portal_peers);
     echttp_route_uri ("/portal/service", hp_portal_service);
