@@ -258,6 +258,10 @@ void housediscover (time_t now) {
 
     static time_t DiscoveryRequest = 0;
 
+    if (!now) { // Manual discovery request (force discovery now)
+        DiscoveryRequest = 0;
+        return;
+    }
     if (DiscoveryPendingTimestamp) {
         // Settled time: do discovery once every 10 minutes.
         if (now < DiscoveryRequest + 600) return;
