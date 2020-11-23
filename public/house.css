@@ -23,6 +23,46 @@
    text-decoration: none;
 }
 
+.housepanel {
+   float: left;
+   width: 40%;
+}
+
+.housepane {
+   border-top-right-radius: 18px;
+   border-bottom-right-radius: 18px;
+   border-top-left-radius: 0px;
+   border-bottom-left-radius: 0px;
+   -webkit-border-top-right-radius: 18px;
+   -webkit-border-bottom-right-radius: 18px;
+   -webkit-border-top-left-radius: 0px;
+   -webkit-border-bottom-left-radius: 0px;
+   -moz-border-top-right-radius: 18px;
+   -moz-border-bottom-right-radius: 18px;
+   -moz-border-top-left-radius: 0px;
+   -moz-border-bottom-left-radius: 0px;
+   background-color: darkgreen;
+   color: #F0F0F0;
+   width: 100%;
+}
+
+.housestatus {
+   font-family: 'Metrophobic', sans-serif;
+   font-size: 20px;
+   text-align: left;
+   display: inline-table;
+   color: white;
+}
+.housetitle {
+   font-family: 'Metrophobic', sans-serif;
+   font-size: 25px;
+   text-align: left;
+}
+.housedata {
+   font-family: 'Metrophobic', sans-serif;
+   font-size: 20px;
+   color: white;
+}
 
 .housewidetable {
    font-family: 'Metrophobic', sans-serif;
