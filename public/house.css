@@ -30,6 +30,12 @@
    width: 100%;
 }
 
+.housewidetable td {
+   font-family:'Metrophobic', sans-serif;
+   font-size: 20px;
+   color: black;
+}
+
 .houseevent tr:nth-child(even) {
   background-color: #E0E0E0;
 }
@@ -39,6 +45,12 @@ h1 {
    font-family:'Metrophobic', sans-serif;
    font-weight: 700;
    text-align: center;
+}
+
+a {
+   font-family:'Metrophobic', sans-serif;
+   font-size: 20px;
+   color: blue;
 }
 
 table {border: 0}

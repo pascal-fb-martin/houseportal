@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel=stylesheet type="text/css" href="/house.css" title="House">
+<script>
+
+function compareService (a, b) {
+    var namea = a.service.toUpperCase();
+    var nameb = b.service.toUpperCase();
+    if (namea < nameb) return -1;
+    if (namea > nameb) return 1;
+    return 0;
+}
+
+function portalShowServices (response) {
+
+   var servicelist = document.getElementById ('servicelist');
+   var services = response.portal.redirect.sort(compareService);
+   var outer = document.createElement("tr");
+
+   var inner = document.createElement("td");
+   var label = document.createElement("span");
+   label.innerHTML = response.portal.host;
+   inner.appendChild(label);
+   outer.appendChild(inner);
+
+   inner = document.createElement("td");
+
+   table2 = document.createElement("table");
+   table2.style = "border-spacing: 100px 2px";
+   var outer2 = document.createElement("tr");
+   for (var i = 0; i < services.length; i++) {
+        var service = services[i];
+
+        var inner2 = document.createElement("td");
+        label = document.createElement("a");
+        label.innerHTML = service.service;
+        label.href = 'http://'+service.target+service.path+'/index.html';
+        inner2.appendChild(label);
+        outer2.appendChild(inner2);
+   }
+   table2.appendChild(outer2);
+   inner.appendChild(table2);
+   outer.appendChild(inner);
+   servicelist.appendChild(outer);
+}
+
+function portalServices (host) {
+    var command = new XMLHttpRequest();
+    command.open("GET", "http://"+host+"/portal/service");
+    command.onreadystatechange = function () {
+        if (command.readyState === 4 && command.status === 200) {
+            portalShowServices (JSON.parse(command.responseText));
+        }
+    }
+    command.send(null);
+}
+
+function portalPeersReceived (response) {
+    var title = response.portal.host+' - Portal';
+    document.getElementsByTagName ('title')[0].innerHTML = title;
+    var peers = response.portal.peers;
+    for (var i = 0; i < peers.length; ++i) {
+        portalServices (peers[i]);
+    }
+}
+
+function portalPeers () {
+    var command = new XMLHttpRequest();
+    command.open("GET", "/portal/peers");
+    command.onreadystatechange = function () {
+        if (command.readyState === 4 && command.status === 200) {
+            portalPeersReceived (JSON.parse(command.responseText));
+        }
+    }
+    command.send(null);
+}
+
+window.onload = function() {
+   portalPeers();
+};
+</script>
+<head>
+   <title></title>
+</head>
+<body>
+   <table class="housetopcontainer">
+   <tr><td>
+   <table class="housetop">
+   <tr>
+   <td><span>Portal</span></td>
+   <td><a href="/events.html">Events</a></td>
+   </tr>
+   </table>
+   </td></tr>
+   </table>
+   <table class="housewidetable" id="servicelist" border="0">
+      <tr>
+         <th width="15%">SERVER</th>
+         <th width="85%">SERVICES</th>
+      </tr>
+   </table>
+</body>
+</html>
+
