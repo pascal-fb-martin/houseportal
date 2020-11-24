@@ -14,35 +14,21 @@ function compareService (a, b) {
 
 function portalShowServices (response) {
 
-   var servicelist = document.getElementById ('servicelist');
+   var table = document.getElementById ('portal-'+response.portal.host);
    var services = response.portal.redirect.sort(compareService);
+
    var outer = document.createElement("tr");
-
-   var inner = document.createElement("td");
-   var label = document.createElement("span");
-   label.innerHTML = response.portal.host;
-   inner.appendChild(label);
-   outer.appendChild(inner);
-
-   inner = document.createElement("td");
-
-   table2 = document.createElement("table");
-   table2.style = "border-spacing: 100px 2px";
-   var outer2 = document.createElement("tr");
    for (var i = 0; i < services.length; i++) {
         var service = services[i];
 
-        var inner2 = document.createElement("td");
-        label = document.createElement("a");
+        var inner = document.createElement("td");
+        var label = document.createElement("a");
         label.innerHTML = service.service;
         label.href = 'http://'+service.target+service.path+'/index.html';
-        inner2.appendChild(label);
-        outer2.appendChild(inner2);
+        inner.appendChild(label);
+        outer.appendChild(inner);
    }
-   table2.appendChild(outer2);
-   inner.appendChild(table2);
-   outer.appendChild(inner);
-   servicelist.appendChild(outer);
+   table.appendChild(outer);
 }
 
 function portalServices (host) {
@@ -59,8 +45,27 @@ function portalServices (host) {
 function portalPeersReceived (response) {
     var title = response.portal.host+' - Portal';
     document.getElementsByTagName ('title')[0].innerHTML = title;
-    var peers = response.portal.peers;
+    var peers = response.portal.peers.sort();
+
+    var servicelist = document.getElementById ('servicelist');
+
     for (var i = 0; i < peers.length; ++i) {
+        var outer = document.createElement("tr");
+        var inner = document.createElement("td");
+        var label = document.createElement("span");
+        label.innerHTML = peers[i];
+        inner.appendChild(label);
+        outer.appendChild(inner);
+
+        inner = document.createElement("td");
+        table2 = document.createElement("table");
+        table2.id = "portal-"+peers[i];
+        table2.style = "border-spacing: 100px 2px";
+        inner.appendChild(table2);
+
+        outer.appendChild(inner);
+        servicelist.appendChild(outer);
+
         portalServices (peers[i]);
     }
 }
