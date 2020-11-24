@@ -27,6 +27,8 @@ void houseportal_register      (int webport, const char **paths, int count);
 void houseportal_register_more (int webport, const char **paths, int count);
 void houseportal_renew         (void);
 
+const char *houseportal_server (void);
+
 int  hp_udp_client (const char *destination, const char *service);
 void hp_udp_send   (const char *data, int length);
 

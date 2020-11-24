@@ -26,6 +26,12 @@
  *
  *    Initialize the environment required to register redirections.
  *
+ * const char *houseportal_server (void);
+ *
+ *    Return the name of the actual server running HousePortal.
+ *    This server is usually the local host, but it might be different
+ *    if the -portal-server option was used.
+ *
  * void houseportal_signature (const char *cypher, const char *key);
  *
  *    Set a secret key for message signature. This call causes the client
@@ -47,6 +53,7 @@
  *    Renew the previous redirections.
  */
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -67,24 +74,39 @@ static char HousePortalTemporaryBuffer[256]; // Don't make the name obvious.
 static char HousePortalSecondaryBuffer[256]; // Don't make the name obvious.
 static int  HousePortalTemporaryLength;
 
+static const char *HousePortalHost = 0;
+static const char *HousePortalPort = "70";
+
 void houseportal_initialize (int argc, const char **argv) {
 
-    const char *destination = "localhost";
-    const char *service = "70";
     int debug = 0;
     int i;
 
     for (i = 1; i < argc; ++i) {
-        if (echttp_option_match("-portal-port=", argv[i], &service))
+        if (echttp_option_match("-portal-port=", argv[i], &HousePortalPort))
             continue;
-        if (echttp_option_match("-portal-server=", argv[i], &destination))
+        if (echttp_option_match("-portal-server=", argv[i], &HousePortalHost))
             continue;
     }
-    if (hp_udp_client (destination, service) <= 0) {
+
+    // If the portal runs on the local host, uses the actual name of the host
+    // so that this can be used on a remote web client.
+    //
+    if (!HousePortalHost) {
+        char buffer[256];
+        gethostname (buffer, sizeof(buffer));
+        HousePortalHost = strdup(buffer);
+    }
+
+    if (hp_udp_client (HousePortalHost, HousePortalPort) <= 0) {
         fprintf (stderr, "Cannot open UDP sockets to %s:%s\n",
-                 destination, service);
+                 HousePortalHost, HousePortalPort);
         exit(1);
     }
+}
+
+const char *houseportal_server (void) {
+    return HousePortalHost;
 }
 
 void houseportal_signature (const char *cypher, const char *key) {
