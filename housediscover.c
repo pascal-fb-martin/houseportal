@@ -102,7 +102,7 @@ static void housediscover_service_response
         return;
     }
 
-    int host = echttp_json_search (tokens, ".portal.host");
+    int host = echttp_json_search (tokens, ".host");
     int list = echttp_json_search (tokens, ".portal.redirect");
     if (host <= 0 || list <= 0) {
         houselog_trace (HOUSE_FAILURE, service, "invalid data format");
