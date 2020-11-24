@@ -577,7 +577,7 @@ void hp_redirect_background (void) {
 static int hp_redirect_preamble (time_t now, char *buffer, int size) {
 
     snprintf (buffer, size,
-             "{\"portal\":{\"host\":\"%s\",\"timestamp\":%d,", HostName, now);
+             "{\"host\":\"%s\",\"timestamp\":%d,\"portal\":{", HostName, now);
     return strlen(buffer);
 }
 

@@ -14,7 +14,7 @@ function compareService (a, b) {
 
 function portalShowServices (response) {
 
-   var table = document.getElementById ('portal-'+response.portal.host);
+   var table = document.getElementById ('portal-'+response.host);
    var services = response.portal.redirect.sort(compareService);
 
    var outer = document.createElement("tr");
@@ -24,7 +24,7 @@ function portalShowServices (response) {
         var inner = document.createElement("td");
         var label = document.createElement("a");
         label.innerHTML = service.service;
-        label.href = 'http://'+service.target+service.path+'/index.html';
+        label.href = 'http://'+response.host+service.path+'/index.html';
         inner.appendChild(label);
         outer.appendChild(inner);
    }
@@ -43,7 +43,7 @@ function portalServices (host) {
 }
 
 function portalPeersReceived (response) {
-    var title = response.portal.host+' - Portal';
+    var title = response.host+' - Portal';
     document.getElementsByTagName ('title')[0].innerHTML = title;
     var peers = response.portal.peers.sort();
 
