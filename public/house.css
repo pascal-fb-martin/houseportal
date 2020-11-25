@@ -80,6 +80,30 @@
   background-color: #E0E0E0;
 }
 
+button {
+   font-family:'Metrophobic', sans-serif;
+   font-weight: 500;
+   font-size: 20px;
+   border: 2px solid #3673ad;
+   padding: 5px;
+   border-radius: 5px;
+   -webkit-border-radius: 5px;
+   -moz-border-radius: 5px;
+   background-color: #3673ad;
+   color: #f5f5f5;
+}
+
+select, input[type=text], input[type=number] {
+   font-family:'Metrophobic', sans-serif;
+   font-weight: 500;
+   font-size: 20px;
+   border: 2px solid #3673ad;
+   padding: 5px;
+   border-radius: 5px;
+   -webkit-border-radius: 5px;
+   -moz-border-radius: 5px;
+}
+
 body {background-color: #F5F5F5}
 h1 {
    font-family:'Metrophobic', sans-serif;
