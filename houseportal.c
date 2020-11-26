@@ -36,6 +36,8 @@
 #include "houseportal.h"
 #include "houselog.h"
 
+static char HostName[256];
+
 static void hp_help (const char *argv0) {
 
     int i = 1;
@@ -116,6 +118,8 @@ int main (int argc, const char **argv) {
         }
     }
 
+    gethostname (HostName, sizeof(HostName));
+
     echttp_open (argc, argv);
     houselog_initialize ("portal", argc, argv);
     echttp_cors_allow_method("GET");
@@ -127,6 +131,7 @@ int main (int argc, const char **argv) {
     echttp_static_route ("/", "/usr/local/share/house/public");
     hp_redirect_start (argc, argv);
     echttp_background (&hp_background);
+    houselog_event ("SYSTEM", HostName, "START", "");
     houselog_trace (HOUSE_INFO, "HousePortal", "Started");
     echttp_loop();
 }

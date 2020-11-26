@@ -404,6 +404,7 @@ static void DecodeMessage (char *buffer, int live) {
     } else if (strcmp("LOCAL", token[0]) == 0) {
 
         houselog_trace (HOUSE_INFO, "HousePortal", "LOCAL mode");
+        houselog_event ("SYSTEM", "HousePortal", "SET", "LOCAL MODE");
         RestrictUdp2Local = 1;
 
     } else if (strcmp("SIGN", token[0]) == 0) {
@@ -413,6 +414,7 @@ static void DecodeMessage (char *buffer, int live) {
             IntermediateDecode[index].method = strdup(token[1]);
             IntermediateDecode[index].value = strdup(token[2]);
             DEBUG printf ("%s signature key\n", token[1]);
+            houselog_event ("SYSTEM", "HousePortal", "SET", "SIGNATURE");
         }
 
     } else {
@@ -576,6 +578,9 @@ void hp_redirect_background (void) {
                 PruneRedirect (now-3000);
                 pruned = 1;
             }
+        } else {
+            houselog_trace (HOUSE_FAILURE, "HousePortal",
+                            "Cannot stat %s", ConfigurationPath);
         }
         if (!pruned) PruneRedirect (now-3000);
         hp_redirect_publish (now);
