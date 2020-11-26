@@ -24,7 +24,13 @@ function portalShowServices (response) {
         var inner = document.createElement("td");
         var label = document.createElement("a");
         label.innerHTML = service.service;
-        label.href = 'http://'+response.host+service.path+'/index.html';
+        if (service.hide) {
+            // This web service is not integrated with the House environment,
+            // do not assume that it will follow the House conventions.
+            label.href = 'http://'+response.host+service.path;
+        } else {
+            label.href = 'http://'+response.host+service.path+'/index.html';
+        }
         inner.appendChild(label);
         outer.appendChild(inner);
    }
