@@ -52,8 +52,9 @@ function portalPeersReceived (response) {
     for (var i = 0; i < peers.length; ++i) {
         var outer = document.createElement("tr");
         var inner = document.createElement("td");
-        var label = document.createElement("span");
+        var label = document.createElement("a");
         label.innerHTML = peers[i];
+        label.href = 'http://'+peers[i]+'/index.html';
         inner.appendChild(label);
         outer.appendChild(inner);
 
