@@ -219,7 +219,7 @@ void houselog_trace (const char *file, int line, const char *level,
 
     if (TraceFile) {
         fprintf (TraceFile, "%ld.%03d,\"%s\",\"%s\",%d,\"%s\",\"%s\"\n",
-                 (long) (timestamp.tv_sec), (int)(timestamp.tv_usec / 1000),
+                 (long) (timestamp.tv_sec), (int)(timestamp.tv_usec/1000),
                  level, file, line, object, text);
         fflush (TraceFile);
     }
@@ -350,7 +350,7 @@ static const char *houselog_live (time_t now) {
                               "%s[%ld%03d,\"%s\",\"%s\",\"%s\",\"%s\"]",
                               prefix,
                               (long)(cursor->timestamp.tv_sec),
-                              (int)(cursor->timestamp.tv_usec),
+                              (int)(cursor->timestamp.tv_usec/1000),
                               cursor->category,
                               cursor->object,
                               cursor->action,
