@@ -279,8 +279,8 @@ void houselog_event (const char *category,
 static int houselog_getheader (time_t now, char *buffer, int size) {
 
     return snprintf (buffer, size,
-                    "{\"%s\":{\"timestamp\":%ld,\"host\":\"%s\",\"latest\":%ld",
-                    LogName, (long)now, LocalHost, HistoryLatestId);
+                    "{\"host\":\"%s\",\"timestamp\":%ld,\"%s\":{\"latest\":%ld",
+                    LocalHost, (long)now, LogName, HistoryLatestId);
 }
 
 static const char *houselog_get (struct tm *local, const char *id) {
