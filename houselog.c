@@ -34,8 +34,7 @@
  *    Record a new trace. The first 3 parameters are handled by macros:
  *    HOUSE_INFO, HOUSE_WARNING, HOUSE_FAILURE.
  *
- * void houselog_event (time_t timestamp,
- *                      const char *category,
+ * void houselog_event (const char *category,
  *                      const char *object,
  *                      const char *action,
  *                      const char *format, ...);
@@ -65,6 +64,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -85,7 +85,7 @@ static const char *LogName = "portal";
 static char LocalHost[256] = {0};
 
 struct EventHistory {
-    time_t timestamp;
+    struct timeval timestamp;
     char   category[32];
     char   object[32];
     char   action[16];
@@ -189,13 +189,16 @@ void houselog_trace (const char *file, int line, const char *level,
     static struct tm Last = {0};
 
     va_list ap;
-    time_t timestamp = time(0);
-    struct tm local = *localtime (&timestamp);
     char text[1024];
+    struct timeval timestamp;
+
+    gettimeofday (&timestamp, 0);
 
     va_start (ap, format);
     vsnprintf (text, sizeof(text), format, ap);
     va_end (ap);
+
+    struct tm local = *localtime (&(timestamp.tv_sec));
 
     if (local.tm_year != Last.tm_year ||
         local.tm_mon != Last.tm_mon ||
@@ -215,30 +218,30 @@ void houselog_trace (const char *file, int line, const char *level,
         printf ("%s %s, %d: %s %s\n", level, file, line, object, text);
 
     if (TraceFile) {
-        fprintf (TraceFile, "%ld,\"%s\",\"%s\",%d,\"%s\",\"%s\"\n",
-                 (long) timestamp, level, file, line, object, text);
+        fprintf (TraceFile, "%ld.%03d,\"%s\",\"%s\",%d,\"%s\",\"%s\"\n",
+                 (long) (timestamp.tv_sec), (int)(timestamp.tv_usec / 1000),
+                 level, file, line, object, text);
         fflush (TraceFile);
     }
     houselog_updated();
 }
 
-void houselog_event (time_t timestamp,
-                     const char *category,
+void houselog_event (const char *category,
                      const char *object,
                      const char *action,
                      const char *format, ...) {
 
     static struct tm Last = {0};
-
     va_list ap;
     char *text;
-    struct tm local = *localtime (&timestamp);
     struct EventHistory *cursor = History + HistoryCursor;
 
     va_start (ap, format);
     vsnprintf (cursor->description, sizeof(cursor->description), format, ap);
     va_end (ap);
-    cursor->timestamp = timestamp;
+
+    gettimeofday (&(cursor->timestamp), 0);
+
     safecpy (cursor->category, category, sizeof(cursor->category));
     safecpy (cursor->object, object, sizeof(cursor->object));
     safecpy (cursor->action, action, sizeof(cursor->action));
@@ -246,7 +249,9 @@ void houselog_event (time_t timestamp,
 
     HistoryCursor += 1;
     if (HistoryCursor >= HISTORY_DEPTH) HistoryCursor = 0;
-    History[HistoryCursor].timestamp = 0;
+    History[HistoryCursor].timestamp.tv_sec = 0;
+
+    struct tm local = *localtime (&(cursor->timestamp.tv_sec));
 
     if (local.tm_year != Last.tm_year ||
         local.tm_mon != Last.tm_mon ||
@@ -263,8 +268,10 @@ void houselog_event (time_t timestamp,
         EventFile = houselog_update (&local, 'e');
 
     if (EventFile) {
-        fprintf (EventFile, "%ld,\"%s\",\"%s\",\"%s\",\"%s\"\n",
-                 (long) timestamp, category, object, action, text);
+        fprintf (EventFile, "%ld.%03d,\"%s\",\"%s\",\"%s\",\"%s\"\n",
+                 (long) (cursor->timestamp.tv_sec),
+                 (int)(cursor->timestamp.tv_usec/1000),
+                 category, object, action, text);
     }
     houselog_updated();
 }
@@ -337,12 +344,13 @@ static const char *houselog_live (time_t now) {
         }
         struct EventHistory *cursor = History + i;
 
-        if (!cursor->timestamp) continue;
+        if (!(cursor->timestamp.tv_sec)) continue;
 
         int wrote = snprintf (buffer+length, sizeof(buffer)-length,
-                              "%s[%ld,\"%s\",\"%s\",\"%s\",\"%s\"]",
+                              "%s[%ld%03d,\"%s\",\"%s\",\"%s\",\"%s\"]",
                               prefix,
-                              cursor->timestamp,
+                              (long)(cursor->timestamp.tv_sec),
+                              (int)(cursor->timestamp.tv_usec),
                               cursor->category,
                               cursor->object,
                               cursor->action,

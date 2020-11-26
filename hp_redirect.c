@@ -155,7 +155,7 @@ static void PruneRedirect (time_t deadline) {
         time_t expiration = Redirections[i].expiration;
         if (expiration == 0 || expiration > deadline) continue;
 
-        houselog_event (time(0), "route", Redirections[i].path, "expired",
+        houselog_event ("ROUTE", Redirections[i].path, "EXPIRED",
                         "%s", Redirections[i].target);
 
         // Do not free path: the echhtp route still uses it.
@@ -229,6 +229,8 @@ static void AddSingleRedirect (int live, int hide,
         if (strcmp (Redirections[i].path, path) == 0) {
             if (live && Redirections[i].expiration == 0) return; // Permanent..
             if (strcmp (Redirections[i].target, target)) {
+                houselog_event ("ROUTE", path, "REPLACED", "%s WITH %s",
+                                Redirections[i].target, target);
                 free (Redirections[i].target);
                 Redirections[i].target = strdup(target);
             }
@@ -259,7 +261,7 @@ static void AddSingleRedirect (int live, int hide,
         houselog_trace (HOUSE_INFO, p,
                         "add %s route %s to %s%s",
                         live?"live":"permanent",p,target,hide?" (hide)":"");
-        houselog_event (time(0), "route", p, "add",
+        houselog_event ("ROUTE", p, "ADD",
                         "%s (%s)", target, live?"live":"permanent");
         echttp_route_match (p, RedirectRoute);
         Redirections[RedirectionCount].path = p;

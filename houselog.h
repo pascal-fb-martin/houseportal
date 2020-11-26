@@ -36,8 +36,7 @@ void houselog_trace (const char *file, int line, const char *level,
 #define HOUSE_WARNING __FILE__, __LINE__, "WARN"
 #define HOUSE_FAILURE __FILE__, __LINE__, "FAIL"
 
-void houselog_event (time_t timestamp,
-                     const char *category,
+void houselog_event (const char *category,
                      const char *object,
                      const char *action,
                      const char *format, ...);

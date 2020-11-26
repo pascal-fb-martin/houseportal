@@ -32,7 +32,7 @@ window.onload = function() {
       }
       for (var i = response.portal.events.length-1; i >= 0; --i) {
          var event = response.portal.events[i];
-         var timestamp = new Date(event[0] * 1000);
+         var timestamp = new Date(event[0]);
          var row = document.createElement("tr");
          row.appendChild(newColumn(timestamp.toLocaleString()));
          row.appendChild(newColumn(event[1]));

@@ -231,14 +231,12 @@ This initializes the memory storage for the recent logs and register all the URI
 It is possible to force a different history storage path with the "-log=PATH" command line option. This is however not recommended.
 
 ```
-void houselog_event (time_t timestamp,
-                     const char *category,
+void houselog_event (const char *category,
                      const char *object,
                      const char *action,
                      const char *format, ...);
 ```
 Record one more event. The event is added to the in-memory list of recent event, potentially removing the oldest event, and is stored to the event history file for the hour that matches the provided timestamp.
-* The timestamp gives the exact time of the event, which is not necessarily the current time: it is possible to accumulate events, and then save them on a periodic basis.
 * The category and object parameters describe what device or resource this event is related to; by convention category describes a type of device or resource, and object provides a user-friendly identifier of the resource.
 * The action parameter indicates what happened to the resource, typically a verb or a state; for some input devices, such as analog sensors, the action parameter typically represents the value of the input.
 * The format and subsequent parameters are used to build a free format text providing additional information specific to the category of the device. See the printf(3) man page for a description of the formatting tags.
