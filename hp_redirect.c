@@ -145,6 +145,7 @@ static void DeprecatePermanentConfiguration (void) {
         }
     }
     IntermediateDecodeLength = 0;
+    RestrictUdp2Local = 0;
 }
 
 static void PruneRedirect (time_t deadline) {
@@ -155,7 +156,7 @@ static void PruneRedirect (time_t deadline) {
         time_t expiration = Redirections[i].expiration;
         if (expiration == 0 || expiration > deadline) continue;
 
-        houselog_event ("ROUTE", Redirections[i].path, "EXPIRED",
+        houselog_event ("ROUTE", Redirections[i].path, "REMOVED",
                         "%s", Redirections[i].target);
 
         // Do not free path: the echhtp route still uses it.
@@ -236,12 +237,18 @@ static void AddSingleRedirect (int live, int hide,
             }
             if (service) {
                 if (!Redirections[i].service) {
+                    houselog_event ("ROUTE", path, "UPDATED",
+                                    "NOW SERVICE %s", service);
                     Redirections[i].service = strdup(service);
                 } else if (strcmp (Redirections[i].service, service)) {
+                    houselog_event ("ROUTE", path, "UPDATED",
+                                    "SERVICE CHANGED FROM %s TO %s",
+                                    Redirections[i].service, service);
                     free (Redirections[i].service);
                     Redirections[i].service = strdup(service);
                 }
             } else if (Redirections[i].service) {
+                houselog_event ("ROUTE", path, "UPDATED", "NOT A SERVICE");
                 free (Redirections[i].service);
                 Redirections[i].service = 0;
             }
