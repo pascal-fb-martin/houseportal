@@ -201,7 +201,11 @@ static const char *RedirectRoute (const char *method, const char *uri,
                      r->target, uri, parameters);
         else
            snprintf (url, sizeof(url), "http://%s%s", r->target, uri);
-        echttp_redirect (url);
+        if (r->expiration) {
+            echttp_redirect (url);
+        } else {
+            echttp_permanent_redirect (url);
+        }
     } else {
         echttp_error (500, "Unresolvable redirection.");
     }
