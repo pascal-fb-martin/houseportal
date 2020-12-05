@@ -23,7 +23,7 @@ function portalShowServices (response) {
 
         var inner = document.createElement("td");
         var label = document.createElement("a");
-        label.innerHTML = service.service;
+        label.innerHTML = service.path;
         if (service.hide) {
             // This web service is not integrated with the House environment,
             // do not assume that it will follow the House conventions.
