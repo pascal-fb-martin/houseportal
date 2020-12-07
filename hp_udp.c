@@ -30,6 +30,9 @@
  *    not 0, all sockets are bound to the loopback addresses, preventing
  *    from receiving data from remote machines.
  *
+ *    This function can be called multiple times: in this case existing
+ *    UDP sockets are closed and replaced with the new ones.
+ *
  * int hp_udp_receive (int socket, char *buffer, int size)
  *
  *    Receive a UDP packet. Returns the length of the data, or -1.
@@ -48,11 +51,15 @@
  *    the packet multiple times if the destination name matches multiple
  *    addresses, including IPv4 and IPv6 addresses.
  *
+ * int hp_udp_has_broadcast (void);
+ *
+ *    Return true if there is a broadcast socket available, or false
+ *    otherwise.
+ *
  * LIMITATIONS:
  *
- * Only supports IPv4 addresses for the time being.
+ * Require an IPv4 addresses for broadcast.
  * Only supports local broadcast (address 255.255.255.255).
- * Only supports one socket per process.
  */
 
 #include <errno.h>
@@ -96,6 +103,19 @@ int hp_udp_server (const char *service, int local, int *sockets, int size) {
     struct addrinfo *resolved;
     struct addrinfo *cursor;
 
+    if (!UdpService || strcmp (UdpService, service)) {
+        UdpService = strdup(service);
+    }
+
+    if (Ipv6UdpSocket >= 0) {
+        close(Ipv6UdpSocket);
+        Ipv6UdpSocket = -1;
+    }
+    if (BroadcastUdpSocket >= 0) {
+        close(BroadcastUdpSocket);
+        BroadcastUdpSocket = -1;
+    }
+
     hints.ai_flags = (local?0:AI_PASSIVE) | AI_ADDRCONFIG;
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
@@ -105,6 +125,12 @@ int hp_udp_server (const char *service, int local, int *sockets, int size) {
 
         if (cursor->ai_family != AF_INET && cursor->ai_family != AF_INET6)
             continue;
+
+        if (cursor->ai_family == AF_INET && BroadcastUdpSocket >= 0)
+            continue; // We already have the UDP socket for IPv4.
+
+        if (cursor->ai_family == AF_INET6 && Ipv6UdpSocket >= 0)
+            continue; // We already have the UDP socket for IPv6.
 
         DEBUG printf ("Opening socket for port %s (%s)\n",
                       service, (cursor->ai_family==AF_INET6)?"ipv6":"ipv4");
@@ -147,7 +173,8 @@ int hp_udp_server (const char *service, int local, int *sockets, int size) {
                             "Cannot set send buffer to %d: %s",
                             value, strerror(errno));
         }
-        if (!local && cursor->ai_family == AF_INET && BroadcastUdpSocket < 0) {
+
+        if (!local && cursor->ai_family == AF_INET) {
             value = 1;
             if (setsockopt(s, SOL_SOCKET, SO_BROADCAST, &value, sizeof(value)) < 0) {
                 houselog_trace (HOUSE_FAILURE, "HousePortal",
@@ -159,9 +186,8 @@ int hp_udp_server (const char *service, int local, int *sockets, int size) {
             BroadcastAddress.sin_port =
                 ((struct sockaddr_in *)(cursor->ai_addr))->sin_port;
         }
-        if (!local && cursor->ai_family == AF_INET6 && Ipv6UdpSocket < 0) {
+        if (!local && cursor->ai_family == AF_INET6) {
             Ipv6UdpSocket = s;
-            UdpService = strdup(service);
         }
 
         houselog_trace (HOUSE_INFO, "HousePortal",
@@ -176,6 +202,10 @@ int hp_udp_server (const char *service, int local, int *sockets, int size) {
     return count;
 }
 
+
+int hp_udp_has_broadcast (void) {
+    return (BroadcastUdpSocket >= 0);
+}
 
 int hp_udp_receive (int socket, char *buffer, int size) {
 

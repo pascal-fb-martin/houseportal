@@ -69,6 +69,11 @@
 static const char *ConfigurationPath = "/etc/house/portal.config";
 static time_t ConfigurationTime = 0;
 static int RestrictUdp2Local = 0;
+static const char *PortalPort = "70";
+
+#define MAX_UDP_POINTS 4
+static int PortalUdpPoints[MAX_UDP_POINTS];
+static int PortalUdpPointsCount = 0;
 
 typedef struct {
     char *path;
@@ -99,6 +104,7 @@ typedef struct {
     char *method;
     char *value;
 } HttpRequest;
+
 static HttpRequest IntermediateDecode[128]; // Don't make the name obvious.
 static int IntermediateDecodeLength = 0;
 
@@ -525,6 +531,29 @@ static void hp_redirect_udp (int fd, int mode) {
     }
 }
 
+static void hp_redirect_open(void) {
+
+    int count;
+
+    while (PortalUdpPointsCount >= 0) {
+        echttp_forget (PortalUdpPoints[--PortalUdpPointsCount]);
+    }
+
+    count = hp_udp_server (PortalPort, RestrictUdp2Local,
+                           PortalUdpPoints, MAX_UDP_POINTS);
+    if (count <= 0) {
+        houselog_trace (HOUSE_FAILURE, "HousePortal",
+                        "Cannot open UDP sockets for port %s", PortalPort);
+        PortalUdpPointsCount = 0;
+        return;
+    }
+
+    PortalUdpPointsCount = count;
+    while (count > 0) {
+        echttp_listen (PortalUdpPoints[--count], 1, hp_redirect_udp, 0);
+    }
+}
+
 static void hp_redirect_publish (time_t now) {
 
     int i;
@@ -556,6 +585,12 @@ static void hp_redirect_publish (time_t now) {
         length += strlen(buffer+length);
     }
 
+    // There are two ways of publishing:
+    // * Use broadcast to talk to the discovered peers.
+    // * Use explicit unicast for each statically defined peer.
+    // We do this because the static peer feature is meant
+    // for peers that cannot be reached through broadcast.
+    //
     DEBUG printf ("Publish: %s\n", buffer);
     hp_udp_broadcast (buffer, length);
     for (i = 1; i < PeerCount; ++i) { // Do not send to ourself.
@@ -572,6 +607,10 @@ void hp_redirect_background (void) {
     int pruned = 0;
 
     if (now > LastCheck + 30) {
+        if (!RestrictUdp2Local && !hp_udp_has_broadcast()) {
+            hp_redirect_open();
+            return;
+        }
         if (stat (ConfigurationPath, &fileinfo) == 0) {
             if (ConfigurationTime != fileinfo.st_mtim.tv_sec) {
                 houselog_trace (HOUSE_INFO, "HousePortal",
@@ -587,7 +626,7 @@ void hp_redirect_background (void) {
                             "Cannot stat %s", ConfigurationPath);
         }
         if (!pruned) PruneRedirect (now-3000);
-        hp_redirect_publish (now);
+        if (!RestrictUdp2Local) hp_redirect_publish (now);
         LastCheck = now;
     }
 }
@@ -725,8 +764,6 @@ void hp_redirect_service_json (const char *name, char *buffer, int size) {
 void hp_redirect_start (int argc, const char **argv) {
 
     int i;
-    const char *port = "70";
-    int udp[16];
     int count;
 
     char hostname[1000];
@@ -736,21 +773,12 @@ void hp_redirect_start (int argc, const char **argv) {
 
     for (i = 1; i < argc; ++i) {
         echttp_option_match ("-config=", argv[i], &ConfigurationPath);
-        echttp_option_match ("-portal-port=", argv[i], &port);
+        echttp_option_match ("-portal-port=", argv[i], &PortalPort);
     }
 
     AddOnePeer (HostName, 0); // List ourself first.
     LoadConfig (ConfigurationPath);
 
-    count = hp_udp_server (port, RestrictUdp2Local, udp, 16);
-    if (count <= 0) {
-        houselog_trace (HOUSE_FAILURE, "HousePortal",
-                        "Cannot open UDP sockets for port %s", port);
-        exit(1);
-    }
-
-    while (count > 0) {
-        echttp_listen (udp[--count], 1, hp_redirect_udp, 0);
-    }
+    hp_redirect_open();
 }
 
