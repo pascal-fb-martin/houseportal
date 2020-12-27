@@ -27,10 +27,10 @@ libhouseportal.a: $(LIBOJS)
 	ranlib $@
 
 houseportal: $(OBJS) libhouseportal.a
-	gcc -g -O -o houseportal $(OBJS) libhouseportal.a -lechttp -lcrypto -lrt
+	gcc -g -O -o houseportal $(OBJS) libhouseportal.a -lechttp -lssl -lcrypto -lrt
 
 housediscover: housediscoverclient.c libhouseportal.a
-	gcc -g -O -o housediscover housediscoverclient.c libhouseportal.a -lechttp -lcrypto -lrt
+	gcc -g -O -o housediscover housediscoverclient.c libhouseportal.a -lechttp -lssl -lcrypto -lrt
 
 package:
 	mkdir -p packages
