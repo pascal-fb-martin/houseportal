@@ -25,6 +25,8 @@ void housediscover_initialize (int argc, const char **argv);
 
 void housediscover (time_t now);
 
+int housediscover_changed (const char *service, time_t since);
+
 typedef void housediscover_consumer
                  (const char *service, void *context, const char *url);
 

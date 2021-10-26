@@ -199,6 +199,12 @@ void housediscover (const char *service);
 ```
 This function must be called for each service that the application needs. It is asynchronous: the result of the discovery wil be available later, when the HousePortal servers responses have been received.
 
+The application may find if a new service has been detected by periodically walk the local discovery cache:
+```
+int housediscover_changed (const char *service, time_t since);
+```
+This returns true if any new service was detected since the specified time.
+
 The application gets the result of the discovery by walking through the local discovery cache:
 ```
 typedef void housediscover_consumer

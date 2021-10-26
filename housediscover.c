@@ -40,6 +40,11 @@
  *    Doing it this way reduces network traffic (local query does not take
  *    network bandwidth, while still reacting to newly detected portals.
  *
+ * int housediscover_changed (const char *service, time_t since);
+ *
+ *    Return true if something new was discovered since the specified time,
+ *    false otherwise.
+ *
  * void housediscovered (const char *service, void *context,
  *                       housediscover_consumer *consumer);
  *
@@ -71,6 +76,7 @@ static time_t DiscoveryTime[ECHTTP_MAX_SYMBOL];
 
 static echttp_hash DiscoveryByService; // Service name is not unique.
 static const char *DiscoveryUrl[ECHTTP_MAX_SYMBOL];
+static time_t      DiscoveryDetected[ECHTTP_MAX_SYMBOL];
 
 static time_t DiscoveryRequest = 0;
 
@@ -114,6 +120,7 @@ static int housediscover_register (const char *name, const char *url) {
         int byservice = echttp_hash_add (&DiscoveryByService, strdup(name));
         if (byservice > 0) {
             DiscoveryUrl[byservice] = strdup(url);
+            DiscoveryDetected[byservice] = time(0);
         }
     }
     return isnew;
@@ -309,6 +316,21 @@ void housediscover (time_t now) {
     DEBUG ("request %s submitted\n", url);
 
     DiscoveryRequest = now;
+}
+
+static time_t DiscoveryMostRecent = 0;
+
+static int housediscover_changed_iterator (int i, const char *service) {
+    if (DiscoveryDetected[i] > DiscoveryMostRecent)
+        DiscoveryMostRecent = DiscoveryDetected[i];
+    return 0;
+}
+
+int housediscover_changed (const char *service, time_t since) {
+    DiscoveryMostRecent = 0;
+    echttp_hash_iterate (&DiscoveryByService,
+                         service, housediscover_changed_iterator);
+    return DiscoveryMostRecent >= since;
 }
 
 static housediscover_consumer *DiscoveryConsumer = 0;
