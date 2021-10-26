@@ -33,6 +33,13 @@
  *    place later, when receiving responses. This function must be called
  *    periodically.
  *
+ *    Note that the discovery is done in two phase:
+ *    - Phase 1: query local portal, to detect all portals, every 10s.
+ *    - Phase 2: query all portals to detect services, every 120s or on change.
+ *
+ *    Doing it this way reduces network traffic (local query does not take
+ *    network bandwidth, while still reacting to newly detected portals.
+ *
  * void housediscovered (const char *service, void *context,
  *                       housediscover_consumer *consumer);
  *
@@ -65,8 +72,8 @@ static time_t DiscoveryTime[ECHTTP_MAX_SYMBOL];
 static echttp_hash DiscoveryByService; // Service name is not unique.
 static const char *DiscoveryUrl[ECHTTP_MAX_SYMBOL];
 
+static time_t DiscoveryRequest = 0;
 
-static time_t DiscoveryPendingTimestamp = 0;
 
 #define DEBUG if (echttp_isdebug()) printf
 
@@ -206,9 +213,12 @@ static int housediscover_peers_iterator (int i, const char *name) {
 static void housediscover_peers_response (void *origin,
                                           int status, char *data, int length) {
 
+    static time_t DiscoveryDetail = 0;
+
     ParserToken tokens[100];
     int innerlist[100];
     int count = 100;
+    int newportal = 0;
     int i;
 
     time_t now = time(0);
@@ -246,7 +256,6 @@ static void housediscover_peers_response (void *origin,
     }
 
     DEBUG ("processing portals result.\n");
-    DiscoveryPendingTimestamp = time(0);
 
     for (i = 0; i < n; ++i) {
         ParserToken *inner = tokens + peers + innerlist[i];
@@ -260,30 +269,32 @@ static void housediscover_peers_response (void *origin,
                   "http://%s/portal/list", inner->value.string);
         if (housediscover_register ("portal", buffer)) {
              DEBUG ("new portal %s found.\n", inner->value.string);
+             newportal = 1;
         }
     }
 
     // Now that we have updated our list of portal servers, query them.
+    // Actually, do not query a new portal right away: give the services
+    // a few seconds to declare themselves.
     //
-    echttp_hash_iterate (&DiscoveryByService,
-                         "portal", housediscover_peers_iterator);
+    if (newportal) {
+        // Not yet, force one new discovery 3 seconds from now.
+        DiscoveryDetail = 0;
+        DiscoveryRequest = now - 8;
+    } else if (now >= DiscoveryDetail + 120) {
+        echttp_hash_iterate (&DiscoveryByService,
+                             "portal", housediscover_peers_iterator);
+        DiscoveryDetail = now;
+    }
 }
 
 void housediscover (time_t now) {
-
-    static time_t DiscoveryRequest = 0;
 
     if (!now) { // Manual discovery request (force discovery on next tick)
         DiscoveryRequest = 0;
         return;
     }
-    if (DiscoveryPendingTimestamp) {
-        // Settled time: do discovery at slow speed (just a refresh).
-        if (now < DiscoveryRequest + 600) return;
-    } else {
-        // Initialization time: fast speed until we get a response.
-        if (now < DiscoveryRequest + 20) return;
-    }
+    if (now < DiscoveryRequest + 10) return;
 
     char url[100];
     snprintf (url, sizeof(url), "http://%s/portal/peers", LocalPortalServer);
