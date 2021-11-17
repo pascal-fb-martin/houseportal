@@ -167,6 +167,13 @@ The application must then initialize the client interface:
 ```
 void houseportal_initialize (int argc, const char **argv);
 ```
+The houseportal_initialize function decodes the following command line options:
+* --portal-port=N defines a non-default port for the HousePortal UDP interface.
+* --portal-server=NAME to use a HousePortal server on a different machine.
+* --portal-map=NN:NN declares the port mapping used by a proxy or firewall.
+
+(The port mapping option can be repeated for each port used by the application.  HousePortal does not support any load balancing: the same service cannot be declared by more than one application to a single HousePortal server.)
+
 If any cryptographic signature is required, the key must be provided:
 ```
 void houseportal_signature (const char *cypher, const char *key);
@@ -183,7 +190,9 @@ void houseportal_renew (void);
 
 ### Discovery client API
 
-The HousePortal web API for discovery can be used raw, or else through a discovery client module that hides the complete data flow, performs the discovery in an asynchronous mode and caches the result.
+This API can used by a web client to automatically find which services are running. It is up to the web client to find which one of the services found to use.
+
+The HousePortal web API for discovery can always be used raw. This API hides the complete discovery sequence, performs the discovery in an asynchronous mode and caches the result.
 
 First the application must include the client header file:
 ```

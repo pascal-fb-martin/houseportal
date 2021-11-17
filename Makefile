@@ -79,3 +79,19 @@ uninstall:
 purge: uninstall
 	rm -f /etc/default/houseportal /etc/house/portal.config
 
+docker: all
+	rm -rf build
+	mkdir -p build
+	cp Dockerfile build
+	mkdir -p build/usr/local/bin
+	cp houseportal build/usr/local/bin
+	chmod 755 build/usr/local/bin/houseportal
+	mkdir -p build/usr/local/share/house/public
+	cp public/* build/usr/local/share/house/public
+	chmod 644 build/usr/local/share/house/public/*
+	mkdir -p build/etc/default
+	touch build/etc/default/houseportal
+	mkdir -p build/etc/house
+	touch build/etc/house/portal.config
+	cd build ; docker build -t houseproxy .
+

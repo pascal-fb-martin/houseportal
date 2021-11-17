@@ -66,6 +66,12 @@
 
 #define HOUSEPORTALPACKET 1400
 
+// Preformat the redirection messages that we send when renewing.
+// Note that a complete redirection message is:
+//    REDIRECT time [host:]port [HIDE] [[service:]path ..] [SHA-256 signature]
+// Since the time and signature are variables, so we only preformat:
+//    [host:]port [HIDE] [[service:]path ..]
+//
 static char *HousePortalRegistration[256];
 static int   HousePortalRegistrationLength[256];
 static int   HousePortalRegistrationCount = 0;
@@ -76,26 +82,51 @@ static int  HousePortalTemporaryLength;
 
 static const char *HousePortalHost = 0;
 static const char *HousePortalPort = "70";
+static const char *HouseServicelHost = 0;
+
+typedef struct {
+    short external;
+    short internal;
+} PortMapping;
+static PortMapping HousePortalPortMap[256];
+static int         HousePortalPortMapCount = 0;
 
 void houseportal_initialize (int argc, const char **argv) {
 
     int debug = 0;
     int i;
 
+    const char *mapping;
+    char localhost[256];
+    gethostname (localhost, sizeof(localhost));
+
     for (i = 1; i < argc; ++i) {
         if (echttp_option_match("-portal-port=", argv[i], &HousePortalPort))
             continue;
         if (echttp_option_match("-portal-server=", argv[i], &HousePortalHost))
             continue;
+        if (echttp_option_match("-portal-map=", argv[i], &mapping)) {
+            if (sscanf (mapping, "%d:%d",
+                        HousePortalPortMap[HousePortalPortMapCount].external,
+                        HousePortalPortMap[HousePortalPortMapCount].internal) == 2) {
+                HousePortalPortMapCount += 1;
+            }
+            continue;
+        }
     }
 
-    // If the portal runs on the local host, uses the actual name of the host
-    // so that this can be used on a remote web client.
+    // If the portal runs on a remote host, specify the service host when
+    // registering, since the portal cannot use its own host name.
+    //
+    if (HousePortalHost) {
+        HouseServicelHost = strdup(localhost);
+    }
+
+    // If the portal runs on the local host, report the actual name of the host
+    // to the application so that it can be advertised to a remote web client.
     //
     if (!HousePortalHost) {
-        char buffer[256];
-        gethostname (buffer, sizeof(buffer));
-        HousePortalHost = strdup(buffer);
+        HousePortalHost = strdup(localhost);
     }
 
     if (hp_udp_client (HousePortalHost, HousePortalPort) <= 0) {
@@ -134,11 +165,22 @@ void houseportal_register_more (int webport, const char **path, int count) {
     int i;
     int index;
     int length = 0;
-    char buffer[11];
+    char dest[256];
+    int dlen;
     const char *template = "REDIRECT 12345678901234 "; // Only for size.
     int tlen = strlen(template);
-    int blen;
     char *cursor;
+
+    // Adjust the port number to be advertised according to the port mapping
+    // that was declared (if any). This is useful if the local system is only
+    // accessible though a gateway or firewall. For example a container.
+    //
+    for (i = 0; i < HousePortalPortMapCount; ++i) {
+        if (webport == HousePortalPortMap[i].internal) {
+            webport = HousePortalPortMap[i].external;
+            break;
+        }
+    }
 
     if (count <= 0) return;
     if (HousePortalRegistrationCount >= 256) return;
@@ -146,15 +188,19 @@ void houseportal_register_more (int webport, const char **path, int count) {
     // Build the registration messages.
     // There could be more than one, if there are a lot of paths specified.
     //
-    snprintf(buffer, sizeof(buffer), "%d", webport);
-    blen = strlen(buffer);
+    if (HouseServicelHost) {
+        snprintf(dest, sizeof(dest), "%s:%d", HouseServicelHost, webport);
+    } else {
+        snprintf(dest, sizeof(dest), "%d", webport);
+    }
+    dlen = strlen(dest);
 
     index = HousePortalRegistrationCount;
     if (HousePortalRegistration[index] == 0)
         HousePortalRegistration[index] = malloc(HOUSEPORTALPACKET);
-    strncpy (HousePortalRegistration[index], buffer, HOUSEPORTALPACKET);
-    length = tlen + blen;
-    cursor = HousePortalRegistration[index] + blen;
+    strncpy (HousePortalRegistration[index], dest, HOUSEPORTALPACKET);
+    length = tlen + dlen;
+    cursor = HousePortalRegistration[index] + dlen;
 
     for (i = 0; i < count; ++i) {
         int l = strlen(path[i]);
@@ -166,9 +212,9 @@ void houseportal_register_more (int webport, const char **path, int count) {
             index += 1;
             if (HousePortalRegistration[index] == 0)
                 HousePortalRegistration[index] = malloc(HOUSEPORTALPACKET);
-            strncpy (HousePortalRegistration[index], buffer, HOUSEPORTALPACKET);
-            length = tlen + blen;
-            cursor = HousePortalRegistration[index] + blen;
+            strncpy (HousePortalRegistration[index], dest, HOUSEPORTALPACKET);
+            length = tlen + dlen;
+            cursor = HousePortalRegistration[index] + dlen;
         }
         strncpy (cursor++, " ", HOUSEPORTALPACKET-length++);
         strncpy (cursor, path[i], HOUSEPORTALPACKET-length);
@@ -187,13 +233,14 @@ void houseportal_renew (void) {
     int i;
     int blen;
     int total;
-    char buffer[HOUSEPORTALPACKET];
-    char signature[HOUSEPORTALPACKET];
+    char buffer[HOUSEPORTALPACKET+256]; // Added space for signature.
 
-    snprintf (buffer, HOUSEPORTALPACKET, "REDIRECT %ld ", (long)time(0));
+    snprintf (buffer, sizeof(buffer), "REDIRECT %ld ", (long)time(0));
     blen = strlen(buffer);
 
     for (i = 0; i < HousePortalRegistrationCount; ++i) {
+        if (HousePortalRegistrationLength[i] >= HOUSEPORTALPACKET - blen)
+            continue; // Should never happen, but protect ayway.
         memcpy (buffer+blen,
                 HousePortalRegistration[i], HousePortalRegistrationLength[i]);
         total = blen+HousePortalRegistrationLength[i];
