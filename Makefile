@@ -98,4 +98,5 @@ docker: all
 	mkdir -p build/etc/house
 	touch build/etc/house/portal.config
 	cd build ; docker build -t houseproxy .
+	rm -rf build
 
