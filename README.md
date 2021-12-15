@@ -28,7 +28,7 @@ HousePortal may register targets from remote machines, but this is not the main 
 
 ## Configuration File
 
-The default HousePortal configuration is /etc/house/portal.config. A different configuration file can be specified using the -config=path option. The configuration file is a list of directives, one directive per line. Each directive starts with a keyword, with a variable count of space-separated arguments. Lines starting with character '#' are comments and ignored.
+The default HousePortal configuration is /etc/house/portal.config. A different configuration file can be specified using the -config=PATH option. The configuration file is a list of directives, one directive per line. Each directive starts with a keyword, with a variable count of space-separated arguments. Lines starting with character '#' are comments and ignored.
 
 If the configuration file is modified while HousePortal is running, the current HousePortal configuration will be updated within 30 seconds (except for the LOCAL option, which remains unchanged--see below).
 
@@ -109,15 +109,15 @@ Hosts that are statically configured on an instance will be maintained as live a
 
 ## Service Discovery
 
-A redirection may define the target as a service. HousePortal maintains a list of active targets for each service name. That list can be queried by outside clients that need to discover which URL to use for these services.
+HousePortal maintains a list of active targets for each service name. That list can be queried by outside clients that need to discover which URL to use for these services.
 
-A service is a generic name that uniquely identify the web API supported by the target. For example a service may define how to access sensors, external controls (relays, triac, etc), or how to control of a sprinkler system. A target may be an implementation of the service for a certain type of resource, for example the control service may be associated with two targets, one implementing an interface to a relay boards, and the other using the OpenSprinkler Triac interface.
+A service is a generic name that uniquely identifies the web API supported by the target. For example a service may define how to access sensors, external controls (relays, triac, etc), or how to control of a sprinkler system. A target may be an implementation of the service for a certain type of resource, for example the control service may be associated with two targets, one implementing an interface to a relay boards, and the other using the OpenSprinkler Triac interface.
 
 This service discovery is not concerned with parallelism or clustering: the client needs to query each target to discover more details about the service.
 
-The intent of the HousePortal service discovery is to provide a single endpoint on each server from which services hosted by this server can be discovered. For example a client would query all known servers to find on which servers reside the services it need to access. HousePortal is not intended to act as a global service discovery service, i.e. a single endpoint that will consolidate all the service configuration information for a complete network.
+The intent of the HousePortal service discovery is to provide a single endpoint on each server from which services hosted by this server can be discovered. For example a client would query all known servers to find on which servers reside the services it need to access. HousePortal is not intended to act as a global service discovery service, i.e. there is no single endpoint that will consolidate all the service configuration information for a complete network. An application must query each server independently.
 
-The list of server to query can itself be discovered by sending a request to the local HousePortal server (See the description of the PEER message in a previous section). Thus any discovery takes two phase:
+The list of servers to query can itself be discovered by sending a request to the local HousePortal server (See the description of the PEER message in a previous section). Thus any discovery takes two phases:
 * The first phase is to request the list of known HousePortal servers to the local one:
 ```
 GET /portal/peers
@@ -235,7 +235,12 @@ All logs are stored in daily files (see later for more details).
 
 The 256 latest events are also kept in a memory buffer. If the /{app}/log/events URI is used with no parameter, all events present in memory are returned.
 
-The following API is used to record events and traces in the application:
+The log API is used to record events and traces inside the application and save then to permanent storeage. It also implements the web API used to update an event web page.
+
+First the application must include the client header file:
+```
+#include "houselog.h"
+```
 
 ```
 void houselog_initialize (const char *application,
@@ -290,6 +295,68 @@ In order to avoid writing frequently to SD cards, the active logs are written to
 During initialization, the log module tries to backup any existing log file in /dev/shm and then restore any existing current day file from permanent storage to /dev/shm.
 
 Any of these file operations is performed only if the source is more recent than the destination.
+
+## Configuration API
+
+This module provides a simplified API to handle configuration files in JSON format. This API is easier to use than the general purpose echttp JSON API, but it assumes that there is only one JSON context, for a single file which name is specified by the application.
+
+First the application must include the client header file:
+```
+#include "houseconfig.h"
+```
+
+```
+void houseconfig_default (const char *arg);
+```
+
+This function allows the application to define default options. For now the only options used by the configuration API is the --config=NAME option, which define the name of the configuration file. The name provided with the option is either a full path (starting with '/') or a path relative to `/etc/house`. If the path is relative, the file extension may also be omitted, in which case ".json" is used. All three examples below are equivalent:
+```
+houseconfig_default ("--config=/etc/house/app.json");
+houseconfig_default ("--config=app.json");
+houseconfig_default ("--config=app");
+```
+An application must call houseconfig_default() so that the default name of the configuration file matches the name of the application. It is recommended to always use the shortest form (see third example above), to keep the default file path consistent between applications, and defined only once. However an application may use an alternate scheme if needed.
+
+```
+const char *houseconfig_load (int argc, const char **argv);
+```
+This function loads the existing configuration. This is called on application startup. The argc and argv parameters should represent the command line arguments. The option --config=NAME can then be used to force a different configuration file name. The same file name will be used for loading the initial configuration, and then for saving any configuration change.
+
+```
+int houseconfig_size (void);
+```
+This function returns the size in bytes of the current configuration data.
+
+```
+const char *houseconfig_update (const char *text);
+```
+This function provides a replacement configuration. This is typically used after the user edited and posted a new configuration. The module first proceed with the decoding of the JSON data. If successful, the string is saved to the configuration file. On return the application can then start accessing and applying the new configuration.
+
+```
+int houseconfig_find (int parent, const char *path, int type);
+```
+This function searches for the specified path, starting at the specified index of the parent object. Index 0 is the whole JSON data structure.
+
+```
+const char *houseconfig_string (int parent, const char *path);
+int         houseconfig_integer (int parent, const char *path);
+int         houseconfig_boolean (int parent, const char *path);
+```
+These functions return the value of the specified item.
+
+```
+int houseconfig_array        (int parent, const char *path);
+int houseconfig_array_length (int array);
+```
+The first function returns the index to the specified array, while the second function returns the number of item (length) of the array referenced by its index.
+
+
+```
+int houseconfig_object (int parent, const char *path);
+int houseconfig_array_object (int parent, int index);
+```
+These functions return the index to a specific object. The first form return a sub-object of the specified parent. The second form returns the Nth object in an array of objects.
+
 
 ## Docker
 

@@ -1,12 +1,13 @@
 
 OBJS= hp_udp.o hp_redirect.o houseportal.o houseportalhmac.o
 LIBOJS= houselog.o \
+        houseconfig.o \
         houseportalclient.o \
         houseportaludp.o \
         houseportalhmac.o \
         housediscover.o
 
-EXPORT_INCLUDE=houselog.h houseportalclient.h housediscover.h
+EXPORT_INCLUDE=houselog.h houseconfig.h houseportalclient.h housediscover.h
 
 all: libhouseportal.a houseportal housediscover
 
