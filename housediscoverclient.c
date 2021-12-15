@@ -59,9 +59,9 @@ static void background (int fd, int mode) {
 
     if (Counter == 1) {
         DEBUG ("Starting the discovery\n");
-        housediscover (now);
     }
     Counter += 1;
+    housediscover (now);
 
     if (now > Deadline) {
         first = 1;
