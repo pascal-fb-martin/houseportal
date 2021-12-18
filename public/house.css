@@ -76,6 +76,11 @@
    color: black;
 }
 
+.housewidetable td input {
+   width: 100%;
+   box-sizing: border-box;
+}
+
 .houseevent tr:nth-child(even) {
   background-color: #E0E0E0;
 }
