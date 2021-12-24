@@ -231,11 +231,17 @@ Because the discovery mechanism involves multiple HTTP queries, it is recommende
 
 A House service typically keeps two logs: traces (for maintainer) and events (for users). This history is separate for each application.
 
+Deciding when to generate an event or else a trace is not always obvious. After trials and errors, it is recommended to follow a few basic rules:
+- If the message indicates a problem that would be resolved only by changing the software, then it should be a trace.
+- If the message indicates a problem that the user can resolve without rebuilding the software, then it should be an event.
+- If interpreting the message requires knowledge of the source code, then it should be a trace.
+- If the message provides information that is meaningful to the user without requiring knowledge of the source code, then it should be an event.
+
 All logs are stored in daily files (see later for more details).
 
 The 256 latest events are also kept in a memory buffer. If the /{app}/log/events URI is used with no parameter, all events present in memory are returned.
 
-The log API is used to record events and traces inside the application and save then to permanent storeage. It also implements the web API used to update an event web page.
+The log API is used to record events and traces inside the application and to save then to permanent storeage. It also implements the web API used to update an event web page.
 
 First the application must include the client header file:
 ```

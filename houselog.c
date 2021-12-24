@@ -25,7 +25,8 @@
  * void houselog_initialize (const char *application,
  *                           int argc, const char **argv);
  *
- *    Initialize the environment required to record logs.
+ *    Initialize the environment required to record logs. This must be
+ *    the first function that the application calls.
  *
  * void houselog_trace (const char *file, int line, const char *level,
  *                      const char *object,
@@ -45,6 +46,10 @@
  *
  *    This function must be called a regular intervals for background
  *    processing, e.g. cleanup of expired resources, file backup, etc.
+ *
+ * const char *houselog_host (void);
+ *
+ *    Return the name of the local machine, as used in the logs.
  *
  * In order to avoid writing frequently to SD cards, the active logs are
  * written to /dev/shm, moved to permanent storage at the end of the day.
@@ -521,6 +526,8 @@ void houselog_initialize (const char *name, int argc, const char **argv) {
         houselog_restore (&local, LogTypes[i]);
     }
     houselog_background (now); // Initial state.
+
+    houselog_event ("SERVICE", LogName, "STARTING", "ON %s", LocalHost);
 }
 
 void houselog_background (time_t now) {
@@ -566,5 +573,9 @@ void houselog_background (time_t now) {
             LastHour = local.tm_hour;
         }
     }
+}
+
+const char *houselog_host (void) {
+    return LocalHost;
 }
 

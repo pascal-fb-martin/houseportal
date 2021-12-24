@@ -76,6 +76,7 @@
 
 #include <echttp_json.h>
 
+#include "houselog.h"
 #include "houseconfig.h"
 
 #define CONFIGMAXSIZE 1024
@@ -93,6 +94,7 @@ static const char *ConfigFile = HOUSECONFIG_PATH "portal" HOUSECONFIG_EXT;
 
 static const char *houseconfig_refresh (const char *file) {
 
+    houselog_event ("CONFIG", "DATA", "LOADING", "FROM %s", file);
     if (ConfigText) echttp_parser_free (ConfigText);
     ConfigText = echttp_parser_load (file);
     if (!ConfigText) {
@@ -160,12 +162,16 @@ const char *houseconfig_update (const char *text) {
         ConfigText = 0;
         ConfigTextLength = 0;
         ConfigTokenCount = 0;
+        houselog_trace (HOUSE_FAILURE, "CONFIG", "ERROR %s", error);
         return error;
     }
     fd = open (ConfigFile, O_WRONLY|O_TRUNC|O_CREAT, 0777);
     if (fd >= 0) {
         write (fd, text, ConfigTextLength);
         close (fd);
+        houselog_event ("CONFIG", "DATA", "SAVED", "TO %s", ConfigFile);
+    } else {
+        houselog_event ("CONFIG", "FILE", "ERROR", "CANNOT OPEN %s", ConfigFile);
     }
     return 0;
 }

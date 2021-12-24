@@ -43,3 +43,5 @@ void houselog_event (const char *category,
 
 void houselog_background (time_t now);
 
+const char *houselog_host (void);
+
