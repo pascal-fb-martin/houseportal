@@ -22,6 +22,7 @@
 void        houseconfig_default (const char *arg);
 const char *houseconfig_load (int argc, const char **argv);
 
+int         houseconfig_open (void);
 int         houseconfig_size (void);
 
 const char *houseconfig_update (const char *text);

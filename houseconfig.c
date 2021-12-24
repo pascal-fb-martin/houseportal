@@ -31,6 +31,13 @@
  *    Load the configuration from the specified config option, or else
  *    from the default config file.
  *
+ * int houseconfig_open (void);
+ *
+ *    Return a file descriptor for reading the current configuration.
+ *    This is typically used when there is no primitive for building
+ *    a JSON config text from the live system, for example because
+ *    there is no automatic discovery to populate the configuration.
+ *
  * int houseconfig_size (void);
  *
  *    Return the size of the configuration JSON text currently used.
@@ -161,6 +168,10 @@ const char *houseconfig_update (const char *text) {
         close (fd);
     }
     return 0;
+}
+
+int houseconfig_open (void) {
+    return open(ConfigFile, O_RDONLY);
 }
 
 int houseconfig_size (void) {

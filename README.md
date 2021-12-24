@@ -323,6 +323,13 @@ const char *houseconfig_load (int argc, const char **argv);
 This function loads the existing configuration. This is called on application startup. The argc and argv parameters should represent the command line arguments. The option --config=NAME can then be used to force a different configuration file name. The same file name will be used for loading the initial configuration, and then for saving any configuration change.
 
 ```
+int houseconfig_open (void);
+```
+This function returns a file descriptor for reading the current configuration.
+
+This is typically used when there is no primitive for building a JSON config text from the live system, for example because there is no automatic discovery to populate the configuration. In this case the configuration is purely static and can be served to clients from the up-to-date file.
+
+```
 int houseconfig_size (void);
 ```
 This function returns the size in bytes of the current configuration data.
