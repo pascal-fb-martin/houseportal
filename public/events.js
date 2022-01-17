@@ -41,7 +41,7 @@ function eventShow (response) {
    for (var i = table.childNodes.length - 1; i > 1; i--) {
       table.removeChild(table.childNodes[i]);
    }
-   for (var i = response[app]events.length-1; i >= 0; --i) {
+   for (var i = response[app].events.length-1; i >= 0; --i) {
       var event = response[app].events[i];
       var timestamp = new Date(event[0]);
       var row = document.createElement("tr");
