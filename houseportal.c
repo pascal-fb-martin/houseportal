@@ -121,7 +121,7 @@ int main (int argc, const char **argv) {
     gethostname (HostName, sizeof(HostName));
 
     echttp_open (argc, argv);
-    houselog_initialize ("portal", argc, argv);
+    houselog_initialize ("portal", 0, argc, argv);
     echttp_cors_allow_method("GET");
     echttp_protect (0, hp_portal_protect);
 

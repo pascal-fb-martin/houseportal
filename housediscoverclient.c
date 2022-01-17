@@ -105,7 +105,7 @@ int main (int argc, const char **argv) {
 
     echttp_open (optioncount, option);
     echttp_background (&background);
-    houselog_initialize ("discovery", argc, argv);
+    houselog_initialize ("discovery", 0, argc, argv);
     housediscover_initialize (optioncount, option);
 
     echttp_loop();

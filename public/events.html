@@ -2,75 +2,10 @@
 <html>
 <head>
 <link rel=stylesheet type="text/css" href="/house.css" title="House">
+<script src="/events.js"></script>
 <script>
 window.onload = function() {
-
-   function newColumn (text) {
-      var column = document.createElement("td");
-      column.innerHTML = text;
-      return column;
-   }
-
-   var lastEventId = null;
-
-   function showEvents (response) {
-
-      if (!lastEventId) {
-          var title = response.host + ' - Portal';
-          document.getElementsByTagName ('title')[0].innerHTML = title;
-          var elements = document.getElementsByClassName ('hostname');
-          for (var i = 0; i < elements.length; i++) {
-              elements[i].innerHTML = response.host;
-          }
-      }
-
-      lastEventId = response.portal.latest;
-
-      var table = document.getElementsByClassName ('eventlist')[0];
-      for (var i = table.childNodes.length - 1; i > 1; i--) {
-         table.removeChild(table.childNodes[i]);
-      }
-      for (var i = response.portal.events.length-1; i >= 0; --i) {
-         var event = response.portal.events[i];
-         var timestamp = new Date(event[0]);
-         var row = document.createElement("tr");
-         row.appendChild(newColumn(timestamp.toLocaleString()));
-         row.appendChild(newColumn(event[1]));
-         row.appendChild(newColumn(event[2]));
-         row.appendChild(newColumn(event[3]));
-         row.appendChild(newColumn(event[4]));
-         table.appendChild(row);
-      }
-   }
-
-   function updateEvents() {
-
-      var command = new XMLHttpRequest();
-      command.open("GET", "/portal/log/events");
-      command.onreadystatechange = function () {
-         if (command.readyState === 4 && command.status === 200) {
-            showEvents (JSON.parse(command.responseText));
-         }
-      }
-      command.send(null);
-   }
-
-   function checkEvents () {
-
-      var command = new XMLHttpRequest();
-      command.open("GET", "/portal/log/latest");
-      command.onreadystatechange = function () {
-          if (command.readyState === 4 && command.status === 200) {
-              var response = JSON.parse(command.responseText);
-              if ((lastEventId == null) ||
-                  (response.portal.latest != lastEventId)) updateEvents ();
-          }
-      }
-      command.send(null);
-   }
-
-   updateEvents();
-   setInterval (function() {checkEvents()}, 1000);
+   eventStart();
 }
 </script>
 <head>

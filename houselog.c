@@ -23,6 +23,7 @@
  * SYNOPSYS:
  *
  * void houselog_initialize (const char *application,
+ *                           const char *portal,
  *                           int argc, const char **argv);
  *
  *    Initialize the environment required to record logs. This must be
@@ -88,6 +89,7 @@ static const char *LogFolder = "/var/lib/house/log";
 static const char *LogName = "portal";
 
 static char LocalHost[256] = {0};
+static char PortalHost[256] = {0};
 
 struct EventHistory {
     struct timeval timestamp;
@@ -283,9 +285,18 @@ void houselog_event (const char *category,
 
 static int houselog_getheader (time_t now, char *buffer, int size) {
 
+    if (PortalHost[0]) {
+        return snprintf (buffer, size,
+                        "{\"host\":\"%s\",\"proxy\":\"%s\",\"apps\":[\"%s\"],"
+                            "\"timestamp\":%ld,\"%s\":{\"latest\":%ld",
+                        LocalHost, PortalHost, LogName,
+                            (long)now, LogName, HistoryLatestId);
+    }
     return snprintf (buffer, size,
-                    "{\"host\":\"%s\",\"timestamp\":%ld,\"%s\":{\"latest\":%ld",
-                    LocalHost, (long)now, LogName, HistoryLatestId);
+                    "{\"host\":\"%s\",\"apps\":[\"%s\"],"
+                        "\"timestamp\":%ld,\"%s\":{\"latest\":%ld",
+                    LocalHost, LogName,
+                        (long)now, LogName, HistoryLatestId);
 }
 
 static const char *houselog_get (struct tm *local, const char *id) {
@@ -488,7 +499,8 @@ static void houselog_restore (const struct tm *local, char id) {
     }
 }
 
-void houselog_initialize (const char *name, int argc, const char **argv) {
+void houselog_initialize (const char *name,
+                          const char *portal, int argc, const char **argv) {
     int i;
     char uri[256];
     const char *folder;
@@ -499,6 +511,7 @@ void houselog_initialize (const char *name, int argc, const char **argv) {
     }
     if (name) LogName = strdup(name);
     gethostname (LocalHost, sizeof(LocalHost));
+    if (portal) snprintf (PortalHost, sizeof(PortalHost), "%s", portal);
 
     snprintf (uri, sizeof(uri), "/%s/log/traces", LogName);
     echttp_route_uri (strdup(uri), houselog_webget);
