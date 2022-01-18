@@ -48,7 +48,7 @@ dev:
 	for i in $(EXPORT_INCLUDE) ; do chown root:root /usr/local/include/$$i ; done
 	for i in $(EXPORT_INCLUDE) ; do chmod 644 /usr/local/include/$$i ; done
 	mkdir -p /usr/local/share/house/public
-	cp public/house.css /usr/local/share/house/public
+	cp public/house.css public/events.js /usr/local/share/house/public
 	chown root:root /usr/local/share/house/public/*
 	chmod 644 /usr/local/share/house/public/*
 
