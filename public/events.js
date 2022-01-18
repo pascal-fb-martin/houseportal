@@ -26,12 +26,13 @@ function eventShow (response) {
       for (var i = 0; i < elements.length; i++) {
           elements[i].innerHTML = response.host;
       }
-      if (response.proxy) {
-          document.getElementById('portal').href =
-              'http://'+response.proxy+'/index.html';
-      } else {
-          document.getElementById('portal').href =
-              'http://'+response.host+'/index.html';
+      portalmenu = document.getElementById('portal');
+      if (portalmenu) {
+          if (response.proxy) {
+              portalmenu.href = 'http://'+response.proxy+'/index.html';
+          } else {
+              portalmenu.href = 'http://'+response.host+'/index.html';
+          }
       }
    }
 
