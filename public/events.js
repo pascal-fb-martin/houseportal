@@ -18,7 +18,7 @@ function eventShow (response) {
 
    var app = response.apps[0]; // For now handle only one app per query.
 
-   if (!eventLastId) {
+   if (!eventLastId[app]) {
       var name = app[0].toUpperCase() + app.substring(1);
       var title = response.host + ' - ' + name + ' Events';
       document.getElementsByTagName ('title')[0].innerHTML = title;
