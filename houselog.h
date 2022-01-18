@@ -25,9 +25,7 @@
  */
 #include <time.h>
 
-void houselog_initialize (const char *application,
-                          const char *portal,
-                          int argc, const char **argv);
+void houselog_initialize (const char *name, int argc, const char **argv);
 
 void houselog_trace (const char *file, int line, const char *level,
                      const char *object,

@@ -23,7 +23,6 @@
  * SYNOPSYS:
  *
  * void houselog_initialize (const char *application,
- *                           const char *portal,
  *                           int argc, const char **argv);
  *
  *    Initialize the environment required to record logs. This must be
@@ -87,9 +86,9 @@
 static const char *LogTypes = "et";
 static const char *LogFolder = "/var/lib/house/log";
 static const char *LogName = "portal";
+static const char *PortalHost = 0;
 
 static char LocalHost[256] = {0};
-static char PortalHost[256] = {0};
 
 struct EventHistory {
     struct timeval timestamp;
@@ -287,7 +286,7 @@ static int houselog_getheader (time_t now, char *buffer, int size) {
 
     echttp_content_type_json ();
 
-    if (PortalHost[0]) {
+    if (PortalHost) {
         return snprintf (buffer, size,
                         "{\"host\":\"%s\",\"proxy\":\"%s\",\"apps\":[\"%s\"],"
                             "\"timestamp\":%ld,\"%s\":{\"latest\":%ld",
@@ -501,19 +500,22 @@ static void houselog_restore (const struct tm *local, char id) {
     }
 }
 
-void houselog_initialize (const char *name,
-                          const char *portal, int argc, const char **argv) {
+void houselog_initialize (const char *name, int argc, const char **argv) {
     int i;
     char uri[256];
     const char *folder;
+    const char *portal = 0;
 
     for (i = 1; i < argc; ++i) {
-        if (echttp_option_match ("-log=", argv[i], &folder))
+        if (echttp_option_match ("-log=", argv[i], &folder)) {
             LogFolder = folder;
+            continue;
+        }
+        if (echttp_option_match("-portal-server=", argv[i], &portal)) continue;
     }
     if (name) LogName = strdup(name);
     gethostname (LocalHost, sizeof(LocalHost));
-    if (portal) snprintf (PortalHost, sizeof(PortalHost), "%s", portal);
+    PortalHost = portal ? portal : LocalHost;
 
     snprintf (uri, sizeof(uri), "/%s/log/traces", LogName);
     echttp_route_uri (strdup(uri), houselog_webget);

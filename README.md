@@ -256,6 +256,7 @@ This initializes the memory storage for the recent logs and register all the URI
 
 It is possible to force a different history storage path with the "-log=PATH" command line option. This is however not recommended.
 
+This function consumes the same "--portal-host=NAME" option as houseportal_initialize.
 ```
 void houselog_event (const char *category,
                      const char *object,
