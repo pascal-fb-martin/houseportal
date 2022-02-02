@@ -52,8 +52,6 @@ static void background (int fd, int mode) {
     static int Counter = 0;
 
     time_t now = time(0);
-    int first;
-    int i;
 
     DEBUG ("background, count %d\n", Counter);
 
@@ -64,7 +62,8 @@ static void background (int fd, int mode) {
     housediscover (now);
 
     if (now > Deadline) {
-        first = 1;
+        int i;
+        int first = 1;
         housediscovered ("portal", &first, discovered);
 
         for (i = 0; i < ServiceCount; ++i) {

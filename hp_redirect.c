@@ -155,7 +155,7 @@ static void DeprecatePermanentConfiguration (void) {
 }
 
 static void PruneRedirect (time_t deadline) {
-    int i, j;
+    int i;
     int pruned = 0;
 
     for (i = RedirectionCount-1; i >= 0; --i) {
@@ -369,7 +369,7 @@ static void DecodeMessage (char *buffer, int live) {
     // Split the line
     for (i = start = count = 0; buffer[i] >= ' '; ++i) {
         if (buffer[i] == ' ') {
-            if (count >= 16) {
+            if (count >= 14) {
                 houselog_trace (HOUSE_WARNING, "HousePortal",
                                 "Too many tokens at %s", buffer+i);
                 if (!live) exit(1);
@@ -436,7 +436,6 @@ static void DecodeMessage (char *buffer, int live) {
 
 static void LoadConfig (const char *name) {
 
-    int i, start, count;
     char buffer[1024];
     char *token[16];
     struct stat fileinfo;
@@ -564,10 +563,10 @@ static void hp_redirect_publish (time_t now) {
     length = strlen(buffer);
 
     for (i = 0; i < PeerCount; ++i) {
-        int expiration = Peers[i].expiration;
+        time_t expiration = Peers[i].expiration;
         if (expiration >= now)
             snprintf (buffer+length, sizeof(buffer)-length,
-                      " %s=%ld", Peers[i].name, expiration);
+                      " %s=%ld", Peers[i].name, (long)expiration);
         else if (!expiration)
             snprintf (buffer+length, sizeof(buffer)-length,
                       " %s", Peers[i].name);
@@ -604,9 +603,9 @@ void hp_redirect_background (void) {
     static time_t LastCheck = 0;
     time_t now = time(0);
     struct stat fileinfo;
-    int pruned = 0;
 
     if (now > LastCheck + 30) {
+        int pruned = 0;
         if (!RestrictUdp2Local && !hp_udp_has_broadcast()) {
             hp_redirect_open();
             return;
@@ -764,7 +763,6 @@ void hp_redirect_service_json (const char *name, char *buffer, int size) {
 void hp_redirect_start (int argc, const char **argv) {
 
     int i;
-    int count;
 
     char hostname[1000];
 

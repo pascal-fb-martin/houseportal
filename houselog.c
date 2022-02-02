@@ -306,8 +306,6 @@ static const char *houselog_get (struct tm *local, const char *id) {
 
     time_t start = mktime(local);
     int length;
-    char *eol;
-    const char *prefix = "";
 
     length = houselog_getheader (time(0), buffer, sizeof(buffer));
     length += snprintf (buffer+length, sizeof(buffer)-length, ",\"%s\":[", id);
@@ -317,6 +315,7 @@ static const char *houselog_get (struct tm *local, const char *id) {
 
     if (fd) {
         char line[1024];
+        const char *prefix = "";
         fgets (line, sizeof(line), fd); // Consume the header.
         while (!feof(fd)) {
             line[0] = 0;
@@ -324,7 +323,7 @@ static const char *houselog_get (struct tm *local, const char *id) {
             if (line[0] == 0) continue;
             time_t ts = atol(line);
             if (ts < start) continue;
-            eol = strchr(line, '\n');
+            char *eol = strchr(line, '\n');
             if (eol) *eol = 0;
 
             int wrote = snprintf (buffer+length, sizeof(buffer)-length,
@@ -424,19 +423,17 @@ static const char *houselog_webget (const char *method, const char *uri,
     }
 
     if (date) {
-        int day;
-        int month;
         int year = atoi(date);
         if (year >= 2000) {
             const char *cursor = strchr (date, '-');
             if (cursor) {
                 if (cursor[1] == '0') ++cursor;
-                month = atoi(++cursor);
+                int month = atoi(++cursor);
                 if (month >= 1 && month <= 12) {
                     cursor = strchr (cursor, '-');
                     if (cursor) {
                         if (cursor[1] == '0') ++cursor;
-                        day = atoi(++cursor);
+                        int day = atoi(++cursor);
                         if (day >= 1 && day <= 31) {
                             local.tm_year = year - 1900;
                             local.tm_mon  = month - 1;
@@ -449,13 +446,12 @@ static const char *houselog_webget (const char *method, const char *uri,
     }
 
     if (hhmm) {
-        int minute;
         int hour = atoi(hhmm);
         if (hour >= 0 && hour <= 23) {
             const char *cursor = strchr (hhmm, ':');
             if (cursor) {
                 if (cursor[1] == '0') ++cursor;
-                minute = atoi(++cursor);
+                int minute = atoi(++cursor);
                 if (minute >= 0 && minute <= 59) {
                     local.tm_sec = 0;
                     local.tm_min = minute;
@@ -553,7 +549,6 @@ void houselog_background (time_t now) {
     static int LastHour = 0;
     static time_t LastCleanup = 0;
 
-    int i;
     struct tm local = *localtime (&now);
 
     if (LastCleanup == 0) {
@@ -564,6 +559,7 @@ void houselog_background (time_t now) {
     }
 
     if (now > LastCleanup + 10) {
+        int i;
         if (TraceFile) {
             fclose (TraceFile);
             TraceFile = 0;

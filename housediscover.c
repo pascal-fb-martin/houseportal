@@ -129,42 +129,41 @@ static int housediscover_register (const char *name, const char *url) {
 static void housediscover_service_response
                 (void *origin, int status, char *data, int length) {
 
-    const char *service = (char *)origin;
     ParserToken tokens[100];
     int count = 100;
     int innerlist[100];
     int i;
 
     if (status != 200) {
-        houselog_trace (HOUSE_FAILURE, service, "HTTP error %d", status);
+        houselog_trace (HOUSE_FAILURE, "service", "HTTP error %d", status);
         return;
     }
 
     const char *error = echttp_json_parse (data, tokens, &count);
     if (error) {
-        houselog_trace (HOUSE_FAILURE, service, "JSON syntax error, %s", error);
+        houselog_trace (HOUSE_FAILURE, "service", "JSON syntax error, %s", error);
         return;
     }
     if (count <= 0) {
-        houselog_trace (HOUSE_FAILURE, service, "no data");
+        houselog_trace (HOUSE_FAILURE, "service", "no data");
         return;
     }
 
     int host = echttp_json_search (tokens, ".host");
     int list = echttp_json_search (tokens, ".portal.redirect");
     if (host <= 0 || list <= 0) {
-        houselog_trace (HOUSE_FAILURE, service, "invalid data format");
+        houselog_trace (HOUSE_FAILURE, "service", "invalid data format");
         return;
     }
     int n = tokens[list].length;
     if (n == 0) return; // That is a normal case (no service on that server)
     if (n < 0 || n > 100) {
-        houselog_trace (HOUSE_FAILURE, service, "invalid redirect data");
+        houselog_trace (HOUSE_FAILURE, "service", "invalid redirect data");
         return;
     }
     error = echttp_json_enumerate (tokens+list, innerlist);
     if (error) {
-        houselog_trace (HOUSE_FAILURE, service, "%s", error);
+        houselog_trace (HOUSE_FAILURE, "service", "%s", error);
         return;
     }
 
@@ -243,21 +242,21 @@ static void housediscover_peers_response (void *origin,
         return;
     }
     if (count <= 0) {
-        DEBUG ("JSON empty %d on /portal/peers request\n", error);
+        DEBUG ("JSON empty on /portal/peers request\n");
         houselog_trace (HOUSE_FAILURE, "peers", "no data");
         return;
     }
     int peers = echttp_json_search (tokens, ".portal.peers");
     int n = tokens[peers].length;
     if (n <= 0 || n > 100) {
-        DEBUG ("no data %d on portal request\n", error);
+        DEBUG ("no peer data on portal request\n");
         houselog_trace (HOUSE_FAILURE, "peers", "empty zone data");
         return;
     }
 
     error = echttp_json_enumerate (tokens+peers, innerlist);
     if (error) {
-        DEBUG ("no peers array %d on portal request\n", error);
+        DEBUG ("no peers array on portal request: %s\n", error);
         houselog_trace (HOUSE_FAILURE, "peers", "%s", error);
         return;
     }
@@ -345,8 +344,6 @@ static int housediscovered_iterator (int i, const char *service) {
 
 void housediscovered (const char *service,
                       void *context, housediscover_consumer *consumer) {
-
-    int i;
 
     DiscoveryConsumer = consumer;
     DiscoveryConsumerContext = context;

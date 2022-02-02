@@ -49,7 +49,7 @@ static void hp_help (const char *argv0) {
     printf ("   -h:              print this help.\n");
 
     printf ("\nHTTP options:\n");
-    help = echttp_help(i=1);
+    help = echttp_help(i);
     while (help) {
         printf ("   %s\n", help);
         help = echttp_help(++i);

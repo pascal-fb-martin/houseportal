@@ -43,7 +43,7 @@
 #include "houseportalhmac.h"
 
 static char bin2hex (int value) {
-    static char bin2heximage[] = "0123456789abcdef";
+    static const char bin2heximage[] = "0123456789abcdef";
     return bin2heximage[value&0x0f];
 }
 
@@ -76,8 +76,6 @@ static int hmac_hex2bin (const char *hex, unsigned char *bin, int size) {
 const char *houseportalhmac (const char *cypher,
                              const char *hexkey, const char *data) {
 
-    static char signature[9];
-
     if (strcmp(cypher, "SHA-256") == 0) {
 
         unsigned char key[64];
@@ -88,6 +86,7 @@ const char *houseportalhmac (const char *cypher,
         unsigned char *result =
             HMAC(EVP_sha256(), key, keylen, data, strlen(data), output, &outlen);
         if (result) {
+            static char signature[9];
             int i;
             if (outlen > 4) outlen = 4;
             for (i = 0; i < outlen; ++i) {

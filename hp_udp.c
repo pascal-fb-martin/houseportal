@@ -95,7 +95,6 @@ static struct sockaddr_in BroadcastAddress;
 int hp_udp_server (const char *service, int local, int *sockets, int size) {
 
     int value;
-    int flags;
     int count = 0;
     int s;
 

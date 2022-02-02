@@ -106,9 +106,9 @@ void houseportal_initialize (int argc, const char **argv) {
         if (echttp_option_match("-portal-server=", argv[i], &HousePortalHost))
             continue;
         if (echttp_option_match("-portal-map=", argv[i], &mapping)) {
-            if (sscanf (mapping, "%d:%d",
-                        HousePortalPortMap[HousePortalPortMapCount].external,
-                        HousePortalPortMap[HousePortalPortMapCount].internal) == 2) {
+            if (sscanf (mapping, "%hd:%hd",
+                        &(HousePortalPortMap[HousePortalPortMapCount].external),
+                        &(HousePortalPortMap[HousePortalPortMapCount].internal)) == 2) {
                 HousePortalPortMapCount += 1;
             }
             continue;
