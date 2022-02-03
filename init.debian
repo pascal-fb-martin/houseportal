@@ -6,7 +6,8 @@
 # Required-Stop:   $network $remote_fs $syslog
 # Default-Start:   2 3 4 5
 # Default-Stop: 
-# Short-Description: Start HousePortal daemon
+# Short-Description: House services discovery and routing
+# Description:       Advertise local services, detect other portals and route web requests to the local services
 ### END INIT INFO
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin
