@@ -31,6 +31,7 @@ function portalShowServices (response) {
         } else {
             label.href = 'http://'+response.host+service.path+'/index.html';
         }
+        label.target = '_blank';
         inner.appendChild(label);
         outer.appendChild(inner);
    }
