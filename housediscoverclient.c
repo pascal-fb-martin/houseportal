@@ -102,7 +102,7 @@ int main (int argc, const char **argv) {
         option[optioncount++] = "-http-service=dynamic";
     }
 
-    echttp_open (optioncount, option);
+    optioncount = echttp_open (optioncount, option);
     echttp_background (&background);
     houselog_initialize ("discovery", argc, argv);
     housediscover_initialize (optioncount, option);
