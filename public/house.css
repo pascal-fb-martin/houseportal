@@ -58,6 +58,11 @@
    font-size: 25px;
    text-align: left;
 }
+.houselabel {
+    font-family: 'Metrophobic', sans-serif;
+    font-size: 20px;
+    text-align: left;
+}
 .housedata {
    font-family: 'Metrophobic', sans-serif;
    font-size: 20px;
@@ -96,6 +101,7 @@ button {
    font-size: 20px;
    border: 2px solid #3673ad;
    padding: 5px;
+   margin: 1px;
    border-radius: 5px;
    -webkit-border-radius: 5px;
    -moz-border-radius: 5px;
