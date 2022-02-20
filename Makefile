@@ -5,6 +5,7 @@ LIBOJS= houselog.o \
         houseportalclient.o \
         houseportaludp.o \
         houseportalhmac.o \
+        housedepositor.o \
         housediscover.o
 
 EXPORT_INCLUDE=houselog.h houseconfig.h houseportalclient.h housediscover.h
