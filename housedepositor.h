@@ -33,5 +33,5 @@ int housedepositor_put (const char *repository,
                         const char *name,
                         const char *data, int size);
 
-void housedepositor_periodic (void);
+void housedepositor_periodic (time_t now);
 

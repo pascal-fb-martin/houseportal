@@ -10,7 +10,7 @@ LIBOJS= houselog.o \
 
 EXPORT_INCLUDE=houselog.h houseconfig.h houseportalclient.h housediscover.h
 
-all: libhouseportal.a houseportal housediscover
+all: libhouseportal.a houseportal housediscover housedepositor
 
 main: houseportal.c
 
@@ -33,6 +33,9 @@ houseportal: $(OBJS) libhouseportal.a
 
 housediscover: housediscoverclient.c libhouseportal.a
 	gcc -g -O -o housediscover housediscoverclient.c libhouseportal.a -lechttp -lssl -lcrypto -lrt
+
+housedepositor: housedepositorclient.c libhouseportal.a
+	gcc -g -O -o housedepositor housedepositorclient.c libhouseportal.a -lechttp -lssl -lcrypto -lrt
 
 package:
 	mkdir -p packages

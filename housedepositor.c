@@ -90,6 +90,7 @@ typedef struct {
     char uri[256];
     char *base;
     housedepositor_listener *listener;
+    int refreshing;
     time_t active;   // The timestamp of the file that is used now.
     time_t detected; // The most recent timestamp detected.
     char host[128];  // The host that holds the most recent timestamp.
@@ -132,9 +133,11 @@ void housedepositor_subscribe (const char *repository,
         return;
     }
     
+    DEBUG ("subscribe to %s/%s\n", repository, name);
+
     char path[1024];
     snprintf (path, sizeof(path),
-              "%s/%s/%s", repository, DepotGroup, name);
+              "/depot/%s/%s/%s", repository, DepotGroup, name);
 
     int i = housedepositor_search(path);
     if (i >= 0) {
@@ -155,14 +158,16 @@ void housedepositor_subscribe (const char *repository,
     DepotCache[i].listener = listener;
     DepotCache[i].active = 0;
     DepotCache[i].detected = 0;
+    DepotCache[i].refreshing = 0;
 
     for (i = 0; i < MAX_SOURCE; i++) {
-        if (!strcmp (DepotRepositories[i], repository))
-            break; // Already present.
         if (!(DepotRepositories[i])) {
             DepotRepositories[i] = strdup(repository);
+            DEBUG ("Added repository %s\n", repository);
             break; // Just added.
         }
+        if (!strcmp (DepotRepositories[i], repository))
+            break; // Already present.
     }
 }
 
@@ -187,6 +192,8 @@ static void housedepositor_put_response
        return;
    }
    
+   DEBUG ("response to put of %s: %s\n", request->path, data);
+
    if (status != 200) {
        houselog_trace (HOUSE_FAILURE, request->path, "HTTP code %d", status);
    }
@@ -250,10 +257,14 @@ static void housedepositor_get_response
     }
    
     DepotCacheEntry *cache = (DepotCacheEntry *)context;
+    cache->refreshing = 0;
     if (status != 200) {
         houselog_trace (HOUSE_FAILURE, cache->uri, "HTTP code %d", status);
+        return;
     }
     
+    DEBUG ("response to get %s: %s\n", cache->uri, data);
+
     if (cache->listener) {
         cache->listener(cache->base, data, length);
         cache->active = cache->detected;
@@ -263,7 +274,7 @@ static void housedepositor_get_response
 static void housedepositor_get (DepotCacheEntry *cache) {
     
     char url[1024];
-    snprintf (url, sizeof(url), "http://%s/%s", cache->host, cache->uri);
+    snprintf (url, sizeof(url), "http://%s%s", cache->host, cache->uri);
               
     const char *error = echttp_client ("GET", url);
     if (error) {
@@ -279,10 +290,14 @@ static void housedepositor_refresh (void) {
     
     int i;
     for (i = 0; i < MAX_CACHE; i++) {
-        if (!DepotCache[i].uri[0]) break;
         if (!DepotCache[i].detected) continue;
+        if (DepotCache[i].refreshing) continue;
         if (DepotCache[i].detected != DepotCache[i].active) {
+            DEBUG ("Need to refresh %s (%d != %d)\n",
+                   DepotCache[i].uri,
+                   (int)(DepotCache[i].detected), (int)(DepotCache[i].active));
             housedepositor_get(&(DepotCache[i]));
+            DepotCache[i].refreshing = 1;
         }
     }
 }
@@ -295,16 +310,19 @@ static void housedepositor_scan_response
 
     status = echttp_redirected("GET");
     if (!status){
-        echttp_submit (0, 0, housedepositor_put_response, context);
+        echttp_submit (0, 0, housedepositor_scan_response, context);
         return;
     }
     DepotScanPending -= 1;
+    if (DepotScanPending <= 0) DEBUG ("Scan of HouseDepot services completed\n");
     
     if (status != 200) {
         houselog_trace (HOUSE_FAILURE, repository, "HTTP code %d", status);
         return;
     }
    
+    DEBUG ("response to scan of %s: %s\n", repository, data);
+
     ParserToken tokens[MAX_CACHE*4];
     int count = MAX_CACHE*4;
    
@@ -347,6 +365,8 @@ static void housedepositor_scan_response
         if (filename <= 0 || filetime <= 0) continue;
         int cached = housedepositor_search (inner[filename].value.string);
         if (cached < 0) continue;
+        DEBUG ("Found %s at %s\n", inner[filename].value.string,
+                                   tokens[host].value.string);
         time_t timestamp = (time_t) (inner[filetime].value.integer);
         if (DepotCache[cached].detected < timestamp) {
             DepotCache[cached].detected = timestamp;
@@ -365,6 +385,7 @@ static void housedepositor_scan_iterator
     snprintf (url, sizeof(url),
               "%s/%s/%s/all", provider, repository, DepotGroup);
 
+    DEBUG ("GET %s\n", url);
     const char *error = echttp_client ("GET", url);
     if (error) {
         houselog_trace (HOUSE_FAILURE, repository,
@@ -377,28 +398,31 @@ static void housedepositor_scan_iterator
 }
 
 
-void housedepositor_periodic (void) {
+void housedepositor_periodic (time_t now) {
     
     static time_t DepotLastScan = 0;
     
     if (DepotScanPending > 0) return;
     
-    time_t now = time(0);
     if (now < DepotLastScan + 60) {
         housedepositor_refresh();
         return;
     }
-    DepotLastScan = now;
-    DepotScanPending = 0;
-    
+
+    DEBUG ("Starting to scan all depot services\n");
     int i;
     for (i = 0; i < MAX_CACHE; i++) {
         DepotCache[i].detected = 0;
     }
+    DepotScanPending = 0;
+
     for (i = 0; i < MAX_SOURCE; i++) {
         if (!DepotRepositories[i]) break;
         housediscovered
             ("depot", (void *)(DepotRepositories[i]), housedepositor_scan_iterator);
     }
+
+    // Only delay the next scan if we had services to scan.
+    if (DepotScanPending) DepotLastScan = now;
 }
 
