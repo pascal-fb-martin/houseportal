@@ -6,9 +6,9 @@ The HousePortal main web page acts as a sort of general springboard for all the 
 
 ![HousePortal Main Page](https://raw.githubusercontent.com/pascal-fb-martin/houseportal/master/gallery/main-page.png)
 
-The top line is a navigation bar that give access to the HousePortal major pages.
+The top line is a navigation bar that gives access to the HousePortal major pages.
 
-The left column lists all the servers where HousePortal is currently active. The right column lists the services currently running on each server. If you follow a server link, you will arive to the same page, but from the perspective of that selected server. If you follow a service link, a new tab opens that shows this service's main page.
+The left column lists all the servers where HousePortal is currently active. The right column lists the services currently running on each server. If you follow a server link, you will arrive to the same page, but from the perspective of that selected server. If you follow a service link, a new tab opens that shows this service's main page.
 
 The event page shows a record of the major changes detected by the HousePortal service. It's main purpose is to help troubleshoot issues with service discovery.
 
