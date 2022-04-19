@@ -4,6 +4,8 @@
 
 This is a web server to redirect HTTP requests to multiple specialized web servers. This project depends on [echttp](https://github.com/pascal-fb-martin/echttp).
 
+See the [gallery](https://github.com/pascal-fb-martin/gallery/README.md) for a view of HousePortal's web UI.
+
 Having multiple specialized web servers run on the same machine, typically web servers embedded in applications, causes a port conflict situation: which application will claim port 80?
 
 This software is intended to resolve that specific issue by managing redirects in an automatic fashion:
