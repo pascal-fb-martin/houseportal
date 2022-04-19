@@ -10,7 +10,7 @@ The top line is a navigation bar that give access to the HousePortal major pages
 
 The left column lists all the servers where HousePortal is currently active. The right column lists the services currently running on each server. If you follow a server link, you will arive to the same page, but from the perspective of that selected server. If you follow a service link, a new tab opens that shows this service's main page.
 
-![HousePortal Event Page](https://raw.githubusercontent.com/pascal-fb-martin/houseportal/master/gallery/event-page.png)
-
 The event page shows a record of the major changes detected by the HousePortal service. It's main purpose is to help troubleshoot issues with service discovery.
+
+![HousePortal Event Page](https://raw.githubusercontent.com/pascal-fb-martin/houseportal/master/gallery/event-page.png)
 
