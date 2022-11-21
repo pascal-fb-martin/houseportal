@@ -138,3 +138,27 @@ tr {border: 0}
 th {text-align: center; color: #f5f5f5; background-color: darkgreen}
 td {border: 0}
 
+button.controlOn {
+    height: 80px;
+    width: 100%;
+    border: none;
+    color: black;
+    background-color: rgb(199,255,51);
+}
+
+button.controlOff {
+    height: 80px;
+    width: 100%;
+    border: none;
+    color: white;
+    background-color: rgb(51,80,255);
+}
+
+button.controlDisabled {
+    height: 80px;
+    width: 100%;
+    border: none;
+    color: white;
+    background-color: grey;
+}
+
