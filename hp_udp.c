@@ -94,6 +94,8 @@ static struct sockaddr_in BroadcastAddress;
 
 int hp_udp_server (const char *service, int local, int *sockets, int size) {
 
+    static int FirstCall = 1;
+
     int value;
     int count = 0;
     int s;
@@ -119,6 +121,24 @@ int hp_udp_server (const char *service, int local, int *sockets, int size) {
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
     if (getaddrinfo (0, service, &hints, &resolved)) return 0;
+
+    // We need IPv4 broadcast, so don't do anything until we get at least
+    // one iPv4 interface.
+    // (Apparently it does happen that the IPv4 port is not listed shortly
+    // after boot, even while the IPv6 port is??)
+    //
+    for (cursor = resolved; cursor; cursor = cursor->ai_next) {
+        if (cursor->ai_family == AF_INET) break;
+    }
+    if (!cursor) {
+        if (FirstCall)
+            houselog_trace (HOUSE_INFO, "HousePortal",
+                            "UDP port %s is not yet available for IPv4",
+                            service);
+        FirstCall = 0;
+        freeaddrinfo(resolved);
+        return 0;
+    }
 
     for (cursor = resolved; cursor; cursor = cursor->ai_next) {
 
