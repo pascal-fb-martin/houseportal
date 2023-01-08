@@ -57,15 +57,17 @@ dev:
 	chmod 644 /usr/local/share/house/public/*
 
 install: dev
-	if [ -e /etc/init.d/houseportal ] ; then systemctl stop houseportal ; fi
+	if [ -e /etc/init.d/houseportal ] ; then systemctl stop houseportal ; systemctl disable houseportal ; rm -f /etc/init.d/houseportal ; fi
+	if [ -e /lib/systemd/system/houseportal.service ] ; then systemctl stop houseportal ; systemctl disable houseportal ; rm -f /lib/systemd/system/houseportal.service ; fi
 	mkdir -p /etc/house
 	if [ -e /etc/houseportal/houseportal.config ] ; then mv /etc/houseportal/houseportal.config /etc/house/portal.config; fi
 	mkdir -p /usr/local/bin
-	rm -f /usr/local/bin/houseportal /etc/init.d/houseportal
+	rm -f /usr/local/bin/houseportal
 	cp houseportal /usr/local/bin
-	cp init.debian /etc/init.d/houseportal
-	chown root:root /usr/local/bin/houseportal /etc/init.d/houseportal
-	chmod 755 /usr/local/bin/houseportal /etc/init.d/houseportal
+	chown root:root /usr/local/bin/houseportal
+	chmod 755 /usr/local/bin/houseportal
+	cp systemd.service /lib/systemd/system/houseportal.service
+	chown root:root /lib/systemd/system/houseportal.service
 	mkdir -p /usr/local/share/house/public
 	cp public/* /usr/local/share/house/public
 	chown root:root /usr/local/share/house/public/*
@@ -82,7 +84,7 @@ uninstall:
 	rm -f /usr/local/bin/houseportal
 	systemctl stop houseportal
 	systemctl disable houseportal
-	rm -f /etc/init.d/houseportal
+	rm -f /lib/systemd/system/houseportal.service
 	systemctl daemon-reload
 
 purge: uninstall
