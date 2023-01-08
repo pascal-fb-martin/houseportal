@@ -523,7 +523,6 @@ void houselog_initialize (const char *name, int argc, const char **argv) {
     echttp_route_uri (strdup(uri), houselog_weblatest);
 
     snprintf (uri, sizeof(uri), "/%s/log/files", LogName);
-    snprintf (uri, sizeof(uri), "/%s/log/files", LogName);
     echttp_static_route (strdup(uri), LogFolder);
 
     // Alternate paths for application-independent web pages.
@@ -531,6 +530,7 @@ void houselog_initialize (const char *name, int argc, const char **argv) {
     //
     echttp_route_uri ("/log/traces", houselog_webget);
     echttp_route_uri ("/log/events", houselog_webget);
+    echttp_route_uri ("/log/latest", houselog_weblatest);
     echttp_static_route ("/log/files", LogFolder);
 
     time_t now = time(0);
