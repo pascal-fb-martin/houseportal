@@ -82,6 +82,7 @@ uninstall:
 	for i in $(EXPORT_INCLUDE) ; do rm -f /usr/local/include/$$i ; done
 	rm -f /usr/local/bin/housediscover /usr/local/lib/libhouseportal.a
 	rm -f /usr/local/bin/houseportal
+	rm -f /usr/local/share/house/public/*.html
 	systemctl stop houseportal
 	systemctl disable houseportal
 	rm -f /lib/systemd/system/houseportal.service
