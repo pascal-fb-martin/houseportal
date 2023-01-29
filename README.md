@@ -21,7 +21,7 @@ HousePortal may register targets from remote machines, but this is not the main 
 
 ## Installation
 
-* Install the openssl development package(s)
+* Install the openssl development package(s) and icoutils.
 * install [echttp](https://github.com/pascal-fb-martin/echttp).
 * Clone this GitHub repository.
 * make

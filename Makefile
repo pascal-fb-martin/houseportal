@@ -70,6 +70,7 @@ install: dev
 	chown root:root /lib/systemd/system/houseportal.service
 	mkdir -p /usr/local/share/house/public
 	cp public/* /usr/local/share/house/public
+	icotool -c -o /usr/local/share/house/public/favicon.ico favicon.png
 	chown root:root /usr/local/share/house/public/*
 	chmod 644 /usr/local/share/house/public/*
 	touch /etc/default/houseportal
