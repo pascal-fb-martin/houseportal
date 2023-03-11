@@ -22,20 +22,20 @@ clean:
 rebuild: clean all
 
 %.o: %.c
-	gcc -c -g -O -o $@ $<
+	gcc -c -Os -o $@ $<
 
 libhouseportal.a: $(LIBOJS)
 	ar r $@ $^
 	ranlib $@
 
 houseportal: $(OBJS) libhouseportal.a
-	gcc -g -O -o houseportal $(OBJS) libhouseportal.a -lechttp -lssl -lcrypto -lrt
+	gcc -Os -o houseportal $(OBJS) libhouseportal.a -lechttp -lssl -lcrypto -lrt
 
 housediscover: housediscoverclient.c libhouseportal.a
-	gcc -g -O -o housediscover housediscoverclient.c libhouseportal.a -lechttp -lssl -lcrypto -lrt
+	gcc -Os -o housediscover housediscoverclient.c libhouseportal.a -lechttp -lssl -lcrypto -lrt
 
 housedepositor: housedepositorclient.c libhouseportal.a
-	gcc -g -O -o housedepositor housedepositorclient.c libhouseportal.a -lechttp -lssl -lcrypto -lrt
+	gcc -Os -o housedepositor housedepositorclient.c libhouseportal.a -lechttp -lssl -lcrypto -lrt
 
 package:
 	mkdir -p packages
