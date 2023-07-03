@@ -10,14 +10,12 @@ LIBOJS= houselog.o \
 
 EXPORT_INCLUDE=houselog.h houseconfig.h houseportalclient.h housediscover.h
 
+# Local build ---------------------------------------------------
+
 all: libhouseportal.a houseportal housediscover housedepositor
 
-main: houseportal.c
-
-redirect: hp_redirect.c
-
 clean:
-	rm -f *.o *.a houseportal
+	rm -f *.o *.a houseportal housediscover housedepositor
 
 rebuild: clean all
 
@@ -37,9 +35,13 @@ housediscover: housediscoverclient.c libhouseportal.a
 housedepositor: housedepositorclient.c libhouseportal.a
 	gcc -Os -o housedepositor housedepositorclient.c libhouseportal.a -lechttp -lssl -lcrypto -lrt
 
+# Minimal tar file for installation. ----------------------------
+
 package:
 	mkdir -p packages
-	tar -cf packages/houseportal-`date +%F`.tgz houseportal init.debian Makefile
+	tar -cf packages/houseportal-`date +%F`.tgz houseportal housediscover housedepositor $(EXPORT_INCLUDE) libhouseportal.a systemd.service public Makefile
+
+# Distribution agnostic file installation -----------------------
 
 dev:
 	cp libhouseportal.a /usr/local/lib
@@ -48,6 +50,9 @@ dev:
 	cp housediscover /usr/local/bin
 	chown root:root /usr/local/bin/housediscover
 	chmod 755 /usr/local/bin/housediscover
+	cp housedepositor /usr/local/bin
+	chown root:root /usr/local/bin/housedepositor
+	chmod 755 /usr/local/bin/housedepositor
 	cp $(EXPORT_INCLUDE) /usr/local/include
 	for i in $(EXPORT_INCLUDE) ; do chown root:root /usr/local/include/$$i ; done
 	for i in $(EXPORT_INCLUDE) ; do chmod 644 /usr/local/include/$$i ; done
@@ -56,9 +61,7 @@ dev:
 	chown root:root /usr/local/share/house/public/*
 	chmod 644 /usr/local/share/house/public/*
 
-install: dev
-	if [ -e /etc/init.d/houseportal ] ; then systemctl stop houseportal ; systemctl disable houseportal ; rm -f /etc/init.d/houseportal ; fi
-	if [ -e /lib/systemd/system/houseportal.service ] ; then systemctl stop houseportal ; systemctl disable houseportal ; rm -f /lib/systemd/system/houseportal.service ; fi
+install-files: dev
 	mkdir -p /etc/house
 	if [ -e /etc/houseportal/houseportal.config ] ; then mv /etc/houseportal/houseportal.config /etc/house/portal.config; fi
 	mkdir -p /usr/local/bin
@@ -66,8 +69,6 @@ install: dev
 	cp houseportal /usr/local/bin
 	chown root:root /usr/local/bin/houseportal
 	chmod 755 /usr/local/bin/houseportal
-	cp systemd.service /lib/systemd/system/houseportal.service
-	chown root:root /lib/systemd/system/houseportal.service
 	mkdir -p /usr/local/share/house/public
 	cp public/* /usr/local/share/house/public
 	icotool -c -o /usr/local/share/house/public/favicon.ico favicon.png
@@ -75,22 +76,64 @@ install: dev
 	chmod 644 /usr/local/share/house/public/*
 	touch /etc/default/houseportal
 	touch /etc/house/portal.config
+
+uninstall-files:
+	for i in $(EXPORT_INCLUDE) ; do rm -f /usr/local/include/$$i ; done
+	rm -f /usr/local/bin/houseportal
+	rm -f /usr/local/bin/housediscover
+	rm -f /usr/local/bin/housedepositor
+	rm -f /usr/local/lib/libhouseportal.a
+	rm -f /usr/local/share/house/public/*.html
+
+purge-files:
+	rm -f /usr/local/share/house/public/house.css /usr/local/share/house/public/events.js
+	rm -f /usr/local/share/house/public/favicon.ico
+	rmdir --ignore-fail-on-non-empty /usr/local/share/house/public
+	rmdir --ignore-fail-on-non-empty /usr/local/share/house
+
+purge-config:
+	rm -f /etc/default/houseportal /etc/house/portal.config
+
+# Distribution agnostic systemd support -------------------------
+
+install-systemd:
+	cp systemd.service /lib/systemd/system/houseportal.service
+	chown root:root /lib/systemd/system/houseportal.service
 	systemctl daemon-reload
 	systemctl enable houseportal
 	systemctl start houseportal
 
-uninstall:
-	for i in $(EXPORT_INCLUDE) ; do rm -f /usr/local/include/$$i ; done
-	rm -f /usr/local/bin/housediscover /usr/local/lib/libhouseportal.a
-	rm -f /usr/local/bin/houseportal
-	rm -f /usr/local/share/house/public/*.html
-	systemctl stop houseportal
-	systemctl disable houseportal
-	rm -f /lib/systemd/system/houseportal.service
-	systemctl daemon-reload
+uninstall-systemd:
+	if [ -e /etc/init.d/houseportal ] ; then systemctl stop houseportal ; systemctl disable houseportal ; rm -f /etc/init.d/houseportal ; fi
+	if [ -e /lib/systemd/system/houseportal.service ] ; then systemctl stop houseportal ; systemctl disable houseportal ; rm -f /lib/systemd/system/houseportal.service ; systemctl daemon-reload ; fi
 
-purge: uninstall
-	rm -f /etc/default/houseportal /etc/house/portal.config
+stop-systemd: uninstall-systemd
+
+# Debian GNU/Linux install --------------------------------------
+
+install-debian: stop-systemd install-files install-systemd
+
+uninstall-debian: uninstall-files uninstall-systemd
+
+purge-debian: uninstall-debian purge-files purge-config
+
+# Void Linux install --------------------------------------------
+
+install-void: install-files
+
+uninstall-void: uninstall-files
+
+purge-void: uninstall-void purge-files purge-config
+
+# Default install (Debian GNU/Linux) ----------------------------
+
+install: install-debian
+
+uninstall: uninstall-debian
+
+purge: purge-debian
+
+# Docker install ------------------------------------------------
 
 docker: all
 	rm -rf build
