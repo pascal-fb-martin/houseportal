@@ -113,7 +113,7 @@ stop-systemd: uninstall-systemd
 
 install-debian: stop-systemd install-files install-systemd
 
-uninstall-debian: uninstall-files uninstall-systemd
+uninstall-debian: uninstall-systemd uninstall-files
 
 purge-debian: uninstall-debian purge-files purge-config
 
