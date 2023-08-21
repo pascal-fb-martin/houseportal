@@ -125,7 +125,7 @@ uninstall-runit:
 	if [ -e /etc/sv/houseportal ] ; then /usr/bin/sv shutdown houseportal ; rm -rf /etc/sv/houseportal ; rm -f /etc/runit/runsvdir/default/houseportal ; /bin/sleep 5 ; fi
 
 stop-runit:
-	/usr/bin/sv shutdown houseportal
+	if [ -e /etc/sv/houseportal ] ; then /usr/bin/sv shutdown houseportal ; fi
 
 # Debian GNU/Linux install --------------------------------------
 
