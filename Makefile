@@ -117,6 +117,14 @@ uninstall-debian: uninstall-systemd uninstall-files
 
 purge-debian: uninstall-debian purge-files purge-config
 
+# Devuan GNU/Linux install --------------------------------------
+
+install-devuan: install-files
+
+uninstall-devuan: uninstall-files
+
+purge-devuan: uninstall-devuan purge-files purge-config
+
 # Void Linux install --------------------------------------------
 
 install-void: install-files
