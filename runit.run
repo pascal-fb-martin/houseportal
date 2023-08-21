@@ -1,0 +1,6 @@
+#!/bin/sh
+HTTPOPTS=
+OTHEROPTS=
+if [ -e /etc/default/houseportal ] ; then . /etc/default/houseportal ; fi
+exec /usr/local/bin/houseportal $HTTPOPTS $OTHEROPTS
+

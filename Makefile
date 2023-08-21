@@ -109,6 +109,24 @@ uninstall-systemd:
 
 stop-systemd: uninstall-systemd
 
+# Distribution agnostic runit support ---------------------------
+
+install-runit:
+	mkdir -p /etc/sv/houseportal
+	cp runit.run /etc/sv/houseportal/run
+	chown root:root /etc/sv/houseportal /etc/sv/houseportal/run
+	chmod 755 /etc/sv/houseportal/run
+	rm -f /etc/runit/runsvdir/default/houseportal
+	ln -s /etc/sv/houseportal /etc/runit/runsvdir/default/houseportal
+	/bin/sleep 5
+	/usr/bin/sv up houseportal
+
+uninstall-runit:
+	if [ -e /etc/sv/houseportal ] ; then /usr/bin/sv shutdown houseportal ; rm -rf /etc/sv/houseportal ; rm -f /etc/runit/runsvdir/default/houseportal ; /bin/sleep 5 ; fi
+
+stop-runit:
+	/usr/bin/sv shutdown houseportal
+
 # Debian GNU/Linux install --------------------------------------
 
 install-debian: stop-systemd install-files install-systemd
@@ -117,19 +135,19 @@ uninstall-debian: uninstall-systemd uninstall-files
 
 purge-debian: uninstall-debian purge-files purge-config
 
-# Devuan GNU/Linux install --------------------------------------
+# Devuan GNU/Linux install (using runit) ------------------------
 
-install-devuan: install-files
+install-devuan: stop-runit install-files install-runit
 
-uninstall-devuan: uninstall-files
+uninstall-devuan: uninstall-runit uninstall-files
 
 purge-devuan: uninstall-devuan purge-files purge-config
 
 # Void Linux install --------------------------------------------
 
-install-void: install-files
+install-void: stop-runit install-files install-runit
 
-uninstall-void: uninstall-files
+uninstall-void: uninstall-runit uninstall-files
 
 purge-void: uninstall-void purge-files purge-config
 
