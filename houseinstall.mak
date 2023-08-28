@@ -18,7 +18,7 @@
 # Boston, MA  02110-1301, USA.
 #
 # This file is meant to be included from the main make file of dependent
-# applications. The mai nmake file must have defined th sharede following:
+# applications. The main make file must have defined the following:
 #
 # - Variable HAPP: the name of the specific house dependent application.
 #
@@ -31,6 +31,9 @@
 #   applications, if any.
 #
 # - Target purge-config: delete the local application configuration.
+#
+# In addition, the unit file for Systemd must be locally named systemd.service
+# and the local service script for runit must be named runit.run.
 
 # Distribution agnostic install for systemd -------------------------
 
@@ -60,10 +63,10 @@ install-runit:
 	/usr/bin/sv up $(HAPP)
 
 uninstall-runit:
-	if [ -e /etc/sv/$(HAPP) ] ; then /usr/bin/sv shutdown $(HAPP) ; rm -rf /etc/sv/$(HAPP) ; rm -f /etc/runit/runsvdir/default/$(HAPP) ; /bin/sleep 5 ; fi
+	if [ -e /etc/sv/$(HAPP) ] ; then /usr/bin/sv stop $(HAPP) ; rm -rf /etc/sv/$(HAPP) ; rm -f /etc/runit/runsvdir/default/$(HAPP) ; /bin/sleep 5 ; fi
 
 stop-runit:
-	if [ -e /etc/sv/$(HAPP) ] ; then /usr/bin/sv shutdown $(HAPP) ; fi
+	if [ -e /etc/sv/$(HAPP) ] ; then /usr/bin/sv stop $(HAPP) ; fi
 
 # Debian GNU/Linux install --------------------------------------
 

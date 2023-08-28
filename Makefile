@@ -90,7 +90,7 @@ dev:
 	chmod 644 $(SHARE)/install.mak
 	chmod 644 $(SHARE)/install.mak
 
-install-app:
+install-app: dev
 	mkdir -p /etc/house
 	if [ -e /etc/houseportal/houseportal.config ] ; then mv /etc/houseportal/houseportal.config /etc/house/portal.config; fi
 	mkdir -p $(HROOT)/bin
