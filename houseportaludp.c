@@ -69,7 +69,16 @@ int hp_udp_client (const char *destination, const char *service) {
     hints.ai_flags = AI_ADDRCONFIG;
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
-    if (getaddrinfo (destination, service, &hints, &resolved)) return 0;
+
+    int retries = 200;
+    for (;;) {
+        int status = getaddrinfo (destination, service, &hints, &resolved);
+        if (!status) break; // Success.
+        fprintf (stderr, "cannot resolve %s:%s (%s)\n",
+                         destination, service, gai_strerror(status));
+        if (retries-- <= 0) return 0;
+        sleep(3); // Retry later. It might be a network initialization issue.
+    }
 
     for (cursor = resolved; cursor; cursor = cursor->ai_next) {
 
