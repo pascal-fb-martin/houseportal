@@ -82,6 +82,7 @@ dev:
 	for i in $(EXPORT_INCLUDE) ; do chown root:root $(HROOT)/include/$$i ; done
 	for i in $(EXPORT_INCLUDE) ; do chmod 644 $(HROOT)/include/$$i ; done
 	mkdir -p $(SHARE)/public
+	chmod 755 $(SHARE) $(SHARE)/public
 	cp public/house.css public/events.js $(SHARE)/public
 	chown root:root $(SHARE)/public/*
 	chmod 644 $(SHARE)/public/*
@@ -94,11 +95,14 @@ install-app: dev
 	mkdir -p /etc/house
 	if [ -e /etc/houseportal/houseportal.config ] ; then mv /etc/houseportal/houseportal.config /etc/house/portal.config; fi
 	mkdir -p $(HROOT)/bin
+	chmod 755 $(HROOT)/bin
 	rm -f $(HROOT)/bin/houseportal
 	cp houseportal $(HROOT)/bin
 	chown root:root $(HROOT)/bin/houseportal
 	chmod 755 $(HROOT)/bin/houseportal
 	mkdir -p $(SHARE)/public
+	chown root:root $(SHARE)/public
+	chmod 755 $(SHARE) $(SHARE)/public
 	cp public/* $(SHARE)/public
 	icotool -c -o $(SHARE)/public/favicon.ico favicon.png
 	chown root:root $(SHARE)/public/*
