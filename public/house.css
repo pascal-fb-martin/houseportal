@@ -168,7 +168,7 @@ a {
 
 table {border: 0}
 tr {border: 0}
-th {text-align: center; color: #f5f5f5; background-color: darkgreen}
+th {text-align: center; border-bottom: 3px solid #3673ad}
 td {border: 0}
 
 button.controlOn {
