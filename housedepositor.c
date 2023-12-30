@@ -133,11 +133,11 @@ void housedepositor_subscribe (const char *repository,
         return;
     }
     
-    DEBUG ("subscribe to %s/%s\n", repository, name);
-
     char path[1024];
     snprintf (path, sizeof(path),
               "/depot/%s/%s/%s", repository, DepotGroup, name);
+
+    DEBUG ("subscribe to %s\n", path);
 
     int i = housedepositor_search(path);
     if (i >= 0) {
@@ -173,7 +173,7 @@ void housedepositor_subscribe (const char *repository,
 
 
 typedef struct {
-    const char *path;
+    char *path;
     int pending;
     int length;
     const char *data;
@@ -192,13 +192,16 @@ static void housedepositor_put_response
        return;
    }
    
-   DEBUG ("response to put of %s: %s\n", request->path, data);
+   DEBUG ("response to put of %s: %s\n", request->path, (length > 0)?data:"");
 
    if (status != 200) {
        houselog_trace (HOUSE_FAILURE, request->path, "HTTP code %d", status);
    }
 
-   if ((--request->pending) <= 0) free (request); // Last response.
+   if ((--request->pending) <= 0) { // Last response.
+       free (request->path);
+       free (request);
+   }
 }
 
 static void housedepositor_put_iterator
@@ -228,17 +231,17 @@ int housedepositor_put (const char *repository,
     
     char path[1024];
 
+    snprintf (path, sizeof(path),
+              "%s/%s/%s", repository, DepotGroup, name);
+
     HouseDepositorPutContext *request =
         (HouseDepositorPutContext *) malloc (sizeof(HouseDepositorPutContext));
     
     request->pending = 0;
-    request->path = path;
+    request->path = strdup(path);
     request->length = size;
     request->data = data;
-    
-    snprintf (path, sizeof(path),
-              "%s/%s/%s", repository, DepotGroup, name);
-              
+
     int cached = housedepositor_search(path);
     if (cached >= 0) {
         DepotCache[cached].active = time(0);
