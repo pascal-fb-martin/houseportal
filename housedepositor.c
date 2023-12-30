@@ -94,6 +94,7 @@ typedef struct {
     time_t active;   // The timestamp of the file that is used now.
     time_t detected; // The most recent timestamp detected.
     char host[128];  // The host that holds the most recent timestamp.
+    time_t hostalive; // The last time this host responded.
 } DepotCacheEntry;
 
 #define MAX_CACHE 256
@@ -177,6 +178,7 @@ typedef struct {
     int pending;
     int length;
     const char *data;
+    time_t timestamp;
 } HouseDepositorPutContext;
 
 static void housedepositor_put_response
@@ -212,7 +214,8 @@ static void housedepositor_put_iterator
     
     char url[1024];
     
-    snprintf (url, sizeof(url), "%s/%s", provider, request->path);
+    snprintf (url, sizeof(url), "%s/%s?time=%lld",
+              provider, request->path, request->timestamp);
     const char *error = echttp_client ("PUT", url);
     if (error) {
         houselog_trace (HOUSE_FAILURE, service,
@@ -230,6 +233,7 @@ int housedepositor_put (const char *repository,
                         const char *data, int size) {
     
     char path[1024];
+    time_t now = time(0);
 
     snprintf (path, sizeof(path),
               "%s/%s/%s", repository, DepotGroup, name);
@@ -241,12 +245,14 @@ int housedepositor_put (const char *repository,
     request->path = strdup(path);
     request->length = size;
     request->data = data;
+    request->timestamp = now;
+
+    housediscovered ("depot", request, housedepositor_put_iterator);
 
     int cached = housedepositor_search(path);
     if (cached >= 0) {
-        DepotCache[cached].active = time(0);
+        DepotCache[cached].active = now;
     }
-    housediscovered ("depot", request, housedepositor_put_iterator);
 }
 
 
@@ -309,6 +315,7 @@ static void housedepositor_refresh (void) {
 static void housedepositor_scan_response
                (void *context, int status, char *data, int length) {
 
+    time_t now = time(0);
     const char *repository = (char *)context;
 
     status = echttp_redirected("GET");
@@ -371,10 +378,30 @@ static void housedepositor_scan_response
         DEBUG ("Found %s at %s\n", inner[filename].value.string,
                                    tokens[host].value.string);
         time_t timestamp = (time_t) (inner[filetime].value.integer);
-        if (DepotCache[cached].detected < timestamp) {
+
+        if (! DepotCache[cached].active) {
+            // We keep searching for the most recent revision as long as
+            // the configuration item has not been activated yet.
+            //
+            if (DepotCache[cached].detected < timestamp) {
+                snprintf(DepotCache[cached].host, sizeof(DepotCache[0].host),
+                         "%s", tokens[host].value.string);
+                DepotCache[cached].detected = timestamp;
+                DepotCache[cached].hostalive = now;
+            }
+        } else if (!strcmp(DepotCache[cached].host, tokens[host].value.string)) {
+            // If the configuration was already activated, follow the chosen
+            // server.
+            //
             DepotCache[cached].detected = timestamp;
+            DepotCache[cached].hostalive = now;
+        } else if (DepotCache[cached].hostalive < now - 180) {
+            // If the chosen server is no longer responding, replace it.
+            //
             snprintf(DepotCache[cached].host, sizeof(DepotCache[0].host),
                      "%s", tokens[host].value.string);
+            DepotCache[cached].detected = timestamp;
+            DepotCache[cached].hostalive = now;
         }
     }
 }
