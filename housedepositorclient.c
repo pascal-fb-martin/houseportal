@@ -25,16 +25,21 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #include "echttp.h"
 #include "houselog.h"
 #include "housediscover.h"
 #include "housedepositor.h"
 
-const char *Path[10];
-int PathCount = 0;
+static const char *Path[10];
+static int PathCount = 0;
 
-time_t Deadline = 0;
+static int PutRequested = 0;
+
+static time_t Deadline = 0;
 
 #define DEBUG if (echttp_isdebug()) printf
 
@@ -48,25 +53,62 @@ static void discovered (const char *service, void *context, const char *url) {
     printf ("    %s\n", url);
 }
 
+static void putrevision (void) {
+    if (PutRequested) return; // Do it only once.
+    DEBUG ("Put %s to %s/%s\n", Path[2], Path[0], Path[1]);
+    int fd = open(Path[2], O_RDONLY);
+    if (fd < 0) {
+        fprintf (stderr, "** %s: %s\n", Path[2], strerror(errno));
+        exit(1);
+    }
+    struct stat filestat;
+    fstat (fd, &filestat);
+    size_t size = filestat.st_size;
+    char *data = malloc (size); // Lost. Freed on exit.
+    read (fd, data, size);
+    close(fd);
+    housedepositor_put (Path[0], Path[1], data, (int)size);
+    PutRequested = 1;
+    printf ("Stored %s to %s/%s\n", Path[2], Path[0], Path[1]);
+}
+
 static void background (int fd, int mode) {
 
-    static int Counter = 0;
+    static time_t FirstCall = 0;
+    static time_t LastCall = 0;
 
     time_t now = time(0);
 
-    DEBUG ("background, count %d\n", Counter);
-
-    if (Counter == 1) {
-        DEBUG ("Starting the discovery\n");
+    if (now > LastCall) {
+       if (!FirstCall) FirstCall = now;
+       housediscover (0); // Force rapid discovery.
+       LastCall = now;
+       DEBUG ("=== Background at %d sec.\n", now-FirstCall);
     }
-    Counter += 1;
-    housediscover (now);
+    if (now == FirstCall + 1) {
+        static int StartMsg = 0;
+        if (!StartMsg) DEBUG ("Starting the discovery\n");
+        StartMsg = 1;
+    }
+    if (PathCount > 2) {
+        if (now == FirstCall + 5) {
+            putrevision();
+        } else if (now == FirstCall + 7) {
+            exit(0);
+        }
+    }
     housedepositor_periodic(now);
+    housediscover (now);
 }
 
 static void listener (const char *name, const char *data, int length) {
-    printf ("%s: %s\n", name, data);
-    exit (0);
+    if (PathCount == 2) {
+        printf ("%s: %s\n", name, data);
+        exit (0);
+    }
+    if (PathCount > 2) {
+        putrevision();
+    }
 }
 
 int main (int argc, const char **argv) {
@@ -75,7 +117,6 @@ int main (int argc, const char **argv) {
     int optioncount = 1;
     int i;
     const char *waitlimit;
-    int doput = 0;
 
     option[0] = argv[0];
 
@@ -88,15 +129,12 @@ int main (int argc, const char **argv) {
             }
         } else if (echttp_option_match("-sleep=", argv[i], &waitlimit)) {
             Deadline = time(0) + atoi(waitlimit);
-        } else if (echttp_option_present("-put", argv[i])) {
-            doput = 1;
         } else {
             if (optioncount < 100) {
                 option[optioncount++] =  argv[i];
             }
         }
     }
-
     if (optioncount < 100) {
         option[optioncount++] = "-http-service=dynamic";
     }
@@ -107,7 +145,7 @@ int main (int argc, const char **argv) {
     housediscover_initialize (optioncount, option);
     housedepositor_initialize (optioncount, option);
 
-    if (PathCount == 2) {
+    if (PathCount >= 2) {
        housedepositor_subscribe (Path[0], Path[1], listener);
     }
 
