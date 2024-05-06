@@ -85,7 +85,7 @@ dev:
 	chmod 755 $(SHARE) $(SHARE)/public
 	cp public/house.css public/events.js $(SHARE)/public
 	chown root:root $(SHARE)/public/*
-	chmod 644 $(SHARE)/public/*
+	chmod 644 $(SHARE)/public/*.*
 	cp houseinstall.mak $(SHARE)/install.mak
 	chown root:root $(SHARE)/install.mak
 	chmod 644 $(SHARE)/install.mak
