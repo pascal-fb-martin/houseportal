@@ -106,7 +106,7 @@ install-app: dev
 	cp public/* $(SHARE)/public
 	icotool -c -o $(SHARE)/public/favicon.ico favicon.png
 	chown root:root $(SHARE)/public/*
-	chmod 644 $(SHARE)/public/*
+	chmod 644 $(SHARE)/public/*.*
 	touch /etc/default/houseportal
 	touch /etc/house/portal.config
 
