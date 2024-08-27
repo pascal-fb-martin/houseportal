@@ -50,6 +50,13 @@ uninstall-systemd:
 
 stop-systemd: uninstall-systemd
 
+# This is a do-nothing target, defined so that make files that don't need it
+# do not have to define one. Those make files that need that target may
+# define their own: the "::" syntax allows multiple (cumulative) definitions.
+#
+clean-systemd::
+	sleep 0
+
 # Distribution agnostic install for runit ---------------------------
 
 install-runit:
@@ -70,7 +77,7 @@ stop-runit:
 
 # Debian GNU/Linux install --------------------------------------
 
-install-debian: stop-systemd install-app install-systemd
+install-debian: stop-systemd clean-systemd install-app install-systemd
 
 uninstall-debian: uninstall-systemd uninstall-app
 
