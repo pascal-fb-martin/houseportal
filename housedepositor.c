@@ -45,7 +45,7 @@
  *    Recover these service configuration parameters:
  *       -group=*
  *
- * typedef void housedepositor_listener (const char *name,
+ * typedef void housedepositor_listener (const char *name, time_t timestamp,
  *                                       const char *data, int length);
  * 
  * void housedepositor_subscribe (const char *repository,
@@ -275,7 +275,7 @@ static void housedepositor_get_response
     DEBUG ("response to get %s: %s\n", cache->uri, data);
 
     if (cache->listener) {
-        cache->listener(cache->base, data, length);
+        cache->listener(cache->base, cache->detected, data, length);
         cache->active = cache->detected;
     }
 }

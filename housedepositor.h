@@ -22,7 +22,7 @@
  */
 void housedepositor_initialize (int argc, const char **argv);
 
-typedef void housedepositor_listener (const char *name,
+typedef void housedepositor_listener (const char *name, time_t timestamp,
                                       const char *data, int length);
 
 void housedepositor_subscribe (const char *repository,

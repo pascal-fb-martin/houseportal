@@ -101,7 +101,7 @@ static void background (int fd, int mode) {
     housediscover (now);
 }
 
-static void listener (const char *name, const char *data, int length) {
+static void listener (const char *name, time_t timestamp, const char *data, int length) {
     if (PathCount == 2) {
         printf ("%s: %s\n", name, data);
         exit (0);
