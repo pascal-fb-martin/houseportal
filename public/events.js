@@ -8,13 +8,27 @@
 var eventURLbase = null;
 var eventLastId = new Array();
 
-function eventShow (response) {
+function eventNewColumn (text) {
+   var column = document.createElement("td");
+   column.innerHTML = text;
+   return column;
+}
 
-   function eventNewColumn (text) {
-      var column = document.createElement("td");
-      column.innerHTML = text;
-      return column;
+function eventRow (event) {
+   var timestamp = new Date(event[0]);
+   var row = document.createElement("tr");
+   row.appendChild(eventNewColumn(timestamp.toLocaleString()));
+   if (event.length > 5) {
+       row.appendChild(eventNewColumn(event[5]));
    }
+   row.appendChild(eventNewColumn(event[1]));
+   row.appendChild(eventNewColumn(event[2]));
+   row.appendChild(eventNewColumn(event[3]));
+   row.appendChild(eventNewColumn(event[4]));
+   return row;
+}
+
+function eventShow (response) {
 
    var app = response.apps[0]; // For now handle only one app per query.
 
@@ -42,16 +56,15 @@ function eventShow (response) {
    for (var i = table.childNodes.length - 1; i > 1; i--) {
       table.removeChild(table.childNodes[i]);
    }
-   for (var i = response[app].events.length-1; i >= 0; --i) {
-      var event = response[app].events[i];
-      var timestamp = new Date(event[0]);
-      var row = document.createElement("tr");
-      row.appendChild(eventNewColumn(timestamp.toLocaleString()));
-      row.appendChild(eventNewColumn(event[1]));
-      row.appendChild(eventNewColumn(event[2]));
-      row.appendChild(eventNewColumn(event[3]));
-      row.appendChild(eventNewColumn(event[4]));
-      table.appendChild(row);
+   if (response[app].invert) {
+      var end = response[app].events.length;
+      for (var i = 0; i < end; ++i) {
+         table.appendChild(eventRow(response[app].events[i]));
+      }
+   } else {
+      for (var i = response[app].events.length-1; i >= 0; --i) {
+         table.appendChild(eventRow(response[app].events[i]));
+      }
    }
 }
 
