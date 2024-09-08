@@ -23,8 +23,14 @@ SHARE=$(HROOT)/share/house
 
 # Local build ---------------------------------------------------
 
-OBJS= hp_udp.o hp_redirect.o houseportal.o houseportalhmac.o
-LIBOJS= houselog.o \
+OBJS= hp_udp.o \
+      hp_redirect.o \
+      houseportal.o \
+      houseportalhmac.o \
+      houselog_nostorage.o
+
+LIBOJS= houselog_live.o \
+        houselog_storage.o \
         houseconfig.o \
         houseportalclient.o \
         houseportaludp.o \
