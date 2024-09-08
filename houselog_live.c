@@ -183,7 +183,7 @@ static const char *houselog_trace_json (time_t now) {
     return buffer;
 }
 
-static const char *houselog_event_json (time_t now) {
+static const char *houselog_event_json (time_t now, int filtered) {
 
     static char buffer[128+EVENT_DEPTH*(sizeof(struct EventRecord)+24)] = {0};
 
@@ -202,7 +202,7 @@ static const char *houselog_event_json (time_t now) {
         struct EventRecord *cursor = EventHistory + i;
 
         if (!(cursor->timestamp.tv_sec)) continue;
-        if (!(cursor->unsaved)) continue;
+        if (filtered && !(cursor->unsaved)) continue;
 
         int wrote = snprintf (buffer+length, sizeof(buffer)-length,
                               "%s[%ld%03d,\"%s\",\"%s\",\"%s\",\"%s\"]",
@@ -219,7 +219,7 @@ static const char *houselog_event_json (time_t now) {
         }
         length += wrote;
         prefix = ",";
-        cursor->unsaved = 2;
+        if (filtered) cursor->unsaved = 2;
     }
     snprintf (buffer+length, sizeof(buffer)-length, "]}}");
     return buffer;
@@ -228,7 +228,7 @@ static const char *houselog_event_json (time_t now) {
 static void houselog_event_flush (void) {
     int i;
     int newunsaved = 1;
-    if (houselog_storage_flush ("events", houselog_event_json (time(0)))) {
+    if (houselog_storage_flush ("events", houselog_event_json (time(0),1))) {
         EventLastFlushed = EventLatestId;
         newunsaved = 0;
     }
@@ -269,7 +269,7 @@ static const char *houselog_webget (const char *method, const char *uri,
 
     echttp_content_type_json ();
 
-    return houselog_event_json (now);
+    return houselog_event_json (now, 0);
 }
 
 void houselog_trace (const char *file, int line, const char *level,
