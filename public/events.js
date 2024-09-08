@@ -18,8 +18,8 @@ function eventRow (event) {
    var timestamp = new Date(event[0]);
    var row = document.createElement("tr");
    row.appendChild(eventNewColumn(timestamp.toLocaleString()));
-   if (event.length > 5) {
-       row.appendChild(eventNewColumn(event[5]));
+   if (event.length > 6) {
+       row.appendChild(eventNewColumn(event[5]+'/'+event[6]));
    }
    row.appendChild(eventNewColumn(event[1]));
    row.appendChild(eventNewColumn(event[2]));
