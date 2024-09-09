@@ -110,7 +110,7 @@ static int housediscover_register (const char *name, const char *url) {
             return 0;
         }
         DEBUG ("registered new service %s at %s\n", name, url);
-        houselog_event ("DISCOVERY", name, "DETECTED", "AT %s", url);
+        houselog_event_local ("DISCOVERY", name, "DETECTED", "AT %s", url);
         isnew = 1;
     }
     DiscoveryTime[byurl] = time(0);

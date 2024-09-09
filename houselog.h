@@ -40,6 +40,11 @@ void houselog_event (const char *category,
                      const char *action,
                      const char *format, ...);
 
+void houselog_event_local (const char *category,
+                           const char *object,
+                           const char *action,
+                           const char *format, ...);
+
 void houselog_background (time_t now);
 
 const char *houselog_host (void);

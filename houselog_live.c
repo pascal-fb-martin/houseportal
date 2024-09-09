@@ -42,6 +42,17 @@
  *
  *    Record a new event.
  *
+ * void houselog_event_local (const char *category,
+ *                            const char *object,
+ *                            const char *action,
+ *                            const char *format, ...);
+ *
+ *    Record a new local event. Local events are not propagated to the
+ *    history storage services: they will only appear on this service's
+ *    event page.
+ *    This is typically used with events that are only useful when
+ *    troubleshooting that specific service.
+ *
  * void houselog_background (time_t now);
  *
  *    This function must be called a regular intervals for background
@@ -187,7 +198,7 @@ static const char *houselog_event_json (time_t now, int filtered) {
 
     static char buffer[128+EVENT_DEPTH*(sizeof(struct EventRecord)+24)] = {0};
 
-    const char * prefix = "";
+    const char *prefix = "";
     int length;
     int i;
 
@@ -221,29 +232,38 @@ static const char *houselog_event_json (time_t now, int filtered) {
         prefix = ",";
         if (filtered) cursor->unsaved = 2;
     }
+    if (prefix[0] == 0) return 0; // We did not include any event.
+
     snprintf (buffer+length, sizeof(buffer)-length, "]}}");
     return buffer;
 }
 
 static void houselog_event_flush (void) {
-    int i;
+
+    // We may not have anything to propagate if the new events were all local.
+    //
+    const char *data = houselog_event_json (time(0), 1);
+    if (!data) return; // Nothing to propagate.
+
     int newunsaved = 1;
-    if (houselog_storage_flush ("events", houselog_event_json (time(0),1))) {
+    if (houselog_storage_flush ("events", data)) {
         EventLastFlushed = EventLatestId;
         newunsaved = 0;
     }
+    int i;
     for (i = EVENT_DEPTH-1; i >= 0; --i) {
         if (EventHistory[i].unsaved == 2) EventHistory[i].unsaved = newunsaved;
     }
 }
 
 static void houselog_trace_flush (void) {
-    int i;
+
     int newunsaved = 1;
     if (houselog_storage_flush ("traces", houselog_trace_json (time(0)))) {
         TraceLastFlushed = TraceLatestId;
         newunsaved = 0;
     }
+    int i;
     for (i = TRACE_DEPTH-1; i >= 0; --i) {
         if (TraceHistory[i].unsaved == 2) TraceHistory[i].unsaved = newunsaved;
     }
@@ -313,24 +333,20 @@ void houselog_trace (const char *file, int line, const char *level,
         printf ("%s %s, %d: %s %s\n", level, file, line, object, text);
 }
 
-void houselog_event (const char *category,
-                     const char *object,
-                     const char *action,
-                     const char *format, ...) {
+static void houselog_event_new (const char *category,
+                                const char *object,
+                                const char *action,
+                                const char *text, int propagate) {
 
-    va_list ap;
     struct EventRecord *cursor = EventHistory + EventCursor;
-
-    va_start (ap, format);
-    vsnprintf (cursor->description, sizeof(cursor->description), format, ap);
-    va_end (ap);
 
     gettimeofday (&(cursor->timestamp), 0);
 
     safecpy (cursor->category, category, sizeof(cursor->category));
     safecpy (cursor->object, object, sizeof(cursor->object));
     safecpy (cursor->action, action, sizeof(cursor->action));
-    cursor->unsaved = 1;
+    safecpy (cursor->description, text, sizeof(cursor->description));
+    cursor->unsaved = propagate;
 
     EventCursor += 1;
     if (EventCursor >= EVENT_DEPTH) EventCursor = 0;
@@ -348,6 +364,36 @@ void houselog_event (const char *category,
         EventLatestId = (long) (time(0) & 0xffff);
     }
     EventLatestId += 1;
+}
+
+void houselog_event (const char *category,
+                     const char *object,
+                     const char *action,
+                     const char *format, ...) {
+
+    char text[sizeof(EventHistory[0].description)];
+
+    va_list ap;
+    va_start (ap, format);
+    vsnprintf (text, sizeof(text), format, ap);
+    va_end (ap);
+
+    houselog_event_new (category, object, action, text, 1); // Propagated
+}
+
+void houselog_event_local (const char *category,
+                           const char *object,
+                           const char *action,
+                           const char *format, ...) {
+
+    char text[sizeof(EventHistory[0].description)];
+
+    va_list ap;
+    va_start (ap, format);
+    vsnprintf (text, sizeof(text), format, ap);
+    va_end (ap);
+
+    houselog_event_new (category, object, action, text, 0); // Not propagated
 }
 
 void houselog_initialize (const char *name, int argc, const char **argv) {
