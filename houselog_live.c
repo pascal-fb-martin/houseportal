@@ -421,9 +421,11 @@ void houselog_initialize (const char *name, int argc, const char **argv) {
     echttp_route_uri ("/log/events", houselog_webget);
     echttp_route_uri ("/log/latest", houselog_weblatest);
 
-    houselog_background (time(0)); // Initial state.
+    houselog_background (time(0)); // Initial state (with nothing to flush).
 
-    houselog_event ("SERVICE", LogName, "STARTING", "ON %s", LocalHost);
+    // Mark the point of (re)start in both logs.
+    houselog_trace (HOUSE_INFO, LogName, "STARTING", "");
+    houselog_event ("SERVICE", LogName, "STARTING", "");
 }
 
 void houselog_background (time_t now) {
