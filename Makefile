@@ -38,7 +38,7 @@ LIBOJS= houselog_live.o \
         housedepositor.o \
         housediscover.o
 
-EXPORT_INCLUDE=houselog.h houseconfig.h houseportalclient.h housediscover.h
+EXPORT_INCLUDE=houselog.h houseconfig.h houseportalclient.h housediscover.h housedepositor.h
 
 all: libhouseportal.a houseportal housediscover housedepositor
 

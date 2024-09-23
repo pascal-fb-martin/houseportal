@@ -65,7 +65,7 @@
  *    (The repository and name are typically constants, while the group is
  *    provided as a command line parameter.)
  *
- * void housedepositor_periodic (void);
+ * void housedepositor_periodic (time_t now);
  *
  *    Background updates.
  */
