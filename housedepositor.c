@@ -215,7 +215,7 @@ static void housedepositor_put_iterator
     char url[1024];
     
     snprintf (url, sizeof(url), "%s/%s?time=%lld",
-              provider, request->path, request->timestamp);
+              provider, request->path, (long long)(request->timestamp));
     const char *error = echttp_client ("PUT", url);
     if (error) {
         houselog_trace (HOUSE_FAILURE, service,
