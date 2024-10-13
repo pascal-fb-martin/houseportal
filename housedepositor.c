@@ -88,7 +88,6 @@ static int DepotScanPending = 0;
 
 typedef struct {
     char uri[256];
-    char *base;
     housedepositor_listener *listener;
     int refreshing;
     time_t active;   // The timestamp of the file that is used now.
@@ -150,11 +149,6 @@ void housedepositor_subscribe (const char *repository,
     }
     i = DepotCacheCount++;
     snprintf (DepotCache[i].uri, sizeof(DepotCache[0].uri), "%s", path);
-    DepotCache[i].base = strrchr(DepotCache[i].uri, '/');
-    if (DepotCache[i].base)
-        DepotCache[i].base += 1;
-    else
-        DepotCache[i].base = DepotCache[i].uri;
 
     DepotCache[i].listener = listener;
     DepotCache[i].active = 0;
@@ -176,10 +170,22 @@ void housedepositor_subscribe (const char *repository,
 typedef struct {
     char *path;
     int pending;
+    char *data;
     int length;
-    const char *data;
     time_t timestamp;
 } HouseDepositorPutContext;
+
+static void housedepositor_put_free (HouseDepositorPutContext *request) {
+    free (request->data);
+    free (request->path);
+    free (request);
+}
+
+static void housedepositor_put_release (HouseDepositorPutContext *request) {
+    if ((--request->pending) <= 0) { // Last response.
+        housedepositor_put_free (request);
+    }
+}
 
 static void housedepositor_put_response
                (void *context, int status, char *data, int length) {
@@ -200,10 +206,7 @@ static void housedepositor_put_response
        houselog_trace (HOUSE_FAILURE, request->path, "HTTP code %d", status);
    }
 
-   if ((--request->pending) <= 0) { // Last response.
-       free (request->path);
-       free (request);
-   }
+   housedepositor_put_release (request);
 }
 
 static void housedepositor_put_iterator
@@ -241,13 +244,22 @@ int housedepositor_put (const char *repository,
     HouseDepositorPutContext *request =
         (HouseDepositorPutContext *) malloc (sizeof(HouseDepositorPutContext));
     
+    /* We must keep a copy here because we do not know the lifespan of the
+     * caller's data. By making a copy, we control that copy's lifespan
+     * until all DEPOT requests have completed (or failed).
+     */
+    request->data = malloc (size);
+    request->length = size;
+    memcpy (request->data, data, size);
+
     request->pending = 0;
     request->path = strdup(path);
-    request->length = size;
-    request->data = data;
     request->timestamp = now;
 
     housediscovered ("depot", request, housedepositor_put_iterator);
+
+    // There might have been no depot service running at this time.
+    if (request->pending <= 0) housedepositor_put_free (request);
 
     int cached = housedepositor_search(path);
     if (cached >= 0) {
@@ -275,7 +287,7 @@ static void housedepositor_get_response
     DEBUG ("response to get %s: %s\n", cache->uri, data);
 
     if (cache->listener) {
-        cache->listener(cache->base, cache->detected, data, length);
+        cache->listener(cache->uri, cache->detected, data, length);
         cache->active = cache->detected;
     }
 }
@@ -287,7 +299,7 @@ static void housedepositor_get (DepotCacheEntry *cache) {
               
     const char *error = echttp_client ("GET", url);
     if (error) {
-        houselog_trace (HOUSE_FAILURE, cache->base,
+        houselog_trace (HOUSE_FAILURE, cache->uri,
                         "cannot create socket for %s: %s", url, error);
         return;
     }
