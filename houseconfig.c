@@ -31,6 +31,10 @@
  *    Load the configuration from the specified config option, or else
  *    from the default config file.
  *
+ * const char *houseconfig_name (void);
+ *
+ *    Return the basename of the current configuration file.
+ *
  * const char *houseconfig_current (void);
  *
  *    Return the JSON data for the current configuration.
@@ -98,6 +102,7 @@ static int   ConfigTextLength = 0;
 #define HOUSECONFIG_EXT  ".json"
 
 static const char *ConfigFile = HOUSECONFIG_PATH "portal" HOUSECONFIG_EXT;
+static const char *ConfigName = 0; // Will point to base name in ConfigFile.
 
 static const char *houseconfig_parse (void) {
 
@@ -155,7 +160,7 @@ void houseconfig_default (const char *arg) {
         return;
     }
 
-    if (name[0] == '/') {
+    if ((name[0] == '/') || (name[0] == '.')) {
         ConfigFile = strdup(name);
     } else {
         char buffer[1024];
@@ -174,6 +179,10 @@ const char *houseconfig_load (int argc, const char **argv) {
     for (i = 1; i < argc; ++i) {
         houseconfig_default (argv[i]);
     }
+    char *basename = strrchr (ConfigFile, '/');
+    if (basename) ConfigName = basename + 1;
+    else ConfigName = ConfigFile;
+
     houselog_event ("CONFIG", "DATA", "LOADING", "FROM %s", ConfigFile);
     if (ConfigText) echttp_parser_free (ConfigText);
     ConfigText = echttp_parser_load (ConfigFile);
@@ -191,6 +200,10 @@ const char *houseconfig_update (const char *text) {
 
     houseconfig_write (text, ConfigTextLength);
     return 0;
+}
+
+const char *houseconfig_name (void) {
+    return ConfigName;
 }
 
 const char *houseconfig_current (void) {

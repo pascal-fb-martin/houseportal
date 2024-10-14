@@ -23,6 +23,7 @@ void        houseconfig_default (const char *arg);
 const char *houseconfig_load (int argc, const char **argv);
 
 const char *houseconfig_current (void);
+const char *houseconfig_name (void);
 int         houseconfig_open (void); // DEPRECATED.
 int         houseconfig_size (void); // DEPRECATED.
 
