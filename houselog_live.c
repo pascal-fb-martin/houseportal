@@ -297,7 +297,6 @@ void houselog_trace (const char *file, int line, const char *level,
                      const char *format, ...) {
 
     va_list ap;
-    char text[1024];
     struct TraceRecord *cursor = TraceHistory + TraceCursor;
 
     gettimeofday (&(cursor->timestamp), 0);
@@ -330,7 +329,7 @@ void houselog_trace (const char *file, int line, const char *level,
     TraceLatestId += 1;
 
     if (echttp_isdebug())
-        printf ("%s %s, %d: %s %s\n", level, file, line, object, text);
+        printf ("%s %s, %d: %s %s\n", level, file, line, object, cursor->description);
 }
 
 static void houselog_event_new (const char *category,

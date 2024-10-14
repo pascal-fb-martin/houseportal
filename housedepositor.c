@@ -40,6 +40,12 @@
  * date is more recent: it must simply match. This is because the "current"
  * tag may have been moved to an older revision.
  *
+ * void housedepositor_default (const char *arg);
+ *
+ *    Set default values for command line options. Call the function once for
+ *    each options to set a default for. This function must be called before
+ *    housedepositor_initialize().
+ *
  * void housedepositor_initialize (int argc, const char **argv);
  * 
  *    Recover these service configuration parameters:
@@ -106,12 +112,17 @@ static int             DepotCacheCount = 0;
 static char *DepotRepositories[MAX_SOURCE] = {0};
 
 
+void housedepositor_default (const char *arg) {
+    if (echttp_option_match("-group=", arg, &DepotGroup)) return;
+    // FUTURE: handle other future options.
+    return;
+}
+
 void housedepositor_initialize (int argc, const char **argv) {
 
     int i;
     for (i = 1; i < argc; i++) {
-        if (echttp_option_match("-group=", argv[i], &DepotGroup))
-            continue;
+        housedepositor_default (argv[i]);
     }
 }
 

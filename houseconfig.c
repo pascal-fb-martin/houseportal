@@ -31,16 +31,24 @@
  *    Load the configuration from the specified config option, or else
  *    from the default config file.
  *
- * int houseconfig_open (void);
+ * const char *houseconfig_current (void);
+ *
+ *    Return the JSON data for the current configuration.
+ *
+ * int houseconfig_open (void); (DEPRECATED)
  *
  *    Return a file descriptor for reading the current configuration.
  *    This is typically used when there is no primitive for building
  *    a JSON config text from the live system, for example because
  *    there is no automatic discovery to populate the configuration.
  *
- * int houseconfig_size (void);
+ *    This is deprecated: see houseconfig_current().
+ *
+ * int houseconfig_size (void); (DEPRECATED)
  *
  *    Return the size of the configuration JSON text currently used.
+ *
+ *    This is deprecated: see houseconfig_current().
  *
  * const char *houseconfig_update (const char *text);
  *
@@ -79,12 +87,11 @@
 #include "houselog.h"
 #include "houseconfig.h"
 
-#define CONFIGMAXSIZE 1024
-
-static ParserToken ConfigParsed[CONFIGMAXSIZE];
+static ParserToken *ConfigParsed = 0;
+static int   ConfigTokenAllocated = 0;
 static int   ConfigTokenCount = 0;
-static char *ConfigText;
-static int   ConfigTextSize = 0;
+static char *ConfigText = 0;
+static char *ConfigTextCurrent = 0;
 static int   ConfigTextLength = 0;
 
 #define HOUSECONFIG_PATH "/etc/house/"
@@ -92,20 +99,48 @@ static int   ConfigTextLength = 0;
 
 static const char *ConfigFile = HOUSECONFIG_PATH "portal" HOUSECONFIG_EXT;
 
-static const char *houseconfig_refresh (const char *file) {
+static const char *houseconfig_parse (void) {
 
-    houselog_event ("CONFIG", "DATA", "LOADING", "FROM %s", file);
-    if (ConfigText) echttp_parser_free (ConfigText);
-    ConfigText = echttp_parser_load (file);
     if (!ConfigText) {
         ConfigTextLength = 0;
         ConfigTokenCount = 0;
         return "no configuration";
     }
+    int count = echttp_json_estimate(ConfigText);
+    if (count > ConfigTokenAllocated) {
+        if (ConfigParsed) free (ConfigParsed);
+        ConfigTokenAllocated = count;
+        ConfigParsed = calloc (ConfigTokenAllocated, sizeof(ParserToken));
+    }
+    ConfigTokenCount = ConfigTokenAllocated;
 
-    ConfigTextLength = strlen(ConfigText);
-    ConfigTokenCount = CONFIGMAXSIZE;
-    return echttp_json_parse (ConfigText, ConfigParsed, &ConfigTokenCount);
+    char *proposedconfig = strdup (ConfigText);
+    const char *error =
+        echttp_json_parse (ConfigText, ConfigParsed, &ConfigTokenCount);
+    if (error) {
+        free (proposedconfig); // Don't touch the last valid config text.
+        ConfigTokenCount = 0;
+        houselog_trace (HOUSE_FAILURE, "CONFIG", "ERROR %s", error);
+        return error;
+    }
+
+    // The new proposed config is in service now.
+    if (ConfigTextCurrent) free (ConfigTextCurrent);
+    ConfigTextCurrent = proposedconfig;
+    ConfigTextLength = strlen(ConfigTextCurrent);
+    return 0;
+}
+
+static void houseconfig_write (const char *text, int length) {
+
+    int fd = open (ConfigFile, O_WRONLY|O_TRUNC|O_CREAT, 0777);
+    if (fd >= 0) {
+        write (fd, text, length);
+        close (fd);
+        houselog_event ("CONFIG", "DATA", "SAVED", "TO %s", ConfigFile);
+    } else {
+        houselog_event ("CONFIG", "FILE", "ERROR", "CANNOT WRITE TO %s", ConfigFile);
+    }
 }
 
 void houseconfig_default (const char *arg) {
@@ -139,7 +174,10 @@ const char *houseconfig_load (int argc, const char **argv) {
     for (i = 1; i < argc; ++i) {
         houseconfig_default (argv[i]);
     }
-    return houseconfig_refresh (ConfigFile);
+    houselog_event ("CONFIG", "DATA", "LOADING", "FROM %s", ConfigFile);
+    if (ConfigText) echttp_parser_free (ConfigText);
+    ConfigText = echttp_parser_load (ConfigFile);
+    return houseconfig_parse ();
 }
 
 const char *houseconfig_update (const char *text) {
@@ -148,39 +186,22 @@ const char *houseconfig_update (const char *text) {
 
     if (ConfigText) echttp_parser_free (ConfigText);
     ConfigText = echttp_parser_string (text);
-    if (!ConfigText) {
-        ConfigTextLength = 0;
-        ConfigTokenCount = 0;
-        return "no configuration";
-    }
-    ConfigTextLength = strlen(ConfigText);
-    ConfigTokenCount = CONFIGMAXSIZE;
-    const char *error =
-        echttp_json_parse (ConfigText, ConfigParsed, &ConfigTokenCount);
-    if (error) {
-        echttp_parser_free(ConfigText);
-        ConfigText = 0;
-        ConfigTextLength = 0;
-        ConfigTokenCount = 0;
-        houselog_trace (HOUSE_FAILURE, "CONFIG", "ERROR %s", error);
-        return error;
-    }
-    fd = open (ConfigFile, O_WRONLY|O_TRUNC|O_CREAT, 0777);
-    if (fd >= 0) {
-        write (fd, text, ConfigTextLength);
-        close (fd);
-        houselog_event ("CONFIG", "DATA", "SAVED", "TO %s", ConfigFile);
-    } else {
-        houselog_event ("CONFIG", "FILE", "ERROR", "CANNOT OPEN %s", ConfigFile);
-    }
+    const char *error = houseconfig_parse ();
+    if (error) return error;
+
+    houseconfig_write (text, ConfigTextLength);
     return 0;
 }
 
-int houseconfig_open (void) {
+const char *houseconfig_current (void) {
+    return ConfigTextCurrent;
+}
+
+int houseconfig_open (void) { // DEPRECATED
     return open(ConfigFile, O_RDONLY);
 }
 
-int houseconfig_size (void) {
+int houseconfig_size (void) { // DEPRECATED
     return ConfigTextLength;
 }
 

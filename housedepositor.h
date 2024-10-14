@@ -20,6 +20,7 @@
  *
  * housedepositor.h - The generic client side of the HouseDepot service.
  */
+void housedepositor_default (const char *arg);
 void housedepositor_initialize (int argc, const char **argv);
 
 typedef void housedepositor_listener (const char *name, time_t timestamp,
