@@ -39,20 +39,9 @@
  *
  *    Return the JSON data for the current configuration.
  *
- * int houseconfig_open (void); (DEPRECATED)
+ * int houseconfig_active (void);
  *
- *    Return a file descriptor for reading the current configuration.
- *    This is typically used when there is no primitive for building
- *    a JSON config text from the live system, for example because
- *    there is no automatic discovery to populate the configuration.
- *
- *    This is deprecated: see houseconfig_current().
- *
- * int houseconfig_size (void); (DEPRECATED)
- *
- *    Return the size of the configuration JSON text currently used.
- *
- *    This is deprecated: see houseconfig_current().
+ *    Return true if a configuration was successfully activated.
  *
  * const char *houseconfig_update (const char *text);
  *
@@ -96,7 +85,6 @@ static int   ConfigTokenAllocated = 0;
 static int   ConfigTokenCount = 0;
 static char *ConfigText = 0;
 static char *ConfigTextCurrent = 0;
-static int   ConfigTextLength = 0;
 
 #define HOUSECONFIG_PATH "/etc/house/"
 #define HOUSECONFIG_EXT  ".json"
@@ -107,7 +95,6 @@ static const char *ConfigName = 0; // Will point to base name in ConfigFile.
 static const char *houseconfig_parse (void) {
 
     if (!ConfigText) {
-        ConfigTextLength = 0;
         ConfigTokenCount = 0;
         return "no configuration";
     }
@@ -132,7 +119,6 @@ static const char *houseconfig_parse (void) {
     // The new proposed config is in service now.
     if (ConfigTextCurrent) free (ConfigTextCurrent);
     ConfigTextCurrent = proposedconfig;
-    ConfigTextLength = strlen(ConfigTextCurrent);
     return 0;
 }
 
@@ -198,7 +184,7 @@ const char *houseconfig_update (const char *text) {
     const char *error = houseconfig_parse ();
     if (error) return error;
 
-    houseconfig_write (text, ConfigTextLength);
+    houseconfig_write (text, strlen(text));
     return 0;
 }
 
@@ -210,12 +196,8 @@ const char *houseconfig_current (void) {
     return ConfigTextCurrent;
 }
 
-int houseconfig_open (void) { // DEPRECATED
-    return open(ConfigFile, O_RDONLY);
-}
-
-int houseconfig_size (void) { // DEPRECATED
-    return ConfigTextLength;
+int houseconfig_active (void) {
+    return ConfigTokenCount > 0;
 }
 
 int houseconfig_find (int parent, const char *path, int type) {

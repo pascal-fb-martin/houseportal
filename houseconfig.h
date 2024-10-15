@@ -22,12 +22,13 @@
 void        houseconfig_default (const char *arg);
 const char *houseconfig_load (int argc, const char **argv);
 
+int         houseconfig_active (void);
 const char *houseconfig_current (void);
 const char *houseconfig_name (void);
-int         houseconfig_open (void); // DEPRECATED.
-int         houseconfig_size (void); // DEPRECATED.
 
 const char *houseconfig_update (const char *text);
+
+int houseconfig_find (int parent, const char *path, int type);
 
 const char *houseconfig_string  (int parent, const char *path);
 int         houseconfig_integer (int parent, const char *path);
@@ -35,6 +36,6 @@ int         houseconfig_boolean (int parent, const char *path);
 
 int houseconfig_array        (int parent, const char *path);
 int houseconfig_array_length (int array);
-int houseconfig_object       (int parent, const char *path);
 
+int houseconfig_object       (int parent, const char *path);
 int houseconfig_array_object (int parent, int index);

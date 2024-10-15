@@ -332,16 +332,20 @@ const char *houseconfig_load (int argc, const char **argv);
 This function loads the existing configuration. This is called on application startup. The argc and argv parameters should represent the command line arguments. The option --config=NAME can then be used to force a different configuration file name. The same file name will be used for loading the initial configuration, and then for saving any configuration change.
 
 ```
-int houseconfig_open (void);
+int houseconfig_active (void);
 ```
-This function returns a file descriptor for reading the current configuration.
-
-This is typically used when there is no primitive for building a JSON config text from the live system, for example because there is no automatic discovery to populate the configuration. In this case the configuration is purely static and can be served to clients from the up-to-date file.
+This function returns true if a configuration was successfully activated.
 
 ```
-int houseconfig_size (void);
+const char *houseconfig_current (void);
 ```
-This function returns the size in bytes of the current configuration data.
+This function returns the JSON text matching the most recent successfully activated configuration. Invalid configurations activated since then are ignored.
+
+```
+const char *houseconfig_name (void);
+```
+This function returns the base name of the configuration. This is typically
+used when interfacing with the HomeDepot service.
 
 ```
 const char *houseconfig_update (const char *text);
@@ -372,7 +376,6 @@ int houseconfig_object (int parent, const char *path);
 int houseconfig_array_object (int parent, int index);
 ```
 These functions return the index to a specific object. The first form return a sub-object of the specified parent. The second form returns the Nth object in an array of objects.
-
 
 ## Docker
 
