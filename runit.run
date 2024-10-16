@@ -1,6 +1,8 @@
 #!/bin/sh
 HTTPOPTS=
+HOUSEOPT=
 OTHEROPTS=
+if [ -e /etc/default/housegeneric ] ; then . /etc/default/housegeneric ; fi
 if [ -e /etc/default/houseportal ] ; then . /etc/default/houseportal ; fi
-exec /usr/local/bin/houseportal $HTTPOPTS $OTHEROPTS
+exec /usr/local/bin/houseportal $HTTPOPTS $HOUSEOPT $OTHEROPTS
 

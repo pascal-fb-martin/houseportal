@@ -31,6 +31,10 @@
  *    Load the configuration from the specified config option, or else
  *    from the default config file.
  *
+ *    This function consumes the following command line options:
+ *    -config=STRING         set the name of the configuration file.
+ *    -no-local-storage      Do not use a local configuration file.
+ *
  * const char *houseconfig_name (void);
  *
  *    Return the basename of the current configuration file.
@@ -75,6 +79,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <echttp.h>
 #include <echttp_json.h>
 
 #include "houselog.h"
@@ -88,6 +93,8 @@ static char *ConfigTextCurrent = 0;
 
 #define HOUSECONFIG_PATH "/etc/house/"
 #define HOUSECONFIG_EXT  ".json"
+
+static int ConfigFileEnabled = 1;
 
 static const char *ConfigFile = HOUSECONFIG_PATH "portal" HOUSECONFIG_EXT;
 static const char *ConfigName = 0; // Will point to base name in ConfigFile.
@@ -124,6 +131,8 @@ static const char *houseconfig_parse (void) {
 
 static void houseconfig_write (const char *text, int length) {
 
+    if (!ConfigFileEnabled) return;
+
     int fd = open (ConfigFile, O_WRONLY|O_TRUNC|O_CREAT, 0777);
     if (fd >= 0) {
         write (fd, text, length);
@@ -138,23 +147,19 @@ void houseconfig_default (const char *arg) {
 
     const char *name = 0;
 
-    if (strncmp ("--config=", arg, 9) == 0) {
-        name = arg + 9;
-    } else if (strncmp ("-config=", arg, 8) == 0) {
-        name = arg + 8;
-    } else {
-        return;
-    }
-
-    if ((name[0] == '/') || (name[0] == '.')) {
-        ConfigFile = strdup(name);
-    } else {
-        char buffer[1024];
-        const char *extension = HOUSECONFIG_EXT;
-        if (strchr (name, '.')) extension = "";
-        snprintf (buffer, sizeof(buffer),
-                  HOUSECONFIG_PATH "%s%s", name, extension);
-        ConfigFile = strdup(buffer);
+    if (echttp_option_match ("-config=", arg, &name)) {
+        if ((name[0] == '/') || (name[0] == '.')) {
+            ConfigFile = strdup(name);
+        } else {
+            char buffer[1024];
+            const char *extension = HOUSECONFIG_EXT;
+            if (strchr (name, '.')) extension = "";
+            snprintf (buffer, sizeof(buffer),
+                      HOUSECONFIG_PATH "%s%s", name, extension);
+            ConfigFile = strdup(buffer);
+        }
+    } else if (echttp_option_present ("-no-local-storage", arg)) {
+        ConfigFileEnabled = 0;
     }
 }
 
@@ -169,6 +174,8 @@ const char *houseconfig_load (int argc, const char **argv) {
     if (basename) ConfigName = basename + 1;
     else ConfigName = ConfigFile;
 
+    if (!ConfigFileEnabled) return 0; // No error.
+
     houselog_event ("CONFIG", "DATA", "LOADING", "FROM %s", ConfigFile);
     if (ConfigText) echttp_parser_free (ConfigText);
     ConfigText = echttp_parser_load (ConfigFile);
@@ -176,8 +183,6 @@ const char *houseconfig_load (int argc, const char **argv) {
 }
 
 const char *houseconfig_update (const char *text) {
-
-    int fd;
 
     if (ConfigText) echttp_parser_free (ConfigText);
     ConfigText = echttp_parser_string (text);

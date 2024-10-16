@@ -113,6 +113,7 @@ install-app: dev
 	icotool -c -o $(SHARE)/public/favicon.ico favicon.png
 	chown root:root $(SHARE)/public/*
 	chmod 644 $(SHARE)/public/*.*
+	touch /etc/default/housegeneric
 	touch /etc/default/houseportal
 	touch /etc/house/portal.config
 
@@ -150,6 +151,7 @@ docker: all
 	cp public/* build$(SHARE)/public
 	chmod 644 build$(SHARE)/public/*
 	mkdir -p build/etc/default
+	touch build/etc/default/housegeneric
 	touch build/etc/default/houseportal
 	mkdir -p build/etc/house
 	touch build/etc/house/portal.config
