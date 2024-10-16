@@ -161,7 +161,7 @@ The HousePortal library includes a set of generic modules that are shared among 
 
 A web server can be coded to advertize its port number to HousePortal using the HousePortal client API.
 
-First the application must include the client header file:
+The application must include the client header file:
 ```
 #include "houseportalclient.h"
 ```
@@ -196,7 +196,7 @@ This API can used by a web client to automatically find which services are runni
 
 The HousePortal web API for discovery can always be used raw. This API hides the complete discovery sequence, performs the discovery in an asynchronous mode and caches the result.
 
-First the application must include the client header file:
+The application must include the client header file:
 ```
 #include "housediscover.h"
 ```
@@ -239,13 +239,25 @@ Deciding when to generate an event or else a trace is not always obvious. After 
 - If interpreting the message requires knowledge of the source code, then it should be a trace.
 - If the message provides information that is meaningful to the user without requiring knowledge of the source code, then it should be an event.
 
-All logs are stored in daily files (see later for more details).
-
-The 256 latest events are also kept in a memory buffer. If the /{app}/log/events URI is used with no parameter, all events present in memory are returned.
-
 The log API is used to record events and traces inside the application and to save then to permanent storeage. It also implements the web API used to update an event web page.
 
-First the application must include the client header file:
+The 256 latest events are kept in a memory buffer. The /{app}/log/events URI returns all events current stored in memory.
+
+The storage of events and traces is handled by a separate history service that consolidates the logs from all runing services: see [HouseSaga](https://github.com/pascal-fb-martin/housesaga).
+
+A service generating events automatically detects all running history services:
+
+* If no history services are running, events and traces will not be stored to files (events can still be viewed from the service's own web UI).
+
+* If multiple history services are running, events and traces will be duplicated across all history services present: this can be used as a redundancy feature.
+
+The benefits of using a centralized history service are:
+* Events and traces from all services are consolidated in one single place, on one system.
+* This considerably lowers the write activity on a Raspberry Pi MicroSD card, increasing its lifetime. The history service is meant to run on a file server.
+
+The log API depends on the service discovery mechanism: the application must call the discovery client API.
+
+The application must include the client header file:
 ```
 #include "houselog.h"
 ```
@@ -273,6 +285,15 @@ Record one more event. The event is added to the in-memory list of recent event,
 These parameters are saved as is to the CSV history file.
 
 ```
+void houselog_event_local (const char *category,
+                           const char *object,
+                           const char *action,
+                           const char *format, ...);
+```
+This function is similar to houselog_event(), with the exception that this event
+will _not_ be saved to files. This is typically used for verbose minor events, which value is only for immediate diagnostics.
+
+```
 void houselog_trace (HOUSE_INFO or HOUSE_WARNING or HOUSE_FAILURE,
                      const char *object,
                      const char *format, ...);
@@ -284,32 +305,16 @@ void houselog_background (time_t now);
 ```
 This function must be called at regular intervals for background processing, such as cleanup of expired resources, saving data to permanent storage, etc.
 
-## Log File Management
+```
+const char *houselog_host (void);
+```
+This function returns the name of the local machine, as used in the logs.
 
-All logs are kept in daily files (CSV format) under /var/lib/house/log. That directory is the root of a tree organized in three levels: year (4 digits), month (2 digits) and day of the month (2 digits). The event log file is named {app}_e_{year}{month}{day}.csv and the trace file is named {app}_t_{year}{month}{day}.csv.
-
-(The purpose of the directory tree structure is to avoid having hundreds of files in a single directory, which may slow down file operations. The date is repeated in the file name because of web download, which strips the path: doing it this way prevents file for different days to overwrite each other.)
-
-A web access is provided:
-* Events can be accessed through the /{app}/log/events URI,
-* Traces can be accessed through the /{app}/log/traces URI, and
-* A log file can be downloaded using the /log/files/{year}/{month}/{day}/{app}_[t|e]_{year}{month}{day}.csv URI.
-
-The /{app}/log/events and /{app}/log/traces URI accept two optional parameters:
-* date: date of the first record shown, format is YYYY-MM-DD
-* time: time of the first record shown, format is HH:MM
-
-In order to avoid writing frequently to SD cards, the active logs are written to /dev/shm, and moved to permanent storage at the end of the day. To limit loss of data on power outage, the logs are also saved to permanent storage every hour.
-
-During initialization, the log module tries to backup any existing log file in /dev/shm and then restore any existing current day file from permanent storage to /dev/shm.
-
-Any of these file operations is performed only if the source is more recent than the destination.
-
-## Configuration API
+### Configuration API
 
 This module provides a simplified API to handle configuration files in JSON format. This API is easier to use than the general purpose echttp JSON API, but it assumes that there is only one JSON context, for a single file which name is specified by the application.
 
-First the application must include the client header file:
+The application must include the client header file:
 ```
 #include "houseconfig.h"
 ```
@@ -376,6 +381,59 @@ int houseconfig_object (int parent, const char *path);
 int houseconfig_array_object (int parent, int index);
 ```
 These functions return the index to a specific object. The first form return a sub-object of the specified parent. The second form returns the Nth object in an array of objects.
+
+### Depot Client API (Depositor)
+
+The depot service stores configuration and state files for other services. This approach provides the following benefits:
+* If copies of the same service run on multiple machines (for redundancy purpose), they share the same configuration. Configuration changes are automatically propagated.
+* The depot service manages an history, allowing to undo recent changes: see [HouseDepot](https://github.com/pascal-fb-martin/housedepot)
+* Running the depot service on multiple servers provides a redundancy feature.
+
+This API comes as a complement to the configuration API, and is designed to work in combination.
+
+The depot service mechanism is in addition to, and overwrites, the local configuration file. The local configuration is loaded first. Whenever a depot service has been detected that provides the same configuration file, the depot version is loaded to replace the local one. Any configuration change, either made locally or detected from a depot service, is stored locally. The local configuration is thus always up-to-date, allowing the application to function even if no depot service is accessible.
+
+The application must include the client header file:
+
+```
+#include "housedepositor.h"
+```
+
+```
+void housedepositor_default (const char *arg);
+```
+This function sets default values for command line options. Call the function once for each options to set a default for. This function must be called before housedepositor_initialize().
+
+```
+void housedepositor_initialize (int argc, const char **argv);
+```
+This function initializes the client context. One configuration parameter is consumed: `--group=STRING` (hardcoded default is 'home'). The group name is used to distinguish between multiple instances of the same service that would use separate configurations.
+
+Some services are hardware-dependent, i.e. the configuration is specific to the machine that the service runs on. In this case, the service should set a default group based on the name of the machine it runs on.
+
+```
+typedef void housedepositor_listener (const char *name, time_t timestamp,
+                                      const char *data, int length);
+
+void housedepositor_subscribe (const char *repository,
+                               const char *name,
+                               housedepositor_listener *listener);
+```
+This function declares an application listener, which will be called whenever a new revision of the file identified by `repository` and `name` is detected.
+
+The depositor client supports listening on multiple files. Using multiple configuration files is typically done when the overall configuration is split into separate sets, such as a user-entered configuration ('config' repository), or application-generated state to be restored on restart ('state' repository).
+
+```
+int housedepositor_put (const char *repository,
+                        const char *name,
+                        const char *data, int size);
+```
+This function submits a new revision of the specified configuration file to all depot services currently detected. If other services listen to the same file, they will all be notified of the new revision.
+
+```
+void housedepositor_periodic (time_t now);
+```
+This background function must be called periodically. It handles the discovery of, and queries to, the depot services.
 
 ## Docker
 
