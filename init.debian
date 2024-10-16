@@ -19,9 +19,9 @@ PIDFILE=/var/run/houseportal.pid
 
 test -x $DAEMON || exit 0
 
-HTTP_OPTS=
-HOUSE_OPTS=
-OTHER_OPTS=
+HTTPOPTS=
+HOUSEOPTS=
+OTHEROPTS=
 
 if [ -r /etc/default/housegeneric ]; then
 	. /etc/default/housegeneric
@@ -34,7 +34,7 @@ fi
 case $1 in
 	start)
 		log_daemon_msg "Starting HousePortal server" "houseportal"
-		start-stop-daemon --start --quiet --oknodo --background --pidfile $PIDFILE --make-pidfile --startas $DAEMON -- $HTTP_OPTS $HOUSE_OPTS $OTHER_OPTS
+		start-stop-daemon --start --quiet --oknodo --background --pidfile $PIDFILE --make-pidfile --startas $DAEMON -- $HTTPOPTS $HOUSEOPTS $OTHEROPTS
 		log_end_msg $?
   		;;
 	stop)
