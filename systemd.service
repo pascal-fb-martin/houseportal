@@ -3,12 +3,12 @@ Description=House web services discovery and routing
 After=network-online.target
 
 [Service]
-Environment="HTTPOPTS=" "HOUSEOPT=" "OTHEROPTS="
+Environment="HTTPOPTS=" "HOUSEOPTS=" "OTHEROPTS="
 EnvironmentFile=-/etc/default/housegeneric
 EnvironmentFile=-/etc/default/houseportal
 EnvironmentFile=-/etc/sysconfig/housegeneric
 EnvironmentFile=-/etc/sysconfig/houseportal
-ExecStart=/usr/local/bin/houseportal $HTTPOPTS $HOUSEOPT $OTHEROPTS
+ExecStart=/usr/local/bin/houseportal $HTTPOPTS $HOUSEOPTS $OTHEROPTS
 
 [Install]
 WantedBy=multi-user.target
