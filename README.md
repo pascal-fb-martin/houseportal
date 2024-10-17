@@ -323,7 +323,11 @@ The application must include the client header file:
 void houseconfig_default (const char *arg);
 ```
 
-This function allows the application to define default options. For now the only options used by the configuration API is the --config=NAME option, which define the name of the configuration file. The name provided with the option is either a full path (starting with '/') or a path relative to `/etc/house`. If the path is relative, the file extension may also be omitted, in which case ".json" is used. All three examples below are equivalent:
+This function allows the application to define default options. The options consumed by the configuration API are:
+* --config=NAME: the name (and path) of the configuration file.
+* --no-local-storage: ignore local configuration files. A depot service must be running when this option is used.
+
+The name provided with the --config option is either a full path (starting with '/') or a path relative to `/etc/house`. If the path is relative, the file extension may also be omitted, in which case ".json" is used. All three examples below are equivalent:
 ```
 houseconfig_default ("--config=/etc/house/app.json");
 houseconfig_default ("--config=app.json");
@@ -334,7 +338,7 @@ An application must call houseconfig_default() so that the default name of the c
 ```
 const char *houseconfig_load (int argc, const char **argv);
 ```
-This function loads the existing configuration. This is called on application startup. The argc and argv parameters should represent the command line arguments. The option --config=NAME can then be used to force a different configuration file name. The same file name will be used for loading the initial configuration, and then for saving any configuration change.
+This function loads the existing configuration. This is called on application startup. The argc and argv parameters should represent the command line arguments. See houseconfig_default() for a description of the command line options supported.
 
 ```
 int houseconfig_active (void);
