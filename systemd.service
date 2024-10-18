@@ -1,8 +1,12 @@
 [Unit]
 Description=House web services discovery and routing
 After=network-online.target
+StartLimitIntervalSec=500
+StartLimitBurst=5
 
 [Service]
+Restart=on-failure
+RestartSec=50s
 Environment="HTTPOPTS=" "HOUSEOPTS=" "OTHEROPTS="
 EnvironmentFile=-/etc/default/housegeneric
 EnvironmentFile=-/etc/default/houseportal
