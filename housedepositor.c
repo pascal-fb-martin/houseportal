@@ -89,11 +89,14 @@
 
 #define DEBUG if (echttp_isdebug()) printf
 
+#define DEPOT_URI_PREFIX "/depot/"
+
 static const char *DepotGroup = "home";
 static int DepotScanPending = 0;
+static time_t DepotNextRefresh = 0;
 
 typedef struct {
-    char uri[256];
+    char *uri;
     housedepositor_listener *listener;
     int refreshing;
     time_t active;   // The timestamp of the file that is used now.
@@ -134,6 +137,18 @@ static int housedepositor_search (const char *name) {
     return -1;
 }
 
+static void housedepositor_uri (char *uri, int size,
+                                const char *repository, const char *name) {
+    snprintf (uri, size,
+              DEPOT_URI_PREFIX "%s/%s/%s", repository, DepotGroup, name);
+}
+
+static const char *housedepositor_extract_path (const char *uri) {
+    static int LengthOfPrefix = 0;
+    if (!LengthOfPrefix) LengthOfPrefix = strlen(DEPOT_URI_PREFIX);
+    return uri + LengthOfPrefix;
+}
+
 void housedepositor_subscribe (const char *repository,
                                const char *name,
                                housedepositor_listener *listener) {
@@ -144,13 +159,11 @@ void housedepositor_subscribe (const char *repository,
         return;
     }
     
-    char path[1024];
-    snprintf (path, sizeof(path),
-              "/depot/%s/%s/%s", repository, DepotGroup, name);
+    char uri[1024];
+    housedepositor_uri (uri, sizeof(uri), repository, name);
+    DEBUG ("subscribe to %s\n", uri);
 
-    DEBUG ("subscribe to %s\n", path);
-
-    int i = housedepositor_search(path);
+    int i = housedepositor_search(uri);
     if (i >= 0) {
         if (listener != DepotCache[i].listener) {
            houselog_trace (HOUSE_FAILURE, name,
@@ -159,8 +172,7 @@ void housedepositor_subscribe (const char *repository,
         return;
     }
     i = DepotCacheCount++;
-    snprintf (DepotCache[i].uri, sizeof(DepotCache[0].uri), "%s", path);
-
+    DepotCache[i].uri = strdup(uri);
     DepotCache[i].listener = listener;
     DepotCache[i].active = 0;
     DepotCache[i].detected = 0;
@@ -246,11 +258,10 @@ void housedepositor_put (const char *repository,
                          const char *name,
                          const char *data, int size) {
     
-    char path[1024];
+    char uri[1024];
     time_t now = time(0);
 
-    snprintf (path, sizeof(path),
-              "%s/%s/%s", repository, DepotGroup, name);
+    housedepositor_uri (uri, sizeof(uri),repository, name);
 
     HouseDepositorPutContext *request =
         (HouseDepositorPutContext *) malloc (sizeof(HouseDepositorPutContext));
@@ -263,9 +274,12 @@ void housedepositor_put (const char *repository,
     request->length = size;
     memcpy (request->data, data, size);
 
-    request->pending = 0;
-    request->path = strdup(path);
+    // The request path is not the full URI because the "/depot/" prefix
+    // is already part of the service's address returned by the portal.
+    //
+    request->path = strdup(housedepositor_extract_path(uri));
     request->timestamp = now;
+    request->pending = 0;
 
     housediscovered ("depot", request, housedepositor_put_iterator);
 
@@ -279,7 +293,7 @@ void housedepositor_put (const char *repository,
     // Update the cache to reflect the revision that was just checked in.
     // This is to avoid reloading the same configuration data.
     //
-    int cached = housedepositor_search(path);
+    int cached = housedepositor_search(uri);
     if (cached >= 0) {
         DepotCache[cached].detected = now;
         DepotCache[cached].active = now;
@@ -354,13 +368,15 @@ static void housedepositor_scan_response
         return;
     }
     DepotScanPending -= 1;
-    if (DepotScanPending <= 0) DEBUG ("Scan of HouseDepot services completed\n");
+    if (DepotScanPending <= 0) {
+        DEBUG ("Scan of HouseDepot services completed\n");
+        DepotNextRefresh = now + 1;
+    }
     
     if (status != 200) {
         houselog_trace (HOUSE_FAILURE, repository, "HTTP code %d", status);
         return;
     }
-   
     DEBUG ("response to scan of %s: %s\n", repository, data);
 
     ParserToken tokens[MAX_CACHE*4];
@@ -398,6 +414,7 @@ static void housedepositor_scan_response
     }
 
     int i;
+
     for (i = 0; i < n; i++) {
         ParserToken *inner = tokens + files + innerlist[i];
         int filename = echttp_json_search (inner, ".name");
@@ -419,12 +436,14 @@ static void housedepositor_scan_response
                 DepotCache[cached].detected = timestamp;
                 DepotCache[cached].hostalive = now;
             }
+
         } else if (!strcmp(DepotCache[cached].host, tokens[host].value.string)) {
             // If the configuration was already activated, follow the chosen
             // server.
             //
             DepotCache[cached].detected = timestamp;
             DepotCache[cached].hostalive = now;
+
         } else if (DepotCache[cached].hostalive < now - 180) {
             // If the chosen server is no longer responding, replace it.
             //
@@ -459,14 +478,20 @@ static void housedepositor_scan_iterator
 
 
 void housedepositor_periodic (time_t now) {
-    
+
     static time_t DepotLastScan = 0;
     
-    if (DepotScanPending > 0) return;
-    
-    if (now < DepotLastScan + 60) {
+    if ((DepotNextRefresh > 0) && (now > DepotNextRefresh)) {
         housedepositor_refresh();
-        return;
+        DepotNextRefresh = 0;
+    }
+
+    if (now < DepotLastScan + 60) return; // Don't scan too often.
+
+    if (DepotScanPending > 0) {
+        DEBUG ("Scan timed out, refresh forced\n");
+        housedepositor_refresh();
+        DepotNextRefresh = 0;
     }
 
     DEBUG ("Starting to scan all depot services\n");
