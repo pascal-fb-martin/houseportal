@@ -63,9 +63,9 @@
  *    This does not download the file immediately, this is used to
  *    build a list to scan later.
  * 
- * int housedepositor_put (const char *repository,
- *                         const char *name,
- *                         const char *data, int size);
+ * void housedepositor_put (const char *repository,
+ *                          const char *name,
+ *                          const char *data, int size);
  *
  *    Update the named file in all discovered HouseDepot repositories.
  *    (The repository and name are typically constants, while the group is
@@ -242,9 +242,9 @@ static void housedepositor_put_iterator
                    housedepositor_put_response, context);
 }
 
-int housedepositor_put (const char *repository,
-                        const char *name,
-                        const char *data, int size) {
+void housedepositor_put (const char *repository,
+                         const char *name,
+                         const char *data, int size) {
     
     char path[1024];
     time_t now = time(0);
@@ -270,14 +270,21 @@ int housedepositor_put (const char *repository,
     housediscovered ("depot", request, housedepositor_put_iterator);
 
     // There might have been no depot service running at this time.
-    if (request->pending <= 0) housedepositor_put_free (request);
+    // In that case, nothing has happened: just get out.
+    if (request->pending <= 0) {
+        housedepositor_put_free (request);
+        return;
+    }
 
+    // Update the cache to reflect the revision that was just checked in.
+    // This is to avoid reloading the same configuration data.
+    //
     int cached = housedepositor_search(path);
     if (cached >= 0) {
+        DepotCache[cached].detected = now;
         DepotCache[cached].active = now;
     }
 }
-
 
 static void housedepositor_get_response
                (void *context, int status, char *data, int length) {
