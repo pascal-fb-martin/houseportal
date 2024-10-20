@@ -553,8 +553,9 @@ static void housedepositor_check_response
     }
     if (i >= DepotServicesCount) {
         if (DepotServicesCount >= DepotServicesSize) {
-            DepotServicesSize += 16;
-            DepotServices = realloc (DepotServices, DepotServicesSize);
+            DepotServicesSize = DepotServicesCount + 16;
+            DepotServices = realloc (DepotServices,
+                                     DepotServicesSize*sizeof(DepotServiceEntry));
         }
         i = DepotServicesCount++;
         DepotServices[i].host = strdup (hostname);
