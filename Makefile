@@ -102,10 +102,11 @@ install-app: dev
 	if [ -e /etc/houseportal/houseportal.config ] ; then mv /etc/houseportal/houseportal.config /etc/house/portal.config; fi
 	mkdir -p $(HROOT)/bin
 	chmod 755 $(HROOT)/bin
-	rm -f $(HROOT)/bin/houseportal
+	rm -f $(HROOT)/bin/houseportal $(HROOT)/bin/roof
 	cp houseportal $(HROOT)/bin
-	chown root:root $(HROOT)/bin/houseportal
-	chmod 755 $(HROOT)/bin/houseportal
+	cp roof.sh $(HROOT)/bin/roof
+	chown root:root $(HROOT)/bin/houseportal $(HROOT)/bin/roof
+	chmod 755 $(HROOT)/bin/houseportal $(HROOT)/bin/roof
 	mkdir -p $(SHARE)/public
 	chown root:root $(SHARE)/public
 	chmod 755 $(SHARE) $(SHARE)/public
