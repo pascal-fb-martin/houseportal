@@ -208,7 +208,7 @@ static int housediscover_peers_iterator (int i, const char *name) {
     const char *error = echttp_client ("GET", url);
     if (error) {
         DEBUG ("error on %s: %s.\n", url, error);
-        houselog_trace (HOUSE_FAILURE, url, "%s", error);
+        houselog_trace (HOUSE_FAILURE, "peers", "%s: %s", url, error);
         return 0;
     }
     echttp_submit (0, 0, housediscover_service_response, 0);
