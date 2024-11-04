@@ -140,15 +140,15 @@ static int houselog_getheader (time_t now, char *buffer, int size) {
     if (PortalHost) {
         return snprintf (buffer, size,
                         "{\"host\":\"%s\",\"proxy\":\"%s\",\"apps\":[\"%s\"],"
-                            "\"timestamp\":%ld,\"%s\":{\"latest\":%ld",
+                            "\"timestamp\":%lld,\"%s\":{\"latest\":%ld",
                         LocalHost, PortalHost, LogName,
-                            (long)now, LogName, EventLatestId);
+                            (long long)now, LogName, EventLatestId);
     }
     return snprintf (buffer, size,
                     "{\"host\":\"%s\",\"apps\":[\"%s\"],"
-                        "\"timestamp\":%ld,\"%s\":{\"latest\":%ld",
+                        "\"timestamp\":%lld,\"%s\":{\"latest\":%ld",
                     LocalHost, LogName,
-                        (long)now, LogName, EventLatestId);
+                        (long long)now, LogName, EventLatestId);
 }
 
 static const char *houselog_trace_json (time_t now) {
@@ -173,9 +173,9 @@ static const char *houselog_trace_json (time_t now) {
         if (!(cursor->unsaved)) continue;
 
         int wrote = snprintf (buffer+length, sizeof(buffer)-length,
-                              "%s[%ld%03d,\"%s\",%d,\"%s\",\"%s\",\"%s\"]",
+                              "%s[%lld%03d,\"%s\",%d,\"%s\",\"%s\",\"%s\"]",
                               prefix,
-                              (long)(cursor->timestamp.tv_sec),
+                              (long long)(cursor->timestamp.tv_sec),
                               (int)(cursor->timestamp.tv_usec/1000),
                               cursor->file,
                               cursor->line,
@@ -216,9 +216,9 @@ static const char *houselog_event_json (time_t now, int filtered) {
         if (filtered && !(cursor->unsaved)) continue;
 
         int wrote = snprintf (buffer+length, sizeof(buffer)-length,
-                              "%s[%ld%03d,\"%s\",\"%s\",\"%s\",\"%s\"]",
+                              "%s[%lld%03d,\"%s\",\"%s\",\"%s\",\"%s\"]",
                               prefix,
-                              (long)(cursor->timestamp.tv_sec),
+                              (long long)(cursor->timestamp.tv_sec),
                               (int)(cursor->timestamp.tv_usec/1000),
                               cursor->category,
                               cursor->object,
