@@ -27,6 +27,10 @@ void houselog_sensor_data (const struct timeval *timestamp,
                            const char *location, const char *name,
                            const char *value, const char *unit);
 
+void houselog_sensor_numeric (const struct timeval *timestamp,
+                              const char *location, const char *name,
+                              long long value, const char *unit);
+
 void houselog_sensor_flush (void);
 
 void houselog_sensor_background (time_t now);

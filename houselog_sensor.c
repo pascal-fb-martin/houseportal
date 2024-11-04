@@ -35,6 +35,13 @@
  *    Submit a new sensor data record. The timestamp parameter is used as
  *    a one millisecond precision time (microseconds are ignored).
  *
+ * void houselog_sensor_numeric (const struct timeval *timestamp,
+ *                               const char *location, const char *name,
+ *                               long long value, const char *unit);
+ *
+ *    Submit a new sensor data record. This is a numeric variant of
+ *    houselog_sensor_data().
+ *
  * void houselog_sensor_flush (void);
  *
  *    Force transmission of pending sensor data. The data is buffered until
@@ -213,6 +220,15 @@ void houselog_sensor_data (const struct timeval *timestamp,
     }
     SensorLatestId += 1;
 }
+
+void houselog_sensor_numeric (const struct timeval *timestamp,
+                              const char *location, const char *name,
+                              long long value, const char *unit) {
+    char ascii[32];
+    snprintf (ascii, sizeof(ascii), "%lld", value);
+    houselog_sensor_data (timestamp, location, name, ascii, unit);
+}
+
 
 void houselog_sensor_initialize (const char *name, int argc, const char **argv) {
     int i;
