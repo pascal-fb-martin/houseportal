@@ -154,13 +154,13 @@ static void DeprecatePermanentConfiguration (void) {
     RestrictUdp2Local = 0;
 }
 
-static void PruneRedirect (time_t deadline) {
+static void PruneRedirect (time_t now) {
     int i;
     int pruned = 0;
 
     for (i = RedirectionCount-1; i >= 0; --i) {
         time_t expiration = Redirections[i].expiration;
-        if (expiration == 0 || expiration > deadline) continue;
+        if (expiration == 0 || now < expiration) continue; // Not expired.
 
         houselog_event ("ROUTE", Redirections[i].path, "REMOVED",
                         "%s", Redirections[i].target);
@@ -617,14 +617,14 @@ void hp_redirect_background (void) {
                                 ConfigurationPath);
                 DeprecatePermanentConfiguration();
                 LoadConfig (ConfigurationPath);
-                PruneRedirect (now-3000);
+                PruneRedirect (now+3000); // Force immediate expiration.
                 pruned = 1;
             }
         } else {
             houselog_trace (HOUSE_FAILURE, "HousePortal",
                             "Cannot stat %s", ConfigurationPath);
         }
-        if (!pruned) PruneRedirect (now-3000);
+        if (!pruned) PruneRedirect (now);
         if (!RestrictUdp2Local) hp_redirect_publish (now);
         LastCheck = now;
     }
