@@ -38,6 +38,7 @@
 # Distribution agnostic install for systemd -------------------------
 
 install-systemd:
+	grep -q '^house:' /etc/passwd || useradd -r house -s /usr/sbin/nologin -d /var/lib/house
 	cp systemd.service /lib/systemd/system/$(HAPP).service
 	chown root:root /lib/systemd/system/$(HAPP).service
 	systemctl daemon-reload
