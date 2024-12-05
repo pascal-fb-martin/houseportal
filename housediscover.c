@@ -80,6 +80,8 @@ static time_t      DiscoveryDetected[ECHTTP_MAX_SYMBOL];
 
 static time_t DiscoveryRequest = 0;
 
+#define DISCOVERY_PORTAL_INTERVAL 10
+#define DISCOVERY_SERVICE_INTERVAL 120
 
 #define DEBUG if (echttp_isdebug()) printf
 
@@ -95,10 +97,15 @@ void housediscover_initialize (int argc, const char **argv) {
 }
 
 
+static int housediscover_lapsed (time_t timestamp) {
+    return (timestamp < DiscoveryRequest - DISCOVERY_SERVICE_INTERVAL);
+}
+
 static int housediscover_register (const char *name, const char *url) {
 
     int byurl = echttp_hash_find (&DiscoveryByUrl, url);
     int isnew = 0;
+    time_t now = time(0);
 
     if (byurl <= 0) {
         char *urlsaved = strdup(url);
@@ -112,15 +119,22 @@ static int housediscover_register (const char *name, const char *url) {
         DEBUG ("registered new service %s at %s\n", name, url);
         houselog_event_local ("DISCOVERY", name, "DETECTED", "AT %s", url);
         isnew = 1;
+    } else {
+        if (housediscover_lapsed (DiscoveryTime[byurl])) {
+            int byservice = echttp_hash_find (&DiscoveryByService, name);
+            if (byservice > 0) {
+                DiscoveryDetected[byservice] = now; // Re-detected after lapse
+            }
+        }
     }
-    DiscoveryTime[byurl] = time(0);
+    DiscoveryTime[byurl] = now;
 
     if (isnew) {
         // Record one more instance of this service.
         int byservice = echttp_hash_add (&DiscoveryByService, strdup(name));
         if (byservice > 0) {
             DiscoveryUrl[byservice] = strdup(url);
-            DiscoveryDetected[byservice] = time(0);
+            DiscoveryDetected[byservice] = now;
         }
     }
     return isnew;
@@ -203,16 +217,18 @@ static void housediscover_service_response
 
 static int housediscover_peers_iterator (int i, const char *name) {
 
-    const char *url = DiscoveryUrl[i];
-
-    const char *error = echttp_client ("GET", url);
-    if (error) {
-        DEBUG ("error on %s: %s.\n", url, error);
-        houselog_trace (HOUSE_FAILURE, "peers", "%s: %s", url, error);
-        return 0;
+    if (DiscoveryTime[i]) {
+        const char *url = DiscoveryUrl[i];
+        const char *error = echttp_client ("GET", url);
+        if (error) {
+            DEBUG ("error on %s: %s.\n", url, error);
+            houselog_trace (HOUSE_FAILURE, "peers", "%s: %s", url, error);
+            DiscoveryTime[i] = 0;
+            return 0;
+        }
+        echttp_submit (0, 0, housediscover_service_response, 0);
+        DEBUG ("service request %s submitted.\n", url);
     }
-    echttp_submit (0, 0, housediscover_service_response, 0);
-    DEBUG ("service request %s submitted.\n", url);
     return 0;
 }
 
@@ -287,7 +303,7 @@ static void housediscover_peers_response (void *origin,
         // Not yet, force one new discovery 3 seconds from now.
         DiscoveryDetail = 0;
         DiscoveryRequest = now - 8;
-    } else if (now >= DiscoveryDetail + 120) {
+    } else if (now >= DiscoveryDetail + DISCOVERY_SERVICE_INTERVAL) {
         echttp_hash_iterate (&DiscoveryByService,
                              "portal", housediscover_peers_iterator);
         DiscoveryDetail = now;
@@ -300,7 +316,7 @@ void housediscover (time_t now) {
         DiscoveryRequest = 0;
         return;
     }
-    if (now < DiscoveryRequest + 10) return;
+    if (now < DiscoveryRequest + DISCOVERY_PORTAL_INTERVAL) return;
 
     char url[100];
     snprintf (url, sizeof(url), "http://%s/portal/peers", LocalPortalServer);
@@ -336,6 +352,10 @@ static housediscover_consumer *DiscoveryConsumer = 0;
 static void *DiscoveryConsumerContext = 0;
 
 static int housediscovered_iterator (int i, const char *service) {
+
+    if (housediscover_lapsed (DiscoveryTime[i])) {
+        return 0; // Too old, presumed dead.
+    }
 
     if (DiscoveryConsumer)
         DiscoveryConsumer (service, DiscoveryConsumerContext, DiscoveryUrl[i]);
