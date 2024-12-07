@@ -193,6 +193,7 @@ static void PruneRedirect (time_t now) {
 
 static const char *RedirectRoute (const char *method, const char *uri,
                                   const char *data, int length) {
+
     const HttpRedirection *r = SearchBestRedirect (uri);
     if (r) {
         static char url[2048]; // Accessed once after return.
@@ -218,6 +219,12 @@ static const char *RedirectRoute (const char *method, const char *uri,
     return "";
 }
 
+static const char *RedirectRouteAsync (const char *method, const char *uri,
+                                       const char *data, int length) {
+
+    // For now, this does the same. Might be different in the future.
+    return RedirectRoute (method, uri, data, length);
+}
 
 static void AddSingleRedirect (int live, int hide,
                                const char *target,
@@ -280,7 +287,16 @@ static void AddSingleRedirect (int live, int hide,
                         live?"live":"permanent",p,target,hide?" (hide)":"");
         houselog_event ("ROUTE", p, "ADD",
                         "%s (%s)", target, live?"live":"permanent");
-        echttp_route_match (p, RedirectRoute);
+
+        // Since HousePortal will never process any content data on these
+        // redirected requests, better not wait and accumulate the data.
+        // Respond with a redirect as soon as the HTTP headers have been
+        // received, and then HousePortal will ignore the content data
+        // until the connection is closed.
+        //
+        echttp_asynchronous_route
+            (echttp_route_match (p, RedirectRoute), RedirectRouteAsync);
+
         Redirections[RedirectionCount].path = p;
         Redirections[RedirectionCount].target = strdup(target);
         if (service)
