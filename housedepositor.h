@@ -34,5 +34,9 @@ void housedepositor_put (const char *repository,
                          const char *name,
                          const char *data, int size);
 
+void housedepositor_put_file (const char *repository,
+                              const char *name,
+                              const char *filename);
+
 void housedepositor_periodic (time_t now);
 

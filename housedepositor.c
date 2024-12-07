@@ -71,6 +71,16 @@
  *    (The repository and name are typically constants, while the group is
  *    provided as a command line parameter.)
  *
+ * void housedepositor_put_file (const char *repository,
+ *                               const char *name,
+ *                               const char *filename);
+ *
+ *    This is the same as housedepositor_put(), but the data is to be read
+ *    from the specified file. The HouseDepot data's timestamp is set to the
+ *    timestamp of the file as well. One benefit is that there is no local
+ *    limit to the size of the data (there could be a limit on the server
+ *    side).
+ *
  * void housedepositor_periodic (time_t now);
  *
  *    Background updates.
@@ -79,6 +89,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #include <echttp.h>
 #include <echttp_json.h>
@@ -208,14 +220,17 @@ void housedepositor_subscribe (const char *repository,
 typedef struct {
     char *path;
     int pending;
-    char *data;
+    char *data;     // For data in memory upload
+    int fd;         // For file upload.
+    char *filename; // For file upload (redirected).
     int length;
     time_t timestamp;
 } HouseDepositorPutContext;
 
 static void housedepositor_put_free (HouseDepositorPutContext *request) {
-    free (request->data);
-    free (request->path);
+    if (request->data) free (request->data);
+    if (request->path) free (request->path);
+    if (request->filename) free (request->filename);
     free (request);
 }
 
@@ -233,8 +248,16 @@ static void housedepositor_put_response
 
    status = echttp_redirected("PUT");
    if (!status){
-       echttp_submit (request->data, request->length,
-                      housedepositor_put_response, context);
+       if (request->data) {
+           echttp_submit (request->data, request->length,
+                          housedepositor_put_response, context);
+       } else {
+           // Since the current request has been closed, request->fd was
+           // closed as well. Must reopen.
+           request->fd = open (request->filename, O_RDONLY);
+           echttp_transfer (request->fd, request->length);
+           echttp_submit (0, 0, housedepositor_put_response, context);
+       }
        return;
    }
    
@@ -265,35 +288,28 @@ static void housedepositor_put_iterator
     }
     DEBUG ("PUT %s : %s\n", url, request->data);
     request->pending += 1;
-    echttp_submit (request->data, request->length,
-                   housedepositor_put_response, context);
+    if (request->data) {
+        echttp_submit (request->data, request->length,
+                       housedepositor_put_response, context);
+    } else {
+        echttp_transfer (request->fd, request->length);
+        echttp_submit (0, 0, housedepositor_put_response, context);
+    }
 }
 
-void housedepositor_put (const char *repository,
-                         const char *name,
-                         const char *data, int size) {
-    
+static void housedepositor_put_submit (const char *repository,
+                                       const char *name,
+                                       HouseDepositorPutContext *request) {
+
     char uri[1024];
-    time_t now = time(0);
+    time_t now = request->timestamp;
 
     housedepositor_uri (uri, sizeof(uri),repository, name);
-
-    HouseDepositorPutContext *request =
-        (HouseDepositorPutContext *) malloc (sizeof(HouseDepositorPutContext));
-    
-    /* We must keep a copy here because we do not know the lifespan of the
-     * caller's data. By making a copy, we control that copy's lifespan
-     * until all DEPOT requests have completed (or failed).
-     */
-    request->data = malloc (size);
-    request->length = size;
-    memcpy (request->data, data, size);
 
     // The request path is not the full URI because the "/depot/" prefix
     // is already part of the service's address returned by the portal.
     //
     request->path = strdup(housedepositor_extract_path(uri));
-    request->timestamp = now;
     request->pending = 0;
 
     housediscovered ("depot", request, housedepositor_put_iterator);
@@ -313,6 +329,56 @@ void housedepositor_put (const char *repository,
         DepotCache[cached].detected = now;
         DepotCache[cached].active = now;
     }
+}
+
+void housedepositor_put (const char *repository,
+                         const char *name,
+                         const char *data, int size) {
+    
+    HouseDepositorPutContext *request =
+        (HouseDepositorPutContext *) malloc (sizeof(HouseDepositorPutContext));
+    
+    request->timestamp = time(0);
+
+    /* We must keep a copy here because we do not know the lifespan of the
+     * caller's data. By making a copy, we control that copy's lifespan
+     * until all DEPOT requests have completed (or failed).
+     */
+    request->fd = 0;
+    request->filename = 0;
+    request->data = malloc (size);
+    request->length = size;
+    memcpy (request->data, data, size);
+
+    housedepositor_put_submit (repository, name, request);
+}
+
+void housedepositor_put_file (const char *repository,
+                              const char *name,
+                              const char *filename) {
+    time_t now;
+
+    HouseDepositorPutContext *request =
+        (HouseDepositorPutContext *) malloc (sizeof(HouseDepositorPutContext));
+
+    request->fd = open (filename, O_RDONLY);
+    if (request->fd < 0) goto abort;
+
+    struct stat fileinfo;
+    if (fstat(request->fd, &fileinfo) < 0) goto abort;
+    if ((fileinfo.st_mode & S_IFMT) != S_IFREG) goto abort;
+
+    request->data = 0;
+    request->filename = strdup(filename);
+    request->length = fileinfo.st_size;
+    request->timestamp = fileinfo.st_mtim.tv_sec;
+
+    housedepositor_put_submit (repository, name, request);
+    return;
+
+abort:
+    free (request);
+    return;
 }
 
 static void housedepositor_get_response

@@ -26,8 +26,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <fcntl.h>
-#include <sys/stat.h>
 
 #include "echttp.h"
 #include "houselog.h"
@@ -43,33 +41,11 @@ static time_t Deadline = 0;
 
 #define DEBUG if (echttp_isdebug()) printf
 
-static void discovered (const char *service, void *context, const char *url) {
-
-    int *first = (int *)context;
-    if (*first) {
-        printf ("%s:\n", service);
-        *first = 0;
-    }
-    printf ("    %s\n", url);
-}
-
 static void putrevision (void) {
     if (PutRequested) return; // Do it only once.
     DEBUG ("Put %s to %s/%s\n", Path[2], Path[0], Path[1]);
-    int fd = open(Path[2], O_RDONLY);
-    if (fd < 0) {
-        fprintf (stderr, "** %s: %s\n", Path[2], strerror(errno));
-        exit(1);
-    }
-    struct stat filestat;
-    fstat (fd, &filestat);
-    size_t size = filestat.st_size;
-    char *data = malloc (size); // Lost. Freed on exit.
-    read (fd, data, size);
-    close(fd);
-    housedepositor_put (Path[0], Path[1], data, (int)size);
+    housedepositor_put_file (Path[0], Path[1], Path[2]);
     PutRequested = 1;
-    printf ("Stored %s to %s/%s\n", Path[2], Path[0], Path[1]);
 }
 
 static void background (int fd, int mode) {
@@ -103,7 +79,7 @@ static void background (int fd, int mode) {
 
 static void listener (const char *name, time_t timestamp, const char *data, int length) {
     if (PathCount == 2) {
-        printf ("%s: %s\n", name, data);
+        printf ("%s", data);
         exit (0);
     }
     if (PathCount > 2) {
