@@ -453,7 +453,6 @@ static void DecodeMessage (char *buffer, int live) {
 static void LoadConfig (const char *name) {
 
     char buffer[1024];
-    char *token[16];
     struct stat fileinfo;
 
     if (stat (name, &fileinfo) == 0) {
@@ -649,7 +648,8 @@ void hp_redirect_background (void) {
 static int hp_redirect_preamble (time_t now, char *buffer, int size) {
 
     snprintf (buffer, size,
-             "{\"host\":\"%s\",\"timestamp\":%d,\"portal\":{", HostName, now);
+             "{\"host\":\"%s\",\"timestamp\":%lld,\"portal\":{",
+             HostName, (long long)now);
     return strlen(buffer);
 }
 
@@ -683,12 +683,12 @@ void hp_redirect_list_json (int services, char *buffer, int size) {
             service[0] = 0;
 
         snprintf (cursor, size-length,
-                  "%s{\"path\":\"%*.*s\",%s\"expire\":%d,\"target\":\"%s\",\"hide\":%s,\"active\":%s}",
+                  "%s{\"path\":\"%*.*s\",%s\"expire\":%lld,\"target\":\"%s\",\"hide\":%s,\"active\":%s}",
                   prefix,
                   Redirections[i].length, Redirections[i].length,
                   Redirections[i].path,
                   service,
-                  expiration,
+                  (long long)expiration,
                   Redirections[i].target,
                   Redirections[i].hide?"true":"false",
                   (expiration == 0 || expiration > now)?"true":"false");

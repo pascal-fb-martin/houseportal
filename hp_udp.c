@@ -81,7 +81,7 @@ static union {
     struct sockaddr_in  ipv4;
     struct sockaddr_in6 ipv6;
 } UdpReceived;
-static int UdpReceivedLength;
+static unsigned int UdpReceivedLength;
 
 static int UdpReceivedSocket = -1;
 

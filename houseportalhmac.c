@@ -80,11 +80,11 @@ const char *houseportalhmac (const char *cypher,
 
         unsigned char key[64];
         unsigned char output[EVP_MAX_MD_SIZE];
-        int outlen = EVP_MAX_MD_SIZE;
+        unsigned int outlen = EVP_MAX_MD_SIZE;
         int keylen = hmac_hex2bin (hexkey, key, sizeof(key));
 
         unsigned char *result =
-            HMAC(EVP_sha256(), key, keylen, data, strlen(data), output, &outlen);
+            HMAC(EVP_sha256(), key, keylen, (unsigned char *)data, strlen(data), output, &outlen);
         if (result) {
             static char signature[9];
             int i;

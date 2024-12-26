@@ -356,7 +356,6 @@ void housedepositor_put (const char *repository,
 void housedepositor_put_file (const char *repository,
                               const char *name,
                               const char *filename) {
-    time_t now;
 
     HouseDepositorPutContext *request =
         (HouseDepositorPutContext *) malloc (sizeof(HouseDepositorPutContext));

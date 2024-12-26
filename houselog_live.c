@@ -281,15 +281,8 @@ static const char *houselog_weblatest (const char *method, const char *uri,
 static const char *houselog_webget (const char *method, const char *uri,
                                     const char *data, int length) {
 
-    // Show the most recent data.
-    time_t now = time(0);
-
-    time_t start = now - 600; // Default: show the last 10 minutes.
-    struct tm local = *localtime (&start);
-
     echttp_content_type_json ();
-
-    return houselog_event_json (now, 0);
+    return houselog_event_json (time(0), 0); // Show the most recent data.
 }
 
 void houselog_trace (const char *file, int line, const char *level,
@@ -398,7 +391,6 @@ void houselog_event_local (const char *category,
 void houselog_initialize (const char *name, int argc, const char **argv) {
     int i;
     char uri[256];
-    const char *folder;
     const char *portal = 0;
 
     for (i = 1; i < argc; ++i) {

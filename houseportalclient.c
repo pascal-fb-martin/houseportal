@@ -93,7 +93,6 @@ static int         HousePortalPortMapCount = 0;
 
 void houseportal_initialize (int argc, const char **argv) {
 
-    int debug = 0;
     int i;
 
     const char *mapping;

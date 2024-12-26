@@ -231,8 +231,6 @@ void houselog_sensor_numeric (const struct timeval *timestamp,
 
 void houselog_sensor_initialize (const char *name, int argc, const char **argv) {
     int i;
-    char uri[256];
-    const char *folder;
     const char *portal = 0;
 
     for (i = 1; i < argc; ++i) {

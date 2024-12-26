@@ -39,7 +39,7 @@ LIBOJS= houselog_live.o \
         housedepositor.o \
         housediscover.o
 
-EXPORT_INCLUDE=houselog.h houseconfig.h houseportalclient.h housediscover.h housedepositor.h houselog_sensor.h
+EXPORT_INCLUDE=houselog.h houseconfig.h houseportalclient.h housediscover.h housedepositor.h houselog_sensor.h houselog_storage.h
 
 all: libhouseportal.a houseportal housediscover housedepositor
 
@@ -49,14 +49,14 @@ clean:
 rebuild: clean all
 
 %.o: %.c
-	gcc -c -Os -o $@ $<
+	gcc -c -Wall -g -Os -o $@ $<
 
 libhouseportal.a: $(LIBOJS)
 	ar r $@ $^
 	ranlib $@
 
 houseportal: $(OBJS) libhouseportal.a
-	gcc -Os -o houseportal $(OBJS) libhouseportal.a -lechttp -lssl -lcrypto -lrt
+	gcc -g -Os -o houseportal $(OBJS) libhouseportal.a -lechttp -lssl -lcrypto -lrt
 
 housediscover: housediscoverclient.c libhouseportal.a
 	gcc -Os -o housediscover housediscoverclient.c libhouseportal.a -lechttp -lssl -lcrypto -lrt
