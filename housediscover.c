@@ -98,7 +98,9 @@ void housediscover_initialize (int argc, const char **argv) {
 
 
 static int housediscover_lapsed (time_t timestamp) {
-    return (timestamp < DiscoveryRequest - DISCOVERY_SERVICE_INTERVAL);
+    // Don't substract, only add, to avoid landing into negative range
+    // whenever DiscoveryRequest is reset..
+    return (timestamp + DISCOVERY_SERVICE_INTERVAL < DiscoveryRequest);
 }
 
 static int housediscover_register (const char *name, const char *url) {
