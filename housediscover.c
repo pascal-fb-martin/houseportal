@@ -85,6 +85,23 @@ static time_t DiscoveryRequest = 0;
 
 #define DEBUG if (echttp_isdebug()) printf
 
+// Manage the resources used to decode the discovery responses.
+static ParserToken *DiscoveryTokens = 0;
+static int *DiscoveryInnerList = 0; // That references tokens too: same size.
+static int DiscoveryTokensAllocated = 0;
+
+static int housediscover_adjust_tokens (const char *data) {
+    int count = echttp_json_estimate(data);
+    if (count >= DiscoveryTokensAllocated) {
+        // Need to allocate more than required so that we avoid re-allocating
+        // too many times.
+        int need = DiscoveryTokensAllocated = count + 128;
+        DiscoveryTokens = realloc (DiscoveryTokens, need*sizeof(ParserToken));
+        DiscoveryInnerList = realloc (DiscoveryInnerList, need*sizeof(int));
+    }
+    return count;
+}
+
 void housediscover_initialize (int argc, const char **argv) {
 
     int i;
@@ -145,9 +162,7 @@ static int housediscover_register (const char *name, const char *url) {
 static void housediscover_service_response
                 (void *origin, int status, char *data, int length) {
 
-    ParserToken tokens[100];
-    int count = 100;
-    int innerlist[100];
+    int count = housediscover_adjust_tokens (data);
     int i;
 
     if (status != 200) {
@@ -155,7 +170,7 @@ static void housediscover_service_response
         return;
     }
 
-    const char *error = echttp_json_parse (data, tokens, &count);
+    const char *error = echttp_json_parse (data, DiscoveryTokens, &count);
     if (error) {
         houselog_trace (HOUSE_FAILURE, "service", "JSON syntax error, %s", error);
         return;
@@ -165,32 +180,32 @@ static void housediscover_service_response
         return;
     }
 
-    int host = echttp_json_search (tokens, ".host");
-    int list = echttp_json_search (tokens, ".portal.redirect");
+    int host = echttp_json_search (DiscoveryTokens, ".host");
+    int list = echttp_json_search (DiscoveryTokens, ".portal.redirect");
     if (host <= 0 || list <= 0) {
         houselog_trace (HOUSE_FAILURE, "service", "invalid data format");
         return;
     }
-    int n = tokens[list].length;
+    int n = DiscoveryTokens[list].length;
     if (n == 0) return; // That is a normal case (no service on that server)
-    if (n < 0 || n > 100) {
+    if (n < 0 || n > count) {
         houselog_trace (HOUSE_FAILURE, "service", "invalid redirect data");
         return;
     }
-    error = echttp_json_enumerate (tokens+list, innerlist);
+    error = echttp_json_enumerate (DiscoveryTokens+list, DiscoveryInnerList);
     if (error) {
         houselog_trace (HOUSE_FAILURE, "service", "%s", error);
         return;
     }
 
-    char *hostname = tokens[host].value.string;
+    char *hostname = DiscoveryTokens[host].value.string;
 
     // Update the list of services.
     //
     DEBUG ("processing list of service providers\n");
 
     for (i = 0; i < n; ++i) {
-        ParserToken *inner = tokens + list + innerlist[i];
+        ParserToken *inner = DiscoveryTokens + list + DiscoveryInnerList[i];
         if (inner->type != PARSER_OBJECT) {
             houselog_trace (HOUSE_FAILURE, "peers",
                             "unexpected type %d", inner->type);
@@ -239,9 +254,7 @@ static void housediscover_peers_response (void *origin,
 
     static time_t DiscoveryDetail = 0;
 
-    ParserToken tokens[100];
-    int innerlist[100];
-    int count = 100;
+    int count = housediscover_adjust_tokens (data);
     int newportal = 0;
     int i;
 
@@ -253,7 +266,7 @@ static void housediscover_peers_response (void *origin,
         return;
     }
 
-    const char *error = echttp_json_parse (data, tokens, &count);
+    const char *error = echttp_json_parse (data, DiscoveryTokens, &count);
     if (error) {
         DEBUG ("JSON error on /portal/peers request: %s\n", error);
         houselog_trace (HOUSE_FAILURE, "peers", "JSON syntax error, %s", error);
@@ -264,15 +277,15 @@ static void housediscover_peers_response (void *origin,
         houselog_trace (HOUSE_FAILURE, "peers", "no data");
         return;
     }
-    int peers = echttp_json_search (tokens, ".portal.peers");
-    int n = tokens[peers].length;
-    if (n <= 0 || n > 100) {
+    int peers = echttp_json_search (DiscoveryTokens, ".portal.peers");
+    int n = DiscoveryTokens[peers].length;
+    if (n <= 0 || n > count) {
         DEBUG ("no peer data on portal request\n");
         houselog_trace (HOUSE_FAILURE, "peers", "empty zone data");
         return;
     }
 
-    error = echttp_json_enumerate (tokens+peers, innerlist);
+    error = echttp_json_enumerate (DiscoveryTokens+peers, DiscoveryInnerList);
     if (error) {
         DEBUG ("no peers array on portal request: %s\n", error);
         houselog_trace (HOUSE_FAILURE, "peers", "%s", error);
@@ -282,7 +295,7 @@ static void housediscover_peers_response (void *origin,
     DEBUG ("processing portals result.\n");
 
     for (i = 0; i < n; ++i) {
-        ParserToken *inner = tokens + peers + innerlist[i];
+        ParserToken *inner = DiscoveryTokens + peers + DiscoveryInnerList[i];
         if (inner->type != PARSER_STRING) {
             houselog_trace (HOUSE_FAILURE, "peers",
                             "unexpected type %d", inner->type);
@@ -327,11 +340,10 @@ void housediscover (time_t now) {
         DEBUG ("cannot access %s: %s\n", url, error);
         houselog_trace (HOUSE_FAILURE, "peers",
                         "cannot access %s: %s", url, error);
-        return;
+    } else {
+        echttp_submit (0, 0, housediscover_peers_response, 0);
+        DEBUG ("request %s submitted\n", url);
     }
-    echttp_submit (0, 0, housediscover_peers_response, 0);
-    DEBUG ("request %s submitted\n", url);
-
     DiscoveryRequest = now;
 }
 
