@@ -72,11 +72,11 @@
 static const char *LocalPortalServer = "localhost";
 
 static echttp_hash DiscoveryByUrl; // URL is a unique key.
-static time_t DiscoveryTime[ECHTTP_MAX_SYMBOL];
+static time_t DiscoveryLatest[ECHTTP_MAX_SYMBOL]; // Each time detected
 
 static echttp_hash DiscoveryByService; // Service name is not unique.
 static const char *DiscoveryUrl[ECHTTP_MAX_SYMBOL];
-static time_t      DiscoveryDetected[ECHTTP_MAX_SYMBOL];
+static time_t      DiscoveryFirstDetected[ECHTTP_MAX_SYMBOL];
 
 static time_t DiscoveryRequest = 0;
 
@@ -122,21 +122,21 @@ static int housediscover_register (const char *name, const char *url) {
         houselog_event_local ("DISCOVERY", name, "DETECTED", "AT %s", url);
         isnew = 1;
     } else {
-        if (housediscover_lapsed (DiscoveryTime[byurl])) {
+        if (housediscover_lapsed (DiscoveryLatest[byurl])) {
             int byservice = echttp_hash_find (&DiscoveryByService, name);
-            if (byservice > 0) {
-                DiscoveryDetected[byservice] = now; // Re-detected after lapse
+            if (byservice > 0) { // Re-detected after lapse
+                DiscoveryFirstDetected[byservice] = now;
             }
         }
     }
-    DiscoveryTime[byurl] = now;
+    DiscoveryLatest[byurl] = now;
 
     if (isnew) {
         // Record one more instance of this service.
         int byservice = echttp_hash_add (&DiscoveryByService, strdup(name));
         if (byservice > 0) {
             DiscoveryUrl[byservice] = strdup(url);
-            DiscoveryDetected[byservice] = now;
+            DiscoveryFirstDetected[byservice] = now;
         }
     }
     return isnew;
@@ -219,13 +219,13 @@ static void housediscover_service_response
 
 static int housediscover_peers_iterator (int i, const char *name) {
 
-    if (DiscoveryTime[i]) {
+    if (DiscoveryLatest[i]) {
         const char *url = DiscoveryUrl[i];
         const char *error = echttp_client ("GET", url);
         if (error) {
             DEBUG ("error on %s: %s.\n", url, error);
             houselog_trace (HOUSE_FAILURE, "peers", "%s: %s", url, error);
-            DiscoveryTime[i] = 0;
+            DiscoveryLatest[i] = 0;
             return 0;
         }
         echttp_submit (0, 0, housediscover_service_response, 0);
@@ -338,8 +338,8 @@ void housediscover (time_t now) {
 static time_t DiscoveryMostRecent = 0;
 
 static int housediscover_changed_iterator (int i, const char *service) {
-    if (DiscoveryDetected[i] > DiscoveryMostRecent)
-        DiscoveryMostRecent = DiscoveryDetected[i];
+    if (DiscoveryFirstDetected[i] > DiscoveryMostRecent)
+        DiscoveryMostRecent = DiscoveryFirstDetected[i];
     return 0;
 }
 
@@ -355,7 +355,7 @@ static void *DiscoveryConsumerContext = 0;
 
 static int housediscovered_iterator (int i, const char *service) {
 
-    if (housediscover_lapsed (DiscoveryTime[i])) {
+    if (housediscover_lapsed (DiscoveryLatest[i])) {
         return 0; // Too old, presumed dead.
     }
 
