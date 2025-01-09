@@ -279,7 +279,6 @@ void housedepositor_state_load (const char *app, int argc, const char **argv) {
     if (!newconfig) {
         name = FactoryBackupFile;
         newconfig = echttp_parser_load (name);
-        StateDataHasChanged = time(0); // Force creation of the backup file.
     }
 
     if (newconfig) {
@@ -349,8 +348,6 @@ static int housedepositor_state_format (void) {
     cursor = snprintf (BackupOutBuffer, BackupOutBufferSize,
                        "{\"host\":\"%s\"", housedepositor_state_host());
     for (i = 0; i < BackupWorkerCount; ++i) {
-        cursor += snprintf (BackupOutBuffer+cursor, BackupOutBufferSize-cursor, ",");
-        if (cursor >= BackupOutBufferSize) goto retry;
         cursor += BackupRegisteredWorker[i] (BackupOutBuffer+cursor, BackupOutBufferSize-cursor);
         if (cursor >= BackupOutBufferSize) goto retry;
     }
@@ -364,8 +361,7 @@ retry:
     houselog_trace (HOUSE_WARNING, "STATE",
                     "BUFFER TOO SMALL (NEED %d bytes)", cursor);
     BackupOutBufferSize += 1024;
-    free (BackupOutBuffer);
-    BackupOutBuffer = malloc(BackupOutBufferSize);
+    BackupOutBuffer = realloc(BackupOutBuffer, BackupOutBufferSize);
     return housedepositor_state_format ();
 }
 
@@ -376,12 +372,16 @@ void housedepositor_state_background (time_t now) {
     LastCall = now;
 
     if (StateDataHasChanged) {
-        if (StateDataHasChanged < now - 10) {
+        if (StateDataHasChanged + 20 < now) {
+            // We tried 10 times, no point to try again.
             StateDataHasChanged = 0;
-            return; // We tried 10 times, no point to try again.
+            return;
         }
-        if (StateDataHasChanged < now) {
+        // Delay saving state by a few seconds, to avoid saving an unstable
+        // state.
+        if (StateDataHasChanged + 10 <= now) {
             int size = housedepositor_state_format();
+            if (size <= 0) return;
             if (ShareStateData) {
                 houselog_event ("SYSTEM", "STATE", "SAVE",
                                 "TO DEPOT %s", BackupDepot);
