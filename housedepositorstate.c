@@ -371,6 +371,16 @@ void housedepositor_state_background (time_t now) {
     if (now == LastCall) return; // Run the logic once per second.
     LastCall = now;
 
+    // Delay saving any state for after the first 30 seconds. This gives
+    // the application some time to reach a stable state.
+    //
+    static time_t StabilityPeriodEnd = 0;
+    if (StabilityPeriodEnd == 0) StabilityPeriodEnd = now + 30;
+    if (now < StabilityPeriodEnd) {
+        if (StateDataHasChanged) StateDataHasChanged = now; // Renew.
+        return;
+    }
+
     if (StateDataHasChanged) {
         if (StateDataHasChanged + 20 < now) {
             // We tried 10 times, no point to try again.
