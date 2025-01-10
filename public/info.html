@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel=stylesheet type="text/css" href="/house.css" title="House">
+<script>
+
+var ActivePeers = new Object();
+
+function friendlyTime (timestamp) {
+    var datetime = new Date(timestamp * 1000);
+    datetime = datetime.toLocaleString();;
+    var index = datetime.indexOf(" GMT");
+    if (index > 0) datetime = datetime.substr(0, index);
+    return datetime;
+}
+
+function textColumn (text) {
+   var column = document.createElement("td");
+   column.innerHTML = text;
+   return column;
+}
+
+function portalRefreshInfo () {
+
+    var table = document.getElementById ('hostinfo');
+    if (! table) return;
+
+    for (var i = table.childNodes.length - 1; i > 1; i--) {
+        table.removeChild(table.childNodes[i]);
+    }
+
+    var hosts = Object.keys(ActivePeers);
+    hosts.sort();
+    for (var i = 0; i < hosts.length; ++i) {
+        var host = hosts[i];
+        var info = ActivePeers[host];
+        var line = document.createElement("tr");
+        line.appendChild(textColumn (host));
+        line.appendChild(textColumn (friendlyTime(info.boot)));
+        line.appendChild(textColumn (info.arch));
+        line.appendChild(textColumn (info.os));
+        line.appendChild(textColumn (info.cores));
+        table.appendChild(line);
+    }
+}
+
+function portalGetInfo (host) {
+
+    var command = new XMLHttpRequest();
+    command.open("GET", "http://"+host+"/metrics/info");
+    command.onreadystatechange = function () {
+        if (command.readyState === 4 && command.status === 200) {
+            var data = JSON.parse(command.responseText);
+            ActivePeers[data.host] = data.info;
+            portalRefreshInfo ();
+        }
+    }
+    command.send(null);
+}
+
+function portalGetMetrics (response) {
+
+   var services = response.portal.redirect;
+   for (var i = 0; i < services.length; i++) {
+        if (services[i].path == '/metrics') {
+            portalGetInfo (response.host);
+        }
+   }
+}
+
+function portalServices (host) {
+
+    var command = new XMLHttpRequest();
+    command.open("GET", "http://"+host+"/portal/service");
+    command.onreadystatechange = function () {
+        if (command.readyState === 4 && command.status === 200) {
+            portalGetMetrics (JSON.parse(command.responseText));
+        }
+    }
+    command.send(null);
+}
+
+function portalPeersReceived (response) {
+
+    var peers = response.portal.peers;
+    for (var i = 0; i < peers.length; ++i) {
+        portalServices (peers[i]);
+    }
+}
+
+function portalPeers () {
+
+    var command = new XMLHttpRequest();
+    command.open("GET", "/portal/peers");
+    command.onreadystatechange = function () {
+        if (command.readyState === 4 && command.status === 200) {
+            portalPeersReceived (JSON.parse(command.responseText));
+        }
+    }
+    command.send(null);
+}
+
+window.onload = function() {
+   portalPeers();
+};
+</script>
+<head>
+   <title>Systems Overview</title>
+</head>
+<body>
+   <table class="housetopcontainer">
+   <tr><td>
+   <table class="housetop">
+   <tr>
+   <td><a href="/index.html">Portal</a></td>
+   <td><span>Systems</span></td>
+   <td><a href="/events.html">Events</a></td>
+   </tr>
+   </table>
+   </td></tr>
+   </table>
+   <table class="housewidetable houseevent" id="hostinfo" border="0">
+      <tr>
+         <th width="20%">SERVER</th>
+         <th width="30%">RUNNING SINCE</th>
+         <th width="20%">CPU</th>
+         <th width="20%">OS</th>
+         <th width="10%">CORES</th>
+      </tr>
+   </table>
+</body>
+</html>
+

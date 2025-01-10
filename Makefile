@@ -106,7 +106,16 @@ dev:
 	chmod 644 $(SHARE)/install.mak
 	chmod 644 $(SHARE)/install.mak
 
-install-app: dev
+install-ui:
+	mkdir -p $(SHARE)/public
+	chown root:root $(SHARE)/public
+	chmod 755 $(SHARE) $(SHARE)/public
+	cp public/* $(SHARE)/public
+	icotool -c -o $(SHARE)/public/favicon.ico favicon.png
+	chown root:root $(SHARE)/public/*
+	chmod 644 $(SHARE)/public/*.*
+
+install-app: dev install-ui
 	mkdir -p /etc/house
 	if [ -e /etc/houseportal/houseportal.config ] ; then mv /etc/houseportal/houseportal.config /etc/house/portal.config; fi
 	mkdir -p $(HROOT)/bin
@@ -116,13 +125,6 @@ install-app: dev
 	cp roof.sh $(HROOT)/bin/roof
 	chown root:root $(HROOT)/bin/houseportal $(HROOT)/bin/roof
 	chmod 755 $(HROOT)/bin/houseportal $(HROOT)/bin/roof
-	mkdir -p $(SHARE)/public
-	chown root:root $(SHARE)/public
-	chmod 755 $(SHARE) $(SHARE)/public
-	cp public/* $(SHARE)/public
-	icotool -c -o $(SHARE)/public/favicon.ico favicon.png
-	chown root:root $(SHARE)/public/*
-	chmod 644 $(SHARE)/public/*.*
 	touch /etc/default/housegeneric
 	touch /etc/default/houseportal
 	touch /etc/house/portal.config
