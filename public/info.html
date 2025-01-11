@@ -6,6 +6,111 @@
 
 var ActivePeers = new Object();
 
+var SelectedHost = null;
+var SelectedButton = null;
+var SelectedDraw = null;
+var SelectedRefresh = null;
+var MetricsData = null;
+
+function wipeoutSVG () {
+    var elements = document.getElementsByClassName ('graph');
+
+    for (var i = 0; i < elements.length; ++i) {
+        elements[i].parentElement.removeChild(elements[i]);
+    }
+}
+
+function showGraph (data) {
+    var length = data.length - 1;
+    if (length <= 0) return;
+    var step = Math.floor(960 / (length - 1));
+    var x = 20 + ((length - 1) * step);
+    var i = length;
+    var points = "";
+    while (--i >= 0) {
+        var y = 20 + (2 * (100 - data[i]));
+        points = '' + x + ' ' + y + ' ' + points;
+        x -= step;
+    }
+
+    var chart = document.getElementsByClassName ('chart')[0];
+    var line = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+    line.setAttribute('class', 'graph');
+    line.setAttribute('fill', 'none');
+    line.setAttribute('stroke', '#000000');
+    line.setAttribute('stroke-width', '3');
+    line.setAttribute('points', points);
+    chart.appendChild(line);
+}
+
+function inversePercentage (data) {
+    var i = data.length - 1;
+    while (--i >= 0) {
+        data[i] = 100 - data[i];
+    }
+    return data;
+}
+
+function toPercentage (reference, data) {
+    if (!data) return new Array(); // Empty.
+    var result = data.slice(0);
+    var i = result.length - 1;
+    if (!reference) {
+        while (--i >= 0) {
+            result[i] = 100;
+        }
+    } else {
+        while (--i >= 0) {
+            result[i] = Math.round((100 * result[i]) / reference);
+        }
+    }
+    return result;
+}
+
+function showCPU () {
+    showGraph (MetricsData.Metrics.cpu.busy);
+}
+
+function showRAM () {
+    var memory = MetricsData.Metrics.memory;
+    showGraph (inversePercentage (toPercentage(memory.size[0], memory.available)));
+}
+
+function showIO () {}
+function showNet () {}
+
+function drawView () {
+    wipeoutSVG();
+    if (MetricsData && SelectedHost && SelectedDraw) SelectedDraw();
+}
+
+function selectView (element, view) {
+    if (SelectedButton) {
+        SelectedButton.className = '';
+    }
+    SelectedButton = element;
+    element.className = 'houseactive';
+
+    SelectedDraw = view;
+    drawView();
+}
+
+function selectCPU (element) {
+    selectView (element, showCPU);
+}
+
+function selectRAM (element) {
+    selectView (element, showRAM);
+}
+
+function selectIO (element) {
+    selectView (element, showIO);
+}
+
+function selectNet (element) {
+    selectView (element, showNet);
+}
+
 function friendlyTime (timestamp) {
     var datetime = new Date(timestamp * 1000);
     datetime = datetime.toLocaleString();;
@@ -33,6 +138,36 @@ function textColumn (text) {
    return column;
 }
 
+function portalGetMetrics () {
+
+    if (!SelectedHost) return;
+    var command = new XMLHttpRequest();
+    command.open("GET", "http://"+SelectedHost+"/metrics/details");
+    command.onreadystatechange = function () {
+        if (command.readyState === 4 && command.status === 200) {
+            MetricsData = JSON.parse(command.responseText);
+            drawView ();
+        }
+    }
+    command.send(null);
+}
+
+function selectHost (name) {
+    SelectedHost = name;
+    MetricsData = null;
+    if (SelectedRefresh) clearInterval (SelectedRefresh);
+    SelectedRefresh = setInterval(portalGetMetrics, 5000);
+    portalGetMetrics();
+}
+
+function radioColumn (n, options) {
+    var column = document.createElement("td");
+    if (!options) options = '';
+    column.innerHTML =
+        '<div style="display: inline-block;"><input type="radio" id="host_'+n+'" name="hosts" value="'+n+'" '+options+' onchange="selectHost(this.value)"/></div> <div style="display: inline-block;"><label for="host_'+n+'">'+n+'</label></div>'
+    return column;
+}
+
 function portalRefreshInfo () {
 
     var table = document.getElementById ('hostinfo');
@@ -48,7 +183,7 @@ function portalRefreshInfo () {
         var host = hosts[i];
         var info = ActivePeers[host];
         var line = document.createElement("tr");
-        line.appendChild(textColumn (host));
+        line.appendChild(radioColumn (host));
         line.appendChild(textColumn (friendlyTime(info.boot)));
         line.appendChild(textColumn (friendlyDelta(info.boot)));
         line.appendChild(textColumn (info.arch));
@@ -72,7 +207,7 @@ function portalGetInfo (host) {
     command.send(null);
 }
 
-function portalGetMetrics (response) {
+function portalGetMetricsService (response) {
 
    var services = response.portal.redirect;
    for (var i = 0; i < services.length; i++) {
@@ -88,7 +223,7 @@ function portalServices (host) {
     command.open("GET", "http://"+host+"/portal/service");
     command.onreadystatechange = function () {
         if (command.readyState === 4 && command.status === 200) {
-            portalGetMetrics (JSON.parse(command.responseText));
+            portalGetMetricsService (JSON.parse(command.responseText));
         }
     }
     command.send(null);
@@ -133,6 +268,47 @@ window.onload = function() {
    </table>
    </td></tr>
    </table>
+   <br>
+   <table class="housewidetable" border="0"><tr>
+      <td width="90%">
+         <svg class="chart" viewBox="0 0 1000 240" width="100%" height="200">
+         <g>
+            <polyline fill="none" stroke="#0074d9" stroke-width="2" points="
+               19,220
+               20,20"/>
+            <polyline fill="none" stroke="#0074d9" stroke-width="2" points="
+               19,220
+               980,220"/>
+            <polyline fill="none" stroke="#0074d9" stroke-width="1" stroke-dasharray="5,2" points="
+               20,120
+               980,120"/>
+            <polyline fill="none" stroke="#0074d9" stroke-width="1" stroke-dasharray="5,2" points="
+               20,70
+               980,70"/>
+            <polyline fill="none" stroke="#0074d9" stroke-width="1" stroke-dasharray="5,2" points="
+               20,170
+               980,170"/>
+         </g>
+         </svg>
+      </td>
+      <td width="10%">
+         <table class="housewidetable" border="0">
+            <tr><td>
+                <div style="display: flex;"><button style="flex: 1 0 auto;" onclick="selectCPU(this)">CPU</button></div>
+           </td></tr>
+            <tr><td>
+                <div style="display: flex;"><button style="flex: 1 0 auto;" onclick="selectRAM(this)">RAM</button></div>
+           </td></tr>
+            <tr><td>
+                <div style="display: flex;"><button style="flex: 1 0 auto;" onclick="selectIO(this)">I/O</button></div>
+           </td></tr>
+            <tr><td>
+                <div style="display: flex;"><button style="flex: 1 0 auto" onclick="selectNet(this)">Network</button></div>
+           </td></tr>
+        </table>
+      </td>
+   </tr></table>
+   <br>
    <table class="housewidetable houseevent" id="hostinfo" border="0">
       <tr>
          <th width="20%">SERVER</th>
