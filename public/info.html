@@ -119,6 +119,15 @@ function maxMetrics (a) {
     return max;
 }
 
+function roundBase10 (x) {
+    if (x > 100) {
+        return Math.ceil (x / 100) * 100;
+    } else if (x > 10) {
+        return Math.ceil (x / 10) * 10;
+    }
+    return 10;
+}
+
 function highMetrics (a, b) {
     if (a && b) {
         if (a.length != b.length) throw new Error ("Cannot merge different metrics");
@@ -154,7 +163,7 @@ function showIO () {
     }
     var maxrate = maxMetrics(rate);
     var maxwait = maxMetrics(wait);
-    var max = (maxrate > maxwait) ? maxrate : maxwait;
+    var max = roundBase10 ((maxrate > maxwait) ? maxrate : maxwait);
     var red = '#c02020';
     showGraph (toPercentage(max, rate));
     showGraph (toPercentage(max, wait), red);
@@ -173,7 +182,7 @@ function showNet () {
     }
     var rxmax = maxMetrics(rxrate);
     var txmax = maxMetrics(txrate);
-    var max = (rxmax > txmax) ? rxmax : txmax;
+    var max = roundBase10 ((rxmax > txmax) ? rxmax : txmax);
     var green = '#10a010';
     showGraph (toPercentage(max, rxrate));
     showGraph (toPercentage(max, txrate), green);
