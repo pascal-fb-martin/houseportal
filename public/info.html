@@ -15,12 +15,13 @@ var MetricsData = null;
 function wipeoutSVG () {
     var elements = document.getElementsByClassName ('graph');
 
-    for (var i = 0; i < elements.length; ++i) {
+    for (var i = elements.length-1; i >= 0; --i) {
         elements[i].parentElement.removeChild(elements[i]);
     }
 }
 
-function showGraph (data) {
+function showGraph (data, color) {
+
     var length = data.length - 1;
     if (length <= 0) return;
     var step = Math.floor(960 / (length - 1));
@@ -33,14 +34,41 @@ function showGraph (data) {
         x -= step;
     }
 
+    if (!color) color = '#000000'; // Black for normal people.
+
     var chart = document.getElementsByClassName ('chart')[0];
     var line = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
     line.setAttribute('class', 'graph');
     line.setAttribute('fill', 'none');
-    line.setAttribute('stroke', '#000000');
+    line.setAttribute('stroke', color);
     line.setAttribute('stroke-width', '3');
     line.setAttribute('points', points);
     chart.appendChild(line);
+}
+
+function showScale (text, color, x, anchor) {
+
+    if (!color) color = '#000000'; // Black for normal people.
+
+    var chart = document.getElementsByClassName ('chart')[0];
+    var line = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    line.setAttribute('class', 'graph');
+    line.setAttribute('fill', 'none');
+    line.setAttribute('stroke', color);
+    line.setAttribute('stroke-width', '1');
+    line.setAttribute('x', x);
+    line.setAttribute('y', '20');
+    if (anchor) line.setAttribute('text-anchor', anchor);
+    line.innerHTML = text;
+    chart.appendChild(line);
+}
+
+function showScaleLeft (value, color) {
+    showScale (value, color, '25');
+}
+
+function showScaleRight (value, color) {
+    showScale (value, color, '980', 'end');
 }
 
 function inversePercentage (data) {
@@ -67,17 +95,91 @@ function toPercentage (reference, data) {
     return result;
 }
 
+function sumMetrics (a, b) {
+    if (a && b) {
+        if (a.length != b.length) throw new Error ("Cannot sum different metrics");
+        var i = a.length - 1;
+        var result = a.slice(0);
+        while (--i >= 0) result[i] += b[i];
+        return result;
+    } else if (a) {
+        return a;
+    }
+    return b; // Even if null or undefined, since the input is such.
+}
+
+function maxMetrics (a) {
+    var max = 0;
+    if (a && a.length > 0) {
+        var i = a.length - 1;
+        while (--i >= 0) {
+            if (max < a[i]) max = a[i];
+        }
+    }
+    return max;
+}
+
+function highMetrics (a, b) {
+    if (a && b) {
+        if (a.length != b.length) throw new Error ("Cannot merge different metrics");
+        var i = a.length - 1;
+        var result = a.slice(0);
+        while (--i >= 0) if (result[i] < b[i]) result[i] = b[i];
+        return result;
+    } else if (a) {
+        return a;
+    }
+    return b;
+}
+
 function showCPU () {
     showGraph (MetricsData.Metrics.cpu.busy);
+    showScaleLeft ('%');
 }
 
 function showRAM () {
     var memory = MetricsData.Metrics.memory;
     showGraph (inversePercentage (toPercentage(memory.size[0], memory.available)));
+    showScaleLeft ('%');
 }
 
-function showIO () {}
-function showNet () {}
+function showIO () {
+    var volumes = Object.keys(MetricsData.Metrics.disk);
+    var rate = null;
+    var wait = null;
+    for (var i = 0; i < volumes.length; ++i) {
+        var disk = MetricsData.Metrics.disk[volumes[i]];
+        rate = sumMetrics (sumMetrics (disk.rdrate, disk.wrrate), rate);
+        wait = highMetrics (highMetrics (disk.rdwait, disk.wrwait), wait);
+    }
+    var maxrate = maxMetrics(rate);
+    var maxwait = maxMetrics(wait);
+    var max = (maxrate > maxwait) ? maxrate : maxwait;
+    var red = '#c02020';
+    showGraph (toPercentage(max, rate));
+    showGraph (toPercentage(max, wait), red);
+    showScaleLeft (''+max+' IO/s');
+    showScaleRight (''+max+' ms', red);
+}
+
+function showNet () {
+    var nics = Object.keys(MetricsData.Metrics.net);
+    var rxrate = null;
+    var txrate = null;
+    for (var i = 0; i < nics.length; ++i) {
+        var nic = MetricsData.Metrics.net[nics[i]];
+        rxrate = sumMetrics (nic.rxrate, rxrate);
+        txrate = sumMetrics (nic.txrate, txrate);
+    }
+    var rxmax = maxMetrics(rxrate);
+    var txmax = maxMetrics(txrate);
+    var max = (rxmax > txmax) ? rxmax : txmax;
+    var green = '#10a010';
+    showGraph (toPercentage(max, rxrate));
+    showGraph (toPercentage(max, txrate), green);
+    showScaleLeft (''+max+' rx/s');
+    showScaleRight (''+max+' tx/s', green);
+}
 
 function drawView () {
     wipeoutSVG();
