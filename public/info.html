@@ -186,8 +186,8 @@ function showNet () {
     var green = '#10a010';
     showGraph (toPercentage(max, rxrate));
     showGraph (toPercentage(max, txrate), green);
-    showScaleLeft (''+max+' KB/s');
-    showScaleRight (''+max+' KB/s', green);
+    showScaleLeft (''+max+' KB/s (Rx)');
+    showScaleRight (''+max+' KB/s (Tx)', green);
 }
 
 function drawView () {
