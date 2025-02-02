@@ -298,11 +298,11 @@ function portalRefreshInfo () {
         line.appendChild(textColumn (friendlyTime(info.boot)));
         line.appendChild(textColumn (friendlyDelta(info.boot)));
         line.appendChild(textColumn (info.arch));
+        line.appendChild(textColumn (info.cores));
         if (info.ram)
             line.appendChild(textColumn (''+info.ram.size+' '+info.ram.unit));
         else
             line.appendChild(textColumn (''));
-        line.appendChild(textColumn (info.cores));
         line.appendChild(textColumn (info.os));
         table.appendChild(line);
     }
@@ -429,8 +429,8 @@ window.onload = function() {
          <th width="20%">SERVER</th>
          <th width="30%" colspan="2">RUNNING SINCE</th>
          <th width="8%">CPU</th>
-         <th width="8%">RAM</th>
          <th width="6%">CORES</th>
+         <th width="8%">RAM</th>
          <th width="28%">OS</th>
       </tr>
    </table>
