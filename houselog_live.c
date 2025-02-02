@@ -137,6 +137,8 @@ static void safecpy (char *t, const char *s, int size) {
 
 static int houselog_getheader (time_t now, char *buffer, int size) {
 
+    echttp_content_type_json ();
+
     if (PortalHost) {
         return snprintf (buffer, size,
                         "{\"host\":\"%s\",\"proxy\":\"%s\",\"apps\":[\"%s\"],"
