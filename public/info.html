@@ -153,6 +153,7 @@ function showRAM () {
 }
 
 function showIO () {
+    if (! MetricsData.Metrics.disk) return;
     var volumes = Object.keys(MetricsData.Metrics.disk);
     var rate = null;
     var wait = null;
@@ -172,6 +173,7 @@ function showIO () {
 }
 
 function showNet () {
+    if (! MetricsData.Metrics.net) return;
     var nics = Object.keys(MetricsData.Metrics.net);
     var rxrate = null;
     var txrate = null;
