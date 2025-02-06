@@ -306,6 +306,7 @@ function portalRefreshInfo () {
         else
             line.appendChild(textColumn (''));
         line.appendChild(textColumn (info.os));
+        line.appendChild(textColumn (info.kernel));
         table.appendChild(line);
     }
 }
@@ -428,12 +429,13 @@ window.onload = function() {
    <br>
    <table class="housewidetable houseevent" id="hostinfo" border="0">
       <tr>
-         <th width="20%">SERVER</th>
-         <th width="30%" colspan="2">RUNNING SINCE</th>
+         <th width="15%">SERVER</th>
+         <th width="25%" colspan="2">RUNNING SINCE</th>
          <th width="8%">CPU</th>
          <th width="6%">CORES</th>
          <th width="8%">RAM</th>
-         <th width="28%">OS</th>
+         <th width="23%">OS</th>
+         <th width="15%">KERNEL</th>
       </tr>
    </table>
 </body>
