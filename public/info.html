@@ -306,7 +306,7 @@ function portalRefreshInfo () {
         else
             line.appendChild(textColumn (''));
         line.appendChild(textColumn (info.os));
-        line.appendChild(textColumn (info.kernel));
+        if (info.kernel) line.appendChild(textColumn (info.kernel));
         table.appendChild(line);
     }
 }
