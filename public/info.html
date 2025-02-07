@@ -294,20 +294,37 @@ function portalRefreshInfo () {
     hosts.sort();
     for (var i = 0; i < hosts.length; ++i) {
         var host = hosts[i];
-        var info = ActivePeers[host];
         var line = document.createElement("tr");
-        line.appendChild(radioColumn (host));
-        line.appendChild(textColumn (friendlyTime(info.boot)));
-        line.appendChild(textColumn (friendlyDelta(info.boot)));
-        line.appendChild(textColumn (info.arch));
-        line.appendChild(textColumn (info.cores));
-        if (info.ram)
-            line.appendChild(textColumn (''+info.ram.size+' '+info.ram.unit));
+        if (SelectedHost == host)
+            line.appendChild(radioColumn (host, "checked"));
         else
-            line.appendChild(textColumn (''));
-        line.appendChild(textColumn (info.os));
-        if (info.kernel) line.appendChild(textColumn (info.kernel));
+            line.appendChild(radioColumn (host));
+
+        var info = ActivePeers[host];
+        if (info) {
+            line.appendChild(textColumn (friendlyTime(info.boot)));
+            line.appendChild(textColumn (friendlyDelta(info.boot)));
+            line.appendChild(textColumn (info.arch));
+            line.appendChild(textColumn (info.cores));
+            if (info.ram)
+                line.appendChild(textColumn (''+info.ram.size+' '+info.ram.unit));
+            else
+                line.appendChild(textColumn (''));
+            line.appendChild(textColumn (info.os));
+            if (info.kernel) line.appendChild(textColumn (info.kernel));
+        }
         table.appendChild(line);
+    }
+}
+
+function clearPeer (host) {
+    ActivePeers[host] = null;
+    if (SelectedHost == host) {
+        var radio = document.getElementById ('host_'+host);
+        if (radio) radio.checked = false;
+        SelectedHost = null;
+        MetricsData = null;
+        wipeoutSVG();
     }
 }
 
@@ -316,9 +333,13 @@ function portalGetInfo (host) {
     var command = new XMLHttpRequest();
     command.open("GET", "http://"+host+"/metrics/info");
     command.onreadystatechange = function () {
-        if (command.readyState === 4 && command.status === 200) {
-            var data = JSON.parse(command.responseText);
-            ActivePeers[data.host] = data.info;
+        if (command.readyState === 4) {
+            if (command.status === 200) {
+                var data = JSON.parse(command.responseText);
+                ActivePeers[data.host] = data.info;
+            } else {
+                clearPeer(host);
+            }
             portalRefreshInfo ();
         }
     }
@@ -331,8 +352,11 @@ function portalGetMetricsService (response) {
    for (var i = 0; i < services.length; i++) {
         if (services[i].path == '/metrics') {
             portalGetInfo (response.host);
+            return;
         }
    }
+   clearPeer(response.host);
+   portalRefreshInfo ();
 }
 
 function portalServices (host) {
@@ -340,8 +364,13 @@ function portalServices (host) {
     var command = new XMLHttpRequest();
     command.open("GET", "http://"+host+"/portal/service");
     command.onreadystatechange = function () {
-        if (command.readyState === 4 && command.status === 200) {
-            portalGetMetricsService (JSON.parse(command.responseText));
+        if (command.readyState === 4) {
+            if (command.status === 200) {
+                portalGetMetricsService (JSON.parse(command.responseText));
+            } else {
+                clearPeer(host);
+                portalRefreshInfo ();
+            }
         }
     }
     command.send(null);
@@ -368,7 +397,8 @@ function portalPeers () {
 }
 
 window.onload = function() {
-   portalPeers();
+   portalPeers ();
+   setInterval (portalPeers, 10000);
 };
 </script>
 <head>
