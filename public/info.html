@@ -5,6 +5,7 @@
 <script>
 
 var ActivePeers = new Object();
+var Peers2Host = new Object();
 
 var SelectedHost = null;
 var SelectedButton = null;
@@ -254,8 +255,11 @@ function textColumn (text) {
 function portalGetMetrics () {
 
     if (!SelectedHost) return;
+    var address = Host2Peer[SelectedHost];
+    if (!address) return;
+
     var command = new XMLHttpRequest();
-    command.open("GET", "http://"+SelectedHost+"/metrics/details");
+    command.open("GET", "http://"+address+"/metrics/details");
     command.onreadystatechange = function () {
         if (command.readyState === 4 && command.status === 200) {
             MetricsData = JSON.parse(command.responseText);
@@ -293,14 +297,14 @@ function portalRefreshInfo () {
     var hosts = Object.keys(ActivePeers);
     hosts.sort();
     for (var i = 0; i < hosts.length; ++i) {
-        var host = hosts[i];
+        var hostname = hosts[i].split(':')[0];
         var line = document.createElement("tr");
-        if (SelectedHost == host)
-            line.appendChild(radioColumn (host, "checked"));
+        if (SelectedHost == hostname)
+            line.appendChild(radioColumn (hostname, "checked"));
         else
-            line.appendChild(radioColumn (host));
+            line.appendChild(radioColumn (hostname));
 
-        var info = ActivePeers[host];
+        var info = ActivePeers[hosts[i]];
         if (info) {
             line.appendChild(textColumn (friendlyTime(info.boot)));
             line.appendChild(textColumn (friendlyDelta(info.boot)));
@@ -317,10 +321,11 @@ function portalRefreshInfo () {
     }
 }
 
-function clearPeer (host) {
-    ActivePeers[host] = null;
-    if (SelectedHost == host) {
-        var radio = document.getElementById ('host_'+host);
+function clearPeer (address) {
+    ActivePeers[address] = null;
+    var hostname = address.split(':')[0];
+    if (SelectedHost == hostname) {
+        var radio = document.getElementById ('host_'+hostname);
         if (radio) radio.checked = false;
         SelectedHost = null;
         MetricsData = null;
@@ -328,17 +333,17 @@ function clearPeer (host) {
     }
 }
 
-function portalGetInfo (host) {
+function portalGetInfo (address) {
 
     var command = new XMLHttpRequest();
-    command.open("GET", "http://"+host+"/metrics/info");
+    command.open("GET", "http://"+address+"/metrics/info");
     command.onreadystatechange = function () {
         if (command.readyState === 4) {
             if (command.status === 200) {
                 var data = JSON.parse(command.responseText);
-                ActivePeers[data.host] = data.info;
+                ActivePeers[address] = data.info;
             } else {
-                clearPeer(host);
+                clearPeer(address);
             }
             portalRefreshInfo ();
         }
@@ -346,29 +351,31 @@ function portalGetInfo (host) {
     command.send(null);
 }
 
-function portalGetMetricsService (response) {
+function portalGetMetricsService (address, response) {
 
    var services = response.portal.redirect;
    for (var i = 0; i < services.length; i++) {
         if (services[i].path == '/metrics') {
-            portalGetInfo (response.host);
+            portalGetInfo (address);
             return;
         }
    }
-   clearPeer(response.host);
+   clearPeer(address);
    portalRefreshInfo ();
 }
 
-function portalServices (host) {
+function portalServices (address) {
+
+    Host2Peer[address.split(':')[0]] = address;
 
     var command = new XMLHttpRequest();
-    command.open("GET", "http://"+host+"/portal/service");
+    command.open("GET", "http://"+address+"/portal/service");
     command.onreadystatechange = function () {
         if (command.readyState === 4) {
             if (command.status === 200) {
-                portalGetMetricsService (JSON.parse(command.responseText));
+                portalGetMetricsService (address, JSON.parse(command.responseText));
             } else {
-                clearPeer(host);
+                clearPeer(address);
                 portalRefreshInfo ();
             }
         }
