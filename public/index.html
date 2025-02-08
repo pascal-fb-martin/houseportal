@@ -12,7 +12,7 @@ function compareService (a, b) {
     return 0;
 }
 
-function portalShowServices (response) {
+function portalShowServices (address, response) {
 
    var table = document.getElementById ('portal-'+response.host);
    var services = response.portal.redirect.sort(compareService);
@@ -27,9 +27,9 @@ function portalShowServices (response) {
         if (service.hide) {
             // This web service is not integrated with the House environment,
             // do not assume that it will follow the House conventions.
-            label.href = 'http://'+response.host+service.path;
+            label.href = 'http://'+address+service.path;
         } else {
-            label.href = 'http://'+response.host+service.path+'/index.html';
+            label.href = 'http://'+address+service.path+'/index.html';
         }
         label.target = '_blank';
         inner.appendChild(label);
@@ -43,7 +43,7 @@ function portalServices (host) {
     command.open("GET", "http://"+host+"/portal/service");
     command.onreadystatechange = function () {
         if (command.readyState === 4 && command.status === 200) {
-            portalShowServices (JSON.parse(command.responseText));
+            portalShowServices (host, JSON.parse(command.responseText));
         }
     }
     command.send(null);
