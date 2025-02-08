@@ -60,14 +60,15 @@ function portalPeersReceived (response) {
         var outer = document.createElement("tr");
         var inner = document.createElement("td");
         var label = document.createElement("a");
-        label.innerHTML = peers[i];
+        var peername = peers[i].split(':')[0];
+        label.innerHTML = peername;
         label.href = 'http://'+peers[i]+'/index.html';
         inner.appendChild(label);
         outer.appendChild(inner);
 
         inner = document.createElement("td");
         table2 = document.createElement("table");
-        table2.id = "portal-"+peers[i];
+        table2.id = "portal-"+peername;
         table2.style = "border-spacing: 60px 10px";
         inner.appendChild(table2);
 
