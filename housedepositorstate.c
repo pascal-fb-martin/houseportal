@@ -182,6 +182,8 @@ static void housedepositor_state_clear (void) {
 
 static const char *housedepositor_state_new (char *data) {
 
+    if (!data) return "no data"; // Self protection.
+
     const char *error;
 
     BackupInText = data;

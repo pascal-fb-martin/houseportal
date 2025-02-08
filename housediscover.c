@@ -91,6 +91,7 @@ static int *DiscoveryInnerList = 0; // That references tokens too: same size.
 static int DiscoveryTokensAllocated = 0;
 
 static int housediscover_adjust_tokens (const char *data) {
+    if (!data) return 0; // Self protection
     int count = echttp_json_estimate(data);
     if (count >= DiscoveryTokensAllocated) {
         // Need to allocate more than required so that we avoid re-allocating
@@ -162,14 +163,13 @@ static int housediscover_register (const char *name, const char *url) {
 static void housediscover_service_response
                 (void *origin, int status, char *data, int length) {
 
-    int count = housediscover_adjust_tokens (data);
-    int i;
-
     if (status != 200) {
         houselog_trace (HOUSE_FAILURE, "service", "HTTP error %d", status);
         return;
     }
+    if (!data) return; // Self protection.
 
+    int count = housediscover_adjust_tokens (data);
     const char *error = echttp_json_parse (data, DiscoveryTokens, &count);
     if (error) {
         houselog_trace (HOUSE_FAILURE, "service", "JSON syntax error, %s", error);
@@ -204,6 +204,7 @@ static void housediscover_service_response
     //
     DEBUG ("processing list of service providers\n");
 
+    int i;
     for (i = 0; i < n; ++i) {
         ParserToken *inner = DiscoveryTokens + list + DiscoveryInnerList[i];
         if (inner->type != PARSER_OBJECT) {
@@ -254,18 +255,19 @@ static void housediscover_peers_response (void *origin,
 
     static time_t DiscoveryDetail = 0;
 
-    int count = housediscover_adjust_tokens (data);
     int newportal = 0;
     int i;
-
-    time_t now = time(0);
 
     if (status != 200) {
         DEBUG ("HTTP error %d on /portal/peers request\n", status);
         houselog_trace (HOUSE_FAILURE, "peers", "HTTP error %d", status);
         return;
     }
+    if (!data) return; // Self protection.
 
+    time_t now = time(0);
+
+    int count = housediscover_adjust_tokens (data);
     const char *error = echttp_json_parse (data, DiscoveryTokens, &count);
     if (error) {
         DEBUG ("JSON error on /portal/peers request: %s\n", error);
