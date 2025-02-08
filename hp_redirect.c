@@ -790,7 +790,16 @@ void hp_redirect_start (int argc, const char **argv) {
         echttp_option_match ("-portal-port=", argv[i], &PortalPort);
     }
 
-    AddOnePeer (HostName, 0); // List ourself first.
+    // List ourself first.
+    //
+    int port = echttp_port(4);
+    if (port == 80) {
+        AddOnePeer (HostName, 0);
+    } else {
+        char hostaddress[128];
+        snprintf (hostaddress, sizeof(hostaddress), "%s:%d", HostName, port);
+        AddOnePeer (hostaddress, 0);
+    }
     LoadConfig (ConfigurationPath);
 
     hp_redirect_open();
