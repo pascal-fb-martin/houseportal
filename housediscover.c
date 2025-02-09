@@ -70,6 +70,7 @@
 #include "housediscover.h"
 
 static const char *LocalPortalServer = "localhost";
+static int         LocalPortalPort = 80;
 
 static echttp_hash DiscoveryByUrl; // URL is a unique key.
 static time_t DiscoveryLatest[ECHTTP_MAX_SYMBOL]; // Each time detected
@@ -106,12 +107,17 @@ static int housediscover_adjust_tokens (const char *data) {
 void housediscover_initialize (int argc, const char **argv) {
 
     int i;
+    const char *port;
 
     for (i = 1; i < argc; ++i) {
         if (echttp_option_match("-portal-server=", argv[i], &LocalPortalServer))
             continue;
+        if (echttp_option_match("-portal-http-port=", argv[i], &port)) {
+            LocalPortalPort = atoi(port);
+            continue;
+        }
     }
-    DEBUG ("local portal server: %s\n", LocalPortalServer);
+    DEBUG ("local portal server: %s:%d\n", LocalPortalServer, LocalPortalPort);
 }
 
 
@@ -336,7 +342,8 @@ void housediscover (time_t now) {
     if (now < DiscoveryRequest + DISCOVERY_PORTAL_INTERVAL) return;
 
     char url[100];
-    snprintf (url, sizeof(url), "http://%s/portal/peers", LocalPortalServer);
+    snprintf (url, sizeof(url),
+              "http://%s:%d/portal/peers", LocalPortalServer, LocalPortalPort);
     const char *error = echttp_client ("GET", url);
     if (error) {
         DEBUG ("cannot access %s: %s\n", url, error);

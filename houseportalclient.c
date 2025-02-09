@@ -100,7 +100,7 @@ void houseportal_initialize (int argc, const char **argv) {
     gethostname (localhost, sizeof(localhost));
 
     for (i = 1; i < argc; ++i) {
-        if (echttp_option_match("-portal-port=", argv[i], &HousePortalPort))
+        if (echttp_option_match("-portal-udp-port=", argv[i], &HousePortalPort))
             continue;
         if (echttp_option_match("-portal-server=", argv[i], &HousePortalHost))
             continue;
