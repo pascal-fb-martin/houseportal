@@ -8,6 +8,15 @@
 var eventURLbase = null;
 var eventLastId = new Array();
 
+const dateOption = {year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: 'numeric',
+                    second: 'numeric',
+                    hour12: false,
+                    fractionalSecondDigits:3};
+
 function eventNewColumn (text) {
    var column = document.createElement("td");
    column.innerHTML = text;
@@ -17,7 +26,7 @@ function eventNewColumn (text) {
 function eventRow (event) {
    var timestamp = new Date(event[0]);
    var row = document.createElement("tr");
-   row.appendChild(eventNewColumn(timestamp.toLocaleString()));
+   row.appendChild(eventNewColumn(timestamp.toLocaleString('en-US', dateOption)));
    if (event.length > 6) {
        row.appendChild(eventNewColumn(event[5]+'/'+event[6]));
    }
