@@ -21,6 +21,17 @@ function wipeoutSVG () {
     }
 }
 
+function autoKiloMega (value) {
+    if (value > 1024) {
+        value /= 1024;
+        if (value >= 10) {
+            return ''+Math.ceil(value)+' MB';
+        }
+        return value.toFixed(1) + ' MB';
+    }
+    return ''+value+' KB';
+}
+
 function showGraph (data, color) {
 
     var length = data.length - 1;
@@ -189,7 +200,7 @@ function showNet () {
     var green = '#10a010';
     showGraph (toPercentage(max, rxrate));
     showGraph (toPercentage(max, txrate), green);
-    showScaleLeft (''+max+' KB/s (Rx)');
+    showScaleLeft (autoKiloMega(max)+'/s (Rx)');
     showScaleRight ('(Tx)', green);
 }
 
