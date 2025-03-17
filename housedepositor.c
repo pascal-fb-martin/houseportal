@@ -105,17 +105,13 @@
 
 static const char *DepotGroup = "home";
 
-static int DepotScanPending = 0;
-static int DepotNeedScan = 0;
-static time_t DepotNextScan = 0;
-
 static int DepotCheckPending = 0;
-
-static time_t DepotNextRefresh = 0;
+static int DepotScanPending = 0;
 
 typedef struct {
     char *host;
-    long long timestamp;
+    long long detected;
+    long long scanned;
 } DepotServiceEntry;
 
 static DepotServiceEntry *DepotServices = 0;
@@ -419,9 +415,10 @@ static void housedepositor_get (DepotCacheEntry *cache) {
     echttp_submit (0, 0, housedepositor_get_response, (void *)cache);
 }
 
-static void housedepositor_refresh (void) {
+static int housedepositor_refresh (void) {
     
     int i;
+    int refreshing = 0;
     for (i = 0; i < MAX_CACHE; i++) {
         if (!DepotCache[i].detected) continue;
         if (DepotCache[i].refreshing) continue;
@@ -431,8 +428,10 @@ static void housedepositor_refresh (void) {
                    (int)(DepotCache[i].detected), (int)(DepotCache[i].active));
             housedepositor_get(&(DepotCache[i]));
             DepotCache[i].refreshing = 1;
+            refreshing += 1;
         }
     }
+    return refreshing;
 }
 
 
@@ -450,7 +449,7 @@ static void housedepositor_scan_response
     DepotScanPending -= 1;
     if (DepotScanPending <= 0) {
         DEBUG ("Scan of HouseDepot services completed\n");
-        DepotNextRefresh = now + 1;
+        DepotScanPending = 0; // Better safe than sorry.
     }
     
     if (status != 200) {
@@ -511,6 +510,7 @@ static void housedepositor_scan_response
             // the configuration item has not been activated yet.
             //
             if (DepotCache[cached].detected < timestamp) {
+                DEBUG ("Most recent version found so far\n");
                 snprintf(DepotCache[cached].host, sizeof(DepotCache[0].host),
                          "%s", tokens[host].value.string);
                 DepotCache[cached].detected = timestamp;
@@ -551,8 +551,8 @@ static void housedepositor_scan_iterator
         return;
     }
     DEBUG ("GET %s\n", url);
-    DepotScanPending += 1;
     echttp_submit (0, 0, housedepositor_scan_response, context);
+    DepotScanPending += 1;
 }
 
 static void housedepositor_check_response
@@ -563,17 +563,13 @@ static void housedepositor_check_response
         echttp_submit (0, 0, housedepositor_check_response, context);
         return;
     }
-    time_t now = time(0);
 
     DepotCheckPending -= 1;
     if (DepotCheckPending <= 0) {
         DEBUG ("Check of HouseDepot services completed\n");
-        // Check if we need to scan now, as this response might be an error.
-        if (DepotNeedScan) {
-            DepotNextScan = now + 1;
-        }
+        DepotCheckPending = 0; // Better safe than sorry.
     }
-    
+
     if (status != 200) {
         houselog_trace (HOUSE_FAILURE, "check", "HTTP code %d", status);
         return;
@@ -610,10 +606,7 @@ static void housedepositor_check_response
     int i;
     for (i = 0; i < DepotServicesCount; i++) {
         if (strcmp (hostname, DepotServices[i].host)) continue;
-        if (DepotServices[i].timestamp != tokens[updated].value.integer) {
-            DepotServices[i].timestamp = tokens[updated].value.integer;
-            DepotNeedScan = 1;
-        }
+        DepotServices[i].detected = tokens[updated].value.integer;
         break;
     }
     if (i >= DepotServicesCount) {
@@ -624,15 +617,8 @@ static void housedepositor_check_response
         }
         i = DepotServicesCount++;
         DepotServices[i].host = strdup (hostname);
-        DepotServices[i].timestamp = tokens[updated].value.integer;
-        DepotNeedScan = 1;
-    }
-
-    if (DepotCheckPending <= 0) {
-        // Check if we need to scan again because this may have changed
-        if (DepotNeedScan) {
-            DepotNextScan = now + 1;
-        }
+        DepotServices[i].detected = tokens[updated].value.integer;
+        DepotServices[i].scanned = 0;
     }
 }
 
@@ -649,40 +635,47 @@ static void housedepositor_check_iterator
         return;
     }
     DEBUG ("GET %s \n", url);
-    DepotCheckPending += 1;
     echttp_submit (0, 0, housedepositor_check_response, context);
+    DepotCheckPending += 1;
 }
 
 
 void housedepositor_periodic (time_t now) {
 
-    static time_t DepotLastCheck = 0;
-    static time_t DepotLastScan = 0;
+    static time_t DepotCheckStart = 0;
+    static time_t DepotScanStart = 0;
     
-    if ((now > DepotLastScan + 10) && (DepotScanPending > 0)) {
+    // Make sure to handle non responsive depot service: timeout on
+    // check and scan cycles. Do only one ting at a time: either check,
+    // scan or refresh, but not all at the same time.
+    //
+    if (DepotScanPending > 0) {
+        if (now <= DepotScanStart + 10) return; // wait until end of scan.
         DEBUG ("Scan timed out, refresh forced\n");
         DepotScanPending = 0;
-        DepotNextScan = 0;
-        DepotNextRefresh = now - 1; // Do it now.
     }
-    if (DepotScanPending > 0) return; // Still busy, wait until end of scan.
-
-    if ((now > DepotLastCheck + 10) && (DepotCheckPending > 0)) {
-        DEBUG ("Check timed out");
+    if (DepotCheckPending > 0) {
+        if (now <= DepotCheckStart + 10) return; // wait until end of check.
+        DEBUG ("Check timed out\n");
         DepotCheckPending = 0;
-        if (DepotNeedScan) DepotNextScan = now - 1; // Do it now.
-    }
-    if (DepotCheckPending > 0) return; // Still busy, wait until end of check.
-
-    if ((DepotNextRefresh > 0) && (now > DepotNextRefresh)) {
-        housedepositor_refresh();
-        DepotNextRefresh = 0;
     }
 
-    if ((DepotNextScan > 0) && (now > DepotNextScan)) {
-        DEBUG ("Starting to scan all depot services\n");
-        int i;
-        for (i = 0; i < MAX_CACHE; i++) {
+    if (housedepositor_refresh()) return; // Busy downloading new files.
+
+    // Do we need to scan the depot services?
+    // TBD: only scan those services that need update.
+    //
+    int i;
+    int needscan = 0;
+    for (i = 0; i < DepotServicesCount; i++) {
+        if (DepotServices[i].scanned != DepotServices[i].detected) {
+            DepotServices[i].scanned = DepotServices[i].detected;
+            needscan = 1;
+        }
+    }
+    if (needscan) {
+        DEBUG ("Scanning all depot services\n");
+        for (i = 0; i < DepotCacheCount; i++) {
             DepotCache[i].detected = 0;
         }
         DepotScanPending = 0;
@@ -692,17 +685,16 @@ void housedepositor_periodic (time_t now) {
             housediscovered
                 ("depot", (void *)(DepotRepositories[i]), housedepositor_scan_iterator);
         }
-        DepotNextScan = 0;
-        DepotLastScan = now;
+        DepotScanStart = now;
         if (DepotScanPending > 0) return; // Busy now, wait.
     }
 
-    if (now < DepotLastCheck + 5) return; // Don't check too often.
-    DepotLastCheck = now;
+    if (now < DepotCheckStart + 5) return; // Don't check too often.
+    DepotCheckStart = now;
 
+    DEBUG ("Checking all depot services\n");
     DepotCheckPending = 0;
-    DepotNeedScan = 0;
-    DepotNextScan = 0;
     housediscovered ("depot", 0, housedepositor_check_iterator);
+    if (!DepotCheckPending) DEBUG ("No depot services detected\n");
 }
 
