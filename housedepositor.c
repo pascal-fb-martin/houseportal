@@ -121,7 +121,7 @@ static int                DepotServicesCount = 0;
 typedef struct {
     char *uri;
     housedepositor_listener *listener;
-    int refreshing;
+    time_t refreshing;
     time_t active;   // The timestamp of the file that is used now.
     time_t detected; // The most recent timestamp detected.
     char host[128];  // The host that holds the most recent timestamp.
@@ -389,6 +389,7 @@ static void housedepositor_get_response
     cache->refreshing = 0;
     if (status != 200) {
         houselog_trace (HOUSE_FAILURE, cache->uri, "HTTP code %d", status);
+        cache->detected = cache->active; // Don't get stuck on this file.
         return;
     }
     
@@ -419,15 +420,27 @@ static int housedepositor_refresh (void) {
     
     int i;
     int refreshing = 0;
-    for (i = 0; i < MAX_CACHE; i++) {
-        if (!DepotCache[i].detected) continue;
-        if (DepotCache[i].refreshing) continue;
-        if (DepotCache[i].detected != DepotCache[i].active) {
+    time_t now = time(0);
+
+    for (i = 0; i < DepotCacheCount; i++) {
+        DepotCacheEntry *cache = DepotCache + i;
+        if (!cache->detected) continue;
+        if (cache->refreshing) {
+            if (now > cache->refreshing + 10) {
+                // Timed out. Backtrack and give up on this update.
+                DEBUG ("Timed out while refreshing %s\n", cache->uri);
+                houselog_trace (HOUSE_FAILURE, cache->uri, "timeout");
+                cache->detected = cache->active;
+                cache->refreshing = 0;
+            }
+            continue;
+        }
+        if (cache->detected != cache->active) {
             DEBUG ("Need to refresh %s (%d != %d)\n",
-                   DepotCache[i].uri,
-                   (int)(DepotCache[i].detected), (int)(DepotCache[i].active));
-            housedepositor_get(&(DepotCache[i]));
-            DepotCache[i].refreshing = 1;
+                   cache->uri,
+                   (int)(cache->detected), (int)(cache->active));
+            housedepositor_get(cache);
+            cache->refreshing = now;
             refreshing += 1;
         }
     }
@@ -652,6 +665,7 @@ void housedepositor_periodic (time_t now) {
     if (DepotScanPending > 0) {
         if (now <= DepotScanStart + 10) return; // wait until end of scan.
         DEBUG ("Scan timed out, refresh forced\n");
+        houselog_trace (HOUSE_FAILURE, "Depot scan", "timeout");
         DepotScanPending = 0;
     }
     if (DepotCheckPending > 0) {
