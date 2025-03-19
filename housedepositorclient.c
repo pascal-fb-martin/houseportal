@@ -103,6 +103,9 @@ int main (int argc, const char **argv) {
             if (PathCount < 10) {
                 Path[PathCount++] = argv[i];
             }
+        } else if (echttp_option_present("-h", argv[i])) {
+            printf ("%s repository name file\n", argv[0]);
+            exit (0);
         } else if (echttp_option_match("-sleep=", argv[i], &waitlimit)) {
             Deadline = time(0) + atoi(waitlimit);
         } else {
