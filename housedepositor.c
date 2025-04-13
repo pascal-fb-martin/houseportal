@@ -282,7 +282,7 @@ static void housedepositor_put_iterator
                         "cannot create socket for %s, %s", url, error);
         return;
     }
-    DEBUG ("PUT %s : %s\n", url, request->data);
+    DEBUG ("PUT %s : %s\n", url, request->data?request->data:"(file)");
     request->pending += 1;
     if (request->data) {
         echttp_submit (request->data, request->length,

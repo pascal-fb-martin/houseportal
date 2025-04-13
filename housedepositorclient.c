@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/stat.h>
 
 #include "echttp.h"
 #include "houselog.h"
@@ -124,8 +125,23 @@ int main (int argc, const char **argv) {
     housediscover_initialize (optioncount, option);
     housedepositor_initialize (optioncount, option);
 
-    if (PathCount >= 2) {
-       housedepositor_subscribe (Path[0], Path[1], listener);
+    if (PathCount <= 2) {
+       printf ("No depot file provided.\n");
+       exit (1);
+    }
+    housedepositor_subscribe (Path[0], Path[1], listener);
+
+    // Check that the file provided is legit.
+    if (PathCount > 2) {
+       struct stat filestat;
+       if (stat (Path[2], &filestat)) {
+           printf ("File %s does not exist\n", Path[2]);
+           exit (1);
+       }
+       if ((filestat.st_mode & S_IFMT) != S_IFREG) {
+           printf ("File %s is not a regular file\n");
+           exit (1);
+       }
     }
 
     echttp_loop();
