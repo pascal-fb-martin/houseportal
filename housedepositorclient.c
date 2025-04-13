@@ -125,7 +125,7 @@ int main (int argc, const char **argv) {
     housediscover_initialize (optioncount, option);
     housedepositor_initialize (optioncount, option);
 
-    if (PathCount <= 2) {
+    if (PathCount < 2) {
        printf ("No depot file provided.\n");
        exit (1);
     }
