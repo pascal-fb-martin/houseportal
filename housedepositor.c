@@ -313,6 +313,7 @@ static void housedepositor_put_submit (const char *repository,
     // There might have been no depot service running at this time.
     // In that case, nothing has happened: just get out.
     if (request->pending <= 0) {
+        DEBUG ("No depot service detected during put.\n");
         housedepositor_put_free (request);
         return;
     }
@@ -704,11 +705,13 @@ void housedepositor_periodic (time_t now) {
     }
 
     if (now < DepotCheckStart + 5) return; // Don't check too often.
-    DepotCheckStart = now;
 
     DEBUG ("Checking all depot services\n");
     DepotCheckPending = 0;
     housediscovered ("depot", 0, housedepositor_check_iterator);
-    if (!DepotCheckPending) DEBUG ("No depot services detected\n");
+    if (DepotCheckPending)
+        DepotCheckStart = now;
+    else
+        DEBUG ("No depot services detected\n");
 }
 
