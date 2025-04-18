@@ -51,10 +51,10 @@ EXPORT_INCLUDE=houselog.h \
                houselog_sensor.h \
                houselog_storage.h
 
-all: libhouseportal.a houseportal housediscover housedepositor
+all: libhouseportal.a houseportal housediscover housedepositor housegetalmanac
 
 clean:
-	rm -f *.o *.a houseportal housediscover housedepositor
+	rm -f *.o *.a houseportal housediscover housedepositor housegetalmanac
 
 rebuild: clean all
 
@@ -73,6 +73,9 @@ housediscover: housediscoverclient.c libhouseportal.a
 
 housedepositor: housedepositorclient.c libhouseportal.a
 	gcc -Os -o housedepositor housedepositorclient.c libhouseportal.a -lechttp -lssl -lcrypto -lrt
+
+housegetalmanac: housegetalmanac.c libhouseportal.a
+	gcc -Os -o housegetalmanac housegetalmanac.c libhouseportal.a -lechttp -lssl -lcrypto -lrt
 
 # Minimal tar file for installation. ----------------------------
 
@@ -94,6 +97,9 @@ dev:
 	cp housedepositor $(HROOT)/bin
 	chown root:root $(HROOT)/bin/housedepositor
 	chmod 755 $(HROOT)/bin/housedepositor
+	cp housegetalmanac $(HROOT)/bin
+	chown root:root $(HROOT)/bin/housegetalmanac
+	chmod 755 $(HROOT)/bin/housegetalmanac
 	mkdir -p $(HROOT)/include
 	cp $(EXPORT_INCLUDE) $(HROOT)/include
 	for i in $(EXPORT_INCLUDE) ; do chown root:root $(HROOT)/include/$$i ; done

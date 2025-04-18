@@ -47,6 +47,11 @@
  *    current night. The logic used here is: if it is not night time,
  *    then it is daytime.
  *
+ * const char *housealmanac_provider (void);
+ * int         housealmanac_priority (void);
+ *
+ *    Return information about the service that provided the almanac data.
+ *
  * void housealmanac_background (time_t now);
  *
  *    The periodic function that detects the almanac services.
@@ -91,6 +96,14 @@ const time_t housealmanac_sunset (void) {
 
 const time_t housealmanac_sunrise (void) {
     return SunRise;
+}
+
+const char *housealmanac_provider (void) {
+    return SourceUri;
+}
+
+int housealmanac_priority (void) {
+    return SourcePriority;
 }
 
 static ParserToken *housealmanac_prepare (int count) {

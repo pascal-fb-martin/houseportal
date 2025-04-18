@@ -23,6 +23,10 @@
 int    housealmanac_ready (void);
 time_t housealmanac_sunset (void);
 time_t housealmanac_sunrise (void);
-void   housealmanac_background (time_t now);
-int    housealmanac_status (char *buffer, int size);
+
+const char *housealmanac_provider (void);
+int         housealmanac_priority (void);
+
+void housealmanac_background (time_t now);
+int  housealmanac_status (char *buffer, int size);
 
