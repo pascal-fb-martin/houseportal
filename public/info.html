@@ -205,6 +205,7 @@ function showNet () {
 }
 
 function toCelcius (data) {
+    if (!data) return new Array(); // Empty.
     if (data[data.length-1] != 'mC') return data;
     var base = 1000.0;
     var result = [...data];
