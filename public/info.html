@@ -204,6 +204,34 @@ function showNet () {
     showScaleRight ('(Tx)', green);
 }
 
+function toCelcius (data) {
+    if (data[data.length-1] != 'mC') return data;
+    var base = 1000.0;
+    var result = [...data];
+    for (var i = data.length-2; i >= 0; --i) {
+        result[i] = data[i] / base;
+    }
+    result[data.length-1] = 'C';
+    return result;
+}
+
+function showTemp () {
+    if (! MetricsData.Metrics.temp) return;
+    var temp = MetricsData.Metrics.temp;
+    var cpu = toCelcius (temp.cpu);
+    var gpu = toCelcius (temp.gpu);
+    var cpumax = maxMetrics(cpu);
+    var gpumax = temp.gpu ? maxMetrics(gpu) : 0;
+    var max = roundBase10 ((cpumax > gpumax) ? cpumax : gpumax);
+    var green = '#10a010';
+    showGraph (toPercentage(max, cpu));
+    if (temp.gpu)
+       showGraph (toPercentage(max, gpu), green);
+    showScaleLeft (''+max+' C (CPU)');
+    if (temp.gpu)
+       showScaleRight ('(GPU)', green);
+}
+
 function drawView () {
     wipeoutSVG();
     if (MetricsData && SelectedHost && SelectedDraw) SelectedDraw();
@@ -234,6 +262,10 @@ function selectIO (element) {
 
 function selectNet (element) {
     selectView (element, showNet);
+}
+
+function selectTemp (element) {
+    selectView (element, showTemp);
 }
 
 function friendlyTime (timestamp) {
@@ -470,6 +502,9 @@ window.onload = function() {
            </td></tr>
             <tr><td>
                 <div style="display: flex;"><button style="flex: 1 0 auto" onclick="selectNet(this)">Network</button></div>
+           </td></tr>
+           <tr><td>
+                <div style="display: flex;"><button style="flex: 1 0 auto" onclick="selectTemp(this)">Temperature</button></div>
            </td></tr>
         </table>
       </td>
