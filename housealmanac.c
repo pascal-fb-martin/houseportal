@@ -62,9 +62,19 @@
  *    Return the sunset or sunrise time for the current day.
  *
  * const char *housealmanac_tonight_provider (void);
+ * int         housealmanac_tonight_priority (void);
+ * const char *housealmanac_tonight_origin (void);
+ * const char *housealmanac_today_provider (void);
  * int         housealmanac_today_priority (void);
+ * const char *housealmanac_today_origin (void);
  *
- *    Return information about the service that provided the almanac data.
+ *    Return information about the local service that provided the data,
+ *    the priority of that data and the upstream origin for the data.
+ *
+ *    If the local service accesses an Internet site to get the data,
+ *    the provider will be that local service, while the origin will
+ *    reference the Internet web site accessed. A local service can be both
+ *    the provider and the origin of the data.
  *
  * void housealmanac_background (time_t now);
  *
@@ -94,7 +104,8 @@ struct AlmanacDataBase {
     char gps;
     short priority;
     char timezone[128];
-    char source[128];
+    char provider[128];
+    char origin[256];
     double latitude;
     double longitude;
     time_t sunset;
@@ -121,7 +132,13 @@ static const time_t housealmanac_sunrise (struct AlmanacDataBase *db) {
 
 static const char *housealmanac_provider (struct AlmanacDataBase *db) {
     db->active = 1;
-    return db->source;
+    return db->provider;
+}
+
+static const char *housealmanac_origin (struct AlmanacDataBase *db) {
+    db->active = 1;
+    if (db->origin[0]) return db->origin;
+    return db->provider;
 }
 
 int housealmanac_priority (struct AlmanacDataBase *db) {
@@ -145,6 +162,10 @@ const char *housealmanac_tonight_provider (void) {
     return housealmanac_provider (&Tonight);
 }
 
+const char *housealmanac_tonight_origin (void) {
+    return housealmanac_origin (&Tonight);
+}
+
 int housealmanac_tonight_priority (void) {
     return housealmanac_priority (&Tonight);
 }
@@ -163,6 +184,10 @@ const time_t housealmanac_today_sunrise (void) {
 
 const char *housealmanac_today_provider (void) {
     return housealmanac_provider (&Today);
+}
+
+const char *housealmanac_today_origin (void) {
+    return housealmanac_origin (&Today);
 }
 
 int housealmanac_today_priority (void) {
@@ -234,7 +259,7 @@ static void housealmanac_update (const char *provider,
    db->sunset = sunset;
    db->sunrise = sunrise;
 
-   snprintf (db->source, sizeof(db->source), "%s", provider);
+   snprintf (db->provider, sizeof(db->provider), "%s", provider);
 
    // If this almanac server has location info, remember it.
    index = echttp_json_search (tokens, ".location.timezone");
@@ -250,6 +275,16 @@ static void housealmanac_update (const char *provider,
        db->latitude = tokens[lat].value.real;
        db->longitude = tokens[lng].value.real;
        db->gps = 1;
+   }
+
+   index = echttp_json_search (tokens, ".almanac.origin");
+   if (index > 0) {
+       const char *value = tokens[index].value.string;
+       if (strcmp (value, db->origin)) {
+           snprintf (db->origin, sizeof(db->origin), "%s", value);
+       }
+   } else {
+       db->origin[0] = 0;
    }
 }
 
@@ -337,8 +372,9 @@ int housealmanac_status (char *buffer, int size) {
 
     cursor = snprintf (buffer, size,
                        ",\"almanac\":{\"priority\":%d,\"provider\":\"%s\""
-                       ",\"sunset\":%lld,\"sunrise\":%lld}",
-                       db->priority, db->source,
+                       ",\"origin\":\"%s\",\"sunset\":%lld,\"sunrise\":%lld}",
+                       db->priority, db->provider,
+                       db->origin[0]?db->origin:db->provider,
                        (long long)db->sunset, (long long)db->sunrise);
 
     if (db->timezone[0] || db->gps) {

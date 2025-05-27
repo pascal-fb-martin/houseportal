@@ -61,9 +61,10 @@ static void background (int fd, int mode) {
         if (! housealmanac_tonight_ready()) {
             printf ("No tonight almanac service detected.\n");
         } else {
-            printf ("Tonight Almanac Service: %s (priority %d)\n",
+            printf ("Tonight Provider: %s (priority %d)\n",
                     housealmanac_tonight_provider(),
                     housealmanac_tonight_priority());
+            printf ("Tonight Origin: %s\n", housealmanac_tonight_origin());
             time_t t = housealmanac_tonight_sunset();
             printf ("Tonight Sunset: %s", ctime (&t));
             t = housealmanac_tonight_sunrise();
@@ -72,9 +73,10 @@ static void background (int fd, int mode) {
         if (! housealmanac_today_ready()) {
             printf ("No today almanac service detected.\n");
         } else {
-            printf ("Today Almanac service: %s (priority %d)\n",
+            printf ("Today Provider: %s (priority %d)\n",
                     housealmanac_today_provider(),
                     housealmanac_today_priority());
+            printf ("Today Origin: %s\n", housealmanac_today_origin());
             time_t t = housealmanac_today_sunrise();
             printf ("Today Sunrise: %s", ctime (&t));
             t = housealmanac_today_sunset();

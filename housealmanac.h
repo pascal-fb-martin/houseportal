@@ -24,12 +24,14 @@ int    housealmanac_tonight_ready (void);
 time_t housealmanac_tonight_sunset (void);
 time_t housealmanac_tonight_sunrise (void);
 const char *housealmanac_tonight_provider (void);
+const char *housealmanac_tonight_origin (void);
 int         housealmanac_tonight_priority (void);
 
 int    housealmanac_today_ready (void);
 time_t housealmanac_today_sunset (void);
 time_t housealmanac_today_sunrise (void);
 const char *housealmanac_today_provider (void);
+const char *housealmanac_today_origin (void);
 int         housealmanac_today_priority (void);
 
 void housealmanac_background (time_t now);
