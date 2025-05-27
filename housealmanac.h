@@ -20,12 +20,17 @@
  *
  * housemech_almanac.h - Client interface with the almanac services.
  */
-int    housealmanac_ready (void);
-time_t housealmanac_sunset (void);
-time_t housealmanac_sunrise (void);
+int    housealmanac_tonight_ready (void);
+time_t housealmanac_tonight_sunset (void);
+time_t housealmanac_tonight_sunrise (void);
+const char *housealmanac_tonight_provider (void);
+int         housealmanac_tonight_priority (void);
 
-const char *housealmanac_provider (void);
-int         housealmanac_priority (void);
+int    housealmanac_today_ready (void);
+time_t housealmanac_today_sunset (void);
+time_t housealmanac_today_sunrise (void);
+const char *housealmanac_today_provider (void);
+int         housealmanac_today_priority (void);
 
 void housealmanac_background (time_t now);
 int  housealmanac_status (char *buffer, int size);

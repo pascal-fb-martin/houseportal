@@ -47,23 +47,38 @@ static void background (int fd, int mode) {
 
     DEBUG ("background, count %d\n", Counter);
 
-    if (Counter == 1) {
+    if (Counter == 0) {
         DEBUG ("Starting the discovery\n");
     }
     Counter += 1;
     housediscover (now);
     housealmanac_background (now);
 
+    if (housealmanac_tonight_ready() && housealmanac_today_ready())
+        Deadline = 0; // No need to wait anymore.
+
     if (now > Deadline) {
-        if (! housealmanac_ready()) {
-            printf ("No almanac service detected.\n");
+        if (! housealmanac_tonight_ready()) {
+            printf ("No tonight almanac service detected.\n");
         } else {
-            printf ("Almanac service: %s (priority %d)\n",
-                    housealmanac_provider(), housealmanac_priority());
-            time_t t = housealmanac_sunset();
-            printf ("Sunset: %s", ctime (&t));
-            t = housealmanac_sunrise();
-            printf ("Sunrise: %s", ctime (&t));
+            printf ("Tonight Almanac Service: %s (priority %d)\n",
+                    housealmanac_tonight_provider(),
+                    housealmanac_tonight_priority());
+            time_t t = housealmanac_tonight_sunset();
+            printf ("Tonight Sunset: %s", ctime (&t));
+            t = housealmanac_tonight_sunrise();
+            printf ("Tonight Sunrise: %s", ctime (&t));
+        }
+        if (! housealmanac_today_ready()) {
+            printf ("No today almanac service detected.\n");
+        } else {
+            printf ("Today Almanac service: %s (priority %d)\n",
+                    housealmanac_today_provider(),
+                    housealmanac_today_priority());
+            time_t t = housealmanac_today_sunrise();
+            printf ("Today Sunrise: %s", ctime (&t));
+            t = housealmanac_today_sunset();
+            printf ("Today Sunset: %s", ctime (&t));
         }
         exit(0);
     }
@@ -98,6 +113,9 @@ int main (int argc, const char **argv) {
     echttp_background (&background);
     houselog_initialize ("discovery", argc, argv);
     housediscover_initialize (optioncount, option);
+
+    housealmanac_tonight_ready(); // Tell we want that data..
+    housealmanac_today_ready(); // Tell we want that data..
 
     echttp_loop();
     return 0;
