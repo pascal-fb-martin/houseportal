@@ -9,6 +9,10 @@ function compareService (a, b) {
     var nameb = b.service.toUpperCase();
     if (namea < nameb) return -1;
     if (namea > nameb) return 1;
+    namea = a.path.toUpperCase();
+    nameb = b.path.toUpperCase();
+    if (namea < nameb) return -1;
+    if (namea > nameb) return 1;
     return 0;
 }
 
