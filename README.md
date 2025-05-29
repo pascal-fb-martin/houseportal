@@ -67,10 +67,11 @@ If no cryptographic key is provided, HousePortal will accept all redirection mes
 UDP port 70 is used for redirection registrations, because this port is assigned to the Gopher protocol and, let's be serious, who use Gopher nowadays?
 
 A redirection message is a space-separated text that follows the syntax below:
+```
+'REDIRECT' time [host:]port [HIDE] [PID:pid] [[service:]path ..] [SHA-256 signature]
+```
 
-      'REDIRECT' time [host:]port [HIDE] [[service:]path ..] [SHA-256 signature]
-      
-where host is a host name or IP address, time is the system time when the message was formatted (see time(2)), port is a number in the range 1..65535 and each path item is an URI's absolute path (which must start with '/'), optionally prefixed with a service name (see the service section later).
+where host is a host name or IP address, time is the system time when the message was formatted (see time(2)), port is a number in the range 1..65535 and each path item is an URI's absolute path (which must start with '/'), optionally prefixed with a service name (see the service section later). The optional PID argument can be used to monitor the process. It is also used to detect service restart (i.e. when the PID changes).
 
 The "/portal" path name is reserved for HousePortal's own status.
 

@@ -81,6 +81,8 @@ typedef struct {
     char *target;
     int length;
     int hide;
+    pid_t pid;
+    time_t start;
     time_t expiration;
 } HttpRedirection;
 
@@ -226,13 +228,14 @@ static const char *RedirectRouteAsync (const char *method, const char *uri,
     return RedirectRoute (method, uri, data, length);
 }
 
-static void AddSingleRedirect (int live, int hide,
+static void AddSingleRedirect (int live, int hide, pid_t pid,
                                const char *target,
                                const char *service, const char *path) {
 
     int i;
     char buffer[1024];
-    time_t expiration = (live)?time(0)+REDIRECT_LIFETIME:0;
+    time_t now = time(0);
+    time_t expiration = (live)?now+REDIRECT_LIFETIME:0;
 
     if (!strchr(target, ':')) {
        snprintf (buffer, sizeof(buffer), "%s:%s", HostName, target);
@@ -246,11 +249,11 @@ static void AddSingleRedirect (int live, int hide,
     for (i = 0; i < RedirectionCount; ++i) {
         if (strcmp (Redirections[i].path, path) == 0) {
             if (live && Redirections[i].expiration == 0) return; // Permanent..
+            int restarted = 0;
             if (strcmp (Redirections[i].target, target)) {
-                houselog_event ("ROUTE", path, "REPLACED", "%s WITH %s",
-                                Redirections[i].target, target);
                 free (Redirections[i].target);
                 Redirections[i].target = strdup(target);
+                restarted = 1;
             }
             if (service) {
                 if (!Redirections[i].service) {
@@ -269,7 +272,15 @@ static void AddSingleRedirect (int live, int hide,
                 free (Redirections[i].service);
                 Redirections[i].service = 0;
             }
-
+            if (pid && (pid != Redirections[i].pid)) {
+                Redirections[i].pid = pid;
+                restarted = 1;
+            }
+            if (restarted) {
+                Redirections[i].start = now;
+                houselog_event ("ROUTE", path, "RESTARTED",
+                                "SERVICE %s AS %s", service, target);
+            }
             Redirections[i].hide = hide;
             Redirections[i].expiration = expiration;
             return;
@@ -286,7 +297,8 @@ static void AddSingleRedirect (int live, int hide,
                         "add %s route %s to %s%s",
                         live?"live":"permanent",p,target,hide?" (hide)":"");
         houselog_event ("ROUTE", p, "ADD",
-                        "%s (%s)", target, live?"live":"permanent");
+                        "SERVICE %s AS %s (%s)",
+                        service, target, live?"live":"permanent");
 
         // Since HousePortal will never process any content data on these
         // redirected requests, better not wait and accumulate the data.
@@ -305,6 +317,8 @@ static void AddSingleRedirect (int live, int hide,
             Redirections[RedirectionCount].service = 0;
         Redirections[RedirectionCount].length = strlen(path);
         Redirections[RedirectionCount].hide = hide;
+        Redirections[RedirectionCount].pid = pid;
+        Redirections[RedirectionCount].start = now; // use /proc/[pid]/stat?
         Redirections[RedirectionCount].expiration = expiration;
         RedirectionCount += 1;
     }
@@ -312,14 +326,27 @@ static void AddSingleRedirect (int live, int hide,
 
 static void AddRedirect (int live, char **token, int count) {
 
-    int i = 1;
+    int i;
     int hide = 0;
+    pid_t pid = 0;
     const char *target = token[0];
 
-    if (strcmp ("HIDE", token[1]) == 0) {
-        hide = 1;
-        i = 2;
+    // Decode optional arguments
+    //
+    for (i = 1; i < count; ++i) {
+        if (strcmp ("HIDE", token[i]) == 0) {
+            hide = 1;
+        } else if (strncmp ("PID:", token[i], 4) == 0) {
+            // Static service redirection cannot provide a PID: just
+            // ignore any PID argument present if not live.
+            if (live) pid = (pid_t)atoi(token[i]+4);
+        } else {
+            break;
+        }
     }
+
+    // Decode the list of services provided.
+    //
     for (; i < count; ++i) {
         char *service = 0;
         char *path = token[i];
@@ -329,7 +356,7 @@ static void AddRedirect (int live, char **token, int count) {
             service = path;
             path = s+1;
         }
-        AddSingleRedirect (live, hide, target, service, path);
+        AddSingleRedirect (live, hide, pid, target, service, path);
     }
 }
 
@@ -666,8 +693,8 @@ void hp_redirect_list_json (int services, char *buffer, int size) {
     length = hp_redirect_preamble (now, buffer, size);
     cursor = buffer + length;
 
-    snprintf (cursor, size-length, "\"redirect\":[");
-    length += strlen(cursor);
+    int delta = snprintf (cursor, size-length, "\"redirect\":[");
+    length += delta;
     cursor = buffer + length;
 
     for (i = 0; i < RedirectionCount; ++i) {
@@ -682,9 +709,10 @@ void hp_redirect_list_json (int services, char *buffer, int size) {
         else
             service[0] = 0;
 
-        snprintf (cursor, size-length,
-                  "%s{\"path\":\"%*.*s\",%s\"expire\":%lld,\"target\":\"%s\",\"hide\":%s,\"active\":%s}",
+        reclen = snprintf (cursor, size-length,
+                  "%s{\"start\":%lld,\"path\":\"%*.*s\",%s\"expire\":%lld,\"target\":\"%s\",\"hide\":%s,\"active\":%s}",
                   prefix,
+                  (long long)(Redirections[i].start),
                   Redirections[i].length, Redirections[i].length,
                   Redirections[i].path,
                   service,
@@ -692,7 +720,6 @@ void hp_redirect_list_json (int services, char *buffer, int size) {
                   Redirections[i].target,
                   Redirections[i].hide?"true":"false",
                   (expiration == 0 || expiration > now)?"true":"false");
-        reclen = strlen(cursor);
         prefix = ",";
         if (length + reclen >= size) break;
         length += reclen;

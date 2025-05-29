@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel=stylesheet type="text/css" href="/house.css" title="House">
+<script>
+
+function compareService (a, b) {
+    var namea = a.service.toUpperCase();
+    var nameb = b.service.toUpperCase();
+    if (namea < nameb) return -1;
+    if (namea > nameb) return 1;
+    return 0;
+}
+
+function portalCleanTable (table) {
+
+    for (var i = table.childNodes.length - 1; i > 1; i--) {
+        table.removeChild(table.childNodes[i]);
+    }
+}
+
+function portalShowServices (response) {
+
+   var table = document.getElementById ('services');
+   portalCleanTable (table);
+
+   var services = response.portal.redirect.sort(compareService);
+   var address = response.host;
+   var now = Date.now();
+
+   for (var i = 0; i < services.length; i++) {
+        var service = services[i];
+
+        var outer = document.createElement("tr");
+
+        var inner = document.createElement("td");
+        var label = document.createElement("a");
+        label.innerHTML = service.path;
+        if (service.hide) {
+            // This web service is not integrated with the House environment,
+            // do not assume that it will follow the House conventions.
+            label.href = 'http://'+address+service.path;
+        } else {
+            label.href = 'http://'+address+service.path+'/index.html';
+        }
+        label.target = '_blank';
+        inner.appendChild(label);
+        outer.appendChild(inner);
+
+        inner = document.createElement("td");
+        inner.innerHTML = service.service?service.service:'';
+        outer.appendChild(inner);
+
+        inner = document.createElement("td");
+        var started = new Date(service.start * 1000);
+        inner.innerHTML = started.toLocaleString().split(' GMT')[0];
+        outer.appendChild(inner);
+
+        inner = document.createElement("td");
+        inner.innerHTML = (service.active?"ACTIVE ":"")+(service.hide?"HIDE ":"");
+        outer.appendChild(inner);
+
+        inner = document.createElement("td");
+        var expire = Math.round(((service.expire * 1000) - now) / 1000);
+        if (expire <= 0)
+            inner.innerHTML = 'EXPIRED';
+        else
+            inner.innerHTML = ''+expire+' Sec';
+        outer.appendChild(inner);
+
+        table.appendChild(outer);
+   }
+}
+
+function portalServices () {
+    var command = new XMLHttpRequest();
+    command.open("GET", "/portal/service");
+    command.onreadystatechange = function () {
+        if (command.readyState === 4 && command.status === 200) {
+            portalShowServices (JSON.parse(command.responseText));
+        }
+    }
+    command.send(null);
+}
+
+window.onload = function() {
+   portalServices();
+   setInterval (portalServices, 2000);
+};
+</script>
+<head>
+   <title></title>
+</head>
+<body>
+   <table class="housetopcontainer">
+   <tr><td>
+   <table class="housetop">
+   <tr>
+   <td><a href="/index.html">Portal</a></td>
+   <td><a href="/info.html">Servers</a></td>
+   <td><span>Services</span></td>
+   <td><a href="/events.html">Events</a></td>
+   </tr>
+   </table>
+   </td></tr>
+   </table>
+   <table class="housewidetable houseevent" id="services" border="0">
+      <tr>
+         <th width="30%">PATH</th>
+         <th width="10%">IMPLEMENTS</th>
+         <th width="30%">STARTED</th>
+         <th width="20%">STATUS</th>
+         <th width="10%">EXPIRES</th>
+      </tr>
+   </table>
+</body>
+</html>
+

@@ -161,13 +161,15 @@ void houseportal_register (int webport, const char **path, int count) {
 
 void houseportal_register_more (int webport, const char **path, int count) {
 
+    static pid_t MyPid = 0;
+    if (!MyPid) MyPid = getpid();
+
     int i;
     int index;
     int length = 0;
     char dest[256];
     int dlen;
-    const char *template = "REDIRECT 12345678901234 "; // Only for size.
-    int tlen = strlen(template);
+    int hlen = strlen("REDIRECT 12345678901234");
     char *cursor;
 
     // Adjust the port number to be advertised according to the port mapping
@@ -188,22 +190,23 @@ void houseportal_register_more (int webport, const char **path, int count) {
     // There could be more than one, if there are a lot of paths specified.
     //
     if (HouseServicelHost) {
-        snprintf(dest, sizeof(dest), "%s:%d", HouseServicelHost, webport);
+        dlen = snprintf(dest, sizeof(dest),
+                        "%s:%d PID:%d", HouseServicelHost, webport, MyPid);
     } else {
-        snprintf(dest, sizeof(dest), "%d", webport);
+        dlen = snprintf(dest, sizeof(dest), "%d PID:%d", webport, MyPid);
     }
-    dlen = strlen(dest);
 
     index = HousePortalRegistrationCount;
     if (HousePortalRegistration[index] == 0)
         HousePortalRegistration[index] = malloc(HOUSEPORTALPACKET);
     strncpy (HousePortalRegistration[index], dest, HOUSEPORTALPACKET);
-    length = tlen + dlen;
+    length = hlen + dlen;
     cursor = HousePortalRegistration[index] + dlen;
 
     for (i = 0; i < count; ++i) {
         int l = strlen(path[i]);
         if (length + 1 + l >= HOUSEPORTALPACKET) {
+            // Split this service registration into multiple packets.
             if (index >= 255) break; // Way too many.
             HousePortalRegistrationLength[index] =
                 (int) (cursor - HousePortalRegistration[index]);
@@ -212,7 +215,7 @@ void houseportal_register_more (int webport, const char **path, int count) {
             if (HousePortalRegistration[index] == 0)
                 HousePortalRegistration[index] = malloc(HOUSEPORTALPACKET);
             strncpy (HousePortalRegistration[index], dest, HOUSEPORTALPACKET);
-            length = tlen + dlen;
+            length = hlen + dlen;
             cursor = HousePortalRegistration[index] + dlen;
         }
         strncpy (cursor++, " ", HOUSEPORTALPACKET-length++);
@@ -234,8 +237,7 @@ void houseportal_renew (void) {
     int total;
     char buffer[HOUSEPORTALPACKET+256]; // Added space for signature.
 
-    snprintf (buffer, sizeof(buffer), "REDIRECT %ld ", (long)time(0));
-    blen = strlen(buffer);
+    blen = snprintf (buffer, sizeof(buffer), "REDIRECT %ld ", (long)time(0));
 
     for (i = 0; i < HousePortalRegistrationCount; ++i) {
         if (HousePortalRegistrationLength[i] >= HOUSEPORTALPACKET - blen)
