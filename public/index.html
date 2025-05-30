@@ -7,8 +7,8 @@
 var PortalKnownPeers = null;
 
 function compareService (a, b) {
-    var namea = a.service.toUpperCase();
-    var nameb = b.service.toUpperCase();
+    var namea = a.path.toUpperCase();
+    var nameb = b.path.toUpperCase();
     if (namea < nameb) return -1;
     if (namea > nameb) return 1;
     return 0;
