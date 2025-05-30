@@ -87,7 +87,7 @@ typedef struct {
 } HttpRedirection;
 
 #define REDIRECT_MAX 128
-#define REDIRECT_LIFETIME 600
+#define REDIRECT_LIFETIME 180
 
 static int RedirectionCount = 0;
 static HttpRedirection Redirections[REDIRECT_MAX];
