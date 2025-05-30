@@ -38,19 +38,29 @@
  *    code to sign all messages to houseportal. The key must match the key
  *    in the houseportal's configuration for the provided paths.
  *
- * void houseportal_register (int webport, const char **path, int count);
+ * void houseportal_declare  (int webport, const char **path, int count);
  *
  *    Register a specific list of redirections. This erase any previous
- *    registrations.
+ *    registrations. The registrations will be sent to houseportal from
+ *    within houseportal_background().
  *
- * void houseportal_register_more (int webport, const char **path, int count);
+ * void houseportal_declare_more (int webport, const char **path, int count);
  *
  *    Register a specific list of redirections. This adds to any previous
- *    registrations.
+ *    registrations. The registrations will be sent to houseportal from
+ *    within houseportal_background().
  *
+ * void houseportal_background (time_t now);
+ *
+ *    Periodic function that handles the registration exchanges with
+ *    the houseportal service.
+ *
+ * void houseportal_register (int webport, const char **path, int count);
+ * void houseportal_register_more (int webport, const char **path, int count);
  * void houseportal_renew (void);
  *
- *    Renew the previous redirections.
+ *    This API is being deprecated. Please use houseportal_declare,
+ *    houseportal_declare_more and houseportal_background instead.
  */
 
 #include <unistd.h>
@@ -149,17 +159,16 @@ void houseportal_signature (const char *cypher, const char *key) {
     HousePortalTemporaryLength = strlen(key) / 16; // Key must be long enough
 }
 
-void houseportal_register (int webport, const char **path, int count) {
+void houseportal_declare (int webport, const char **path, int count) {
 
     // Remove any previous registration (but keep the allocated memory).
     //
     HousePortalRegistrationCount = 0;
 
-    houseportal_register_more (webport, path, count);
+    houseportal_declare_more (webport, path, count);
 }
 
-
-void houseportal_register_more (int webport, const char **path, int count) {
+void houseportal_declare_more (int webport, const char **path, int count) {
 
     static pid_t MyPid = 0;
     if (!MyPid) MyPid = getpid();
@@ -226,10 +235,27 @@ void houseportal_register_more (int webport, const char **path, int count) {
     HousePortalRegistrationLength[index] =
         (int) (cursor - HousePortalRegistration[index]);
     HousePortalRegistrationCount = index+1;
+}
 
+// DEPRECATED: use houseportal_declare instead.
+//
+void houseportal_register (int webport, const char **path, int count) {
+
+    houseportal_declare (webport, path, count);
     houseportal_renew();
 }
 
+// DEPRECATED: use houseportal_declare_more instead.
+//
+void houseportal_register_more (int webport, const char **path, int count) {
+
+    houseportal_declare_more (webport, path, count);
+    houseportal_renew();
+}
+
+// DEPRECATED: use houseportal_background instead.
+// Will eventually become a static function.
+//
 void houseportal_renew (void) {
 
     int i;
@@ -262,5 +288,16 @@ void houseportal_renew (void) {
         }
         hp_udp_send (buffer, total);
     }
+}
+
+void houseportal_background (time_t now) {
+
+    static time_t LastRenewal = 0;
+
+    if (HousePortalRegistrationCount <= 0) return;
+    if (now < LastRenewal + 30) return;
+    LastRenewal = now;
+
+    houseportal_renew ();
 }
 

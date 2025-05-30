@@ -23,6 +23,12 @@
 
 void houseportal_initialize    (int argc, const char **argv);
 void houseportal_signature     (const char *cypher, const char *key);
+
+void houseportal_declare      (int webport, const char **paths, int count);
+void houseportal_declare_more (int webport, const char **paths, int count);
+void houseportal_background   (time_t now);
+
+// DEPRECATED:
 void houseportal_register      (int webport, const char **paths, int count);
 void houseportal_register_more (int webport, const char **paths, int count);
 void houseportal_renew         (void);
