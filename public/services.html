@@ -65,11 +65,15 @@ function portalShowServices (response) {
         outer.appendChild(inner);
 
         inner = document.createElement("td");
-        var expire = Math.round(((service.expire * 1000) - now) / 1000);
-        if (expire <= 0)
-            inner.innerHTML = 'EXPIRED';
-        else
-            inner.innerHTML = ''+expire+' Sec';
+        if (service.expire) {
+            var expire = Math.round(((service.expire * 1000) - now) / 1000);
+            if (expire <= 0)
+                inner.innerHTML = 'EXPIRED';
+            else
+                inner.innerHTML = ''+expire+' Sec';
+        } else {
+            inner.innerHTML = 'STATIC";
+        }
         outer.appendChild(inner);
 
         table.appendChild(outer);
