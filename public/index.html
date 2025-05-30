@@ -4,6 +4,8 @@
 <link rel=stylesheet type="text/css" href="/house.css" title="House">
 <script>
 
+var PortalKnownPeers = null;
+
 function compareService (a, b) {
     var namea = a.service.toUpperCase();
     var nameb = b.service.toUpperCase();
@@ -14,9 +16,13 @@ function compareService (a, b) {
 
 function portalShowServices (address, response) {
 
-   var table = document.getElementById ('portal-'+response.host);
-   var services = response.portal.redirect.sort(compareService);
+   var table = document.getElementById ('services-'+response.host);
 
+   for (var i = table.childNodes.length - 1; i >= 0; i--) {
+       table.removeChild(table.childNodes[i]);
+   }
+
+   var services = response.portal.redirect.sort(compareService);
    var outer = document.createElement("tr");
    for (var i = 0; i < services.length; i++) {
         var service = services[i];
@@ -49,6 +55,40 @@ function portalServices (host) {
     command.send(null);
 }
 
+function portalPeersCleanup (table, peers) {
+
+    if (!PortalKnownPeers) {
+        PortalKnownPeers = peers;
+        return true; // First time.
+    }
+
+    // If these is any new entry, we need to re-evaluate the whole page.
+    var refresh = false;
+    for  (var p = peers.length - 1; p >= 0; p--) {
+        if (!PortalKnownPeers.includes(peers[p])) {
+            refresh = true;
+            break;
+        }
+    }
+    if (refresh) {
+        // The table will be rebuilt: remove all known entries.
+        for (var i = PortalKnownPeers.length - 1; i >= 0; i--) {
+            var child = document.getElementById ('peer-'+PortalKnownPeers[i]);
+            if (child) table.removeChild(child);
+        }
+    } else {
+        // .. otherwise, just eliminate those entries that disappeared.
+        for  (var i = PortalKnownPeers.length - 1; i >= 0; i--) {
+            if (!peers.includes(PortalKnownPeers[i])) {
+                var child = document.getElementById ('peer-'+PortalKnownPeers[i]);
+                if (child) table.removeChild(child);
+            }
+        }
+    }
+    PortalKnownPeers = peers;
+    return refresh;
+}
+
 function portalPeersReceived (response) {
     var title = response.host+' - Portal';
     document.getElementsByTagName ('title')[0].innerHTML = title;
@@ -56,25 +96,30 @@ function portalPeersReceived (response) {
 
     var servicelist = document.getElementById ('servicelist');
 
+    if (portalPeersCleanup (servicelist, peers)) {
+        for (var i = 0; i < peers.length; ++i) {
+            var outer = document.createElement("tr");
+            var inner = document.createElement("td");
+            var label = document.createElement("a");
+            var peername = peers[i].split(':')[0];
+            label.innerHTML = peername;
+            label.href = 'http://'+peers[i]+'/index.html';
+            inner.appendChild(label);
+            outer.appendChild(inner);
+
+            inner = document.createElement("td");
+            table2 = document.createElement("table");
+            table2.id = "services-"+peername;
+            table2.style = "border-spacing: 60px 10px";
+            inner.appendChild(table2);
+
+            outer.appendChild(inner);
+            outer.id = 'peer-'+peername;
+            servicelist.appendChild(outer);
+        }
+    }
+
     for (var i = 0; i < peers.length; ++i) {
-        var outer = document.createElement("tr");
-        var inner = document.createElement("td");
-        var label = document.createElement("a");
-        var peername = peers[i].split(':')[0];
-        label.innerHTML = peername;
-        label.href = 'http://'+peers[i]+'/index.html';
-        inner.appendChild(label);
-        outer.appendChild(inner);
-
-        inner = document.createElement("td");
-        table2 = document.createElement("table");
-        table2.id = "portal-"+peername;
-        table2.style = "border-spacing: 60px 10px";
-        inner.appendChild(table2);
-
-        outer.appendChild(inner);
-        servicelist.appendChild(outer);
-
         portalServices (peers[i]);
     }
 }
@@ -92,6 +137,7 @@ function portalPeers () {
 
 window.onload = function() {
    portalPeers();
+   setInterval (portalPeers, 5000);
 };
 </script>
 <head>
