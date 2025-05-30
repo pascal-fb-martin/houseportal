@@ -181,15 +181,23 @@ If any cryptographic signature is required, the key must be provided:
 ```
 void houseportal_signature (const char *cypher, const char *key);
 ```
-The next step is to register the various paths:
+The next step is to declare the various URI paths:
+```
+void houseportal_declare (int webport, const char **paths, int count);
+void houseportal_declare_more (int webport, const char **paths, int count);
+```
+Once all this was done, the application must periodically call the background function, which renews the registered paths:
+```
+void houseportal_background (time_t now);
+```
+
+The following API functions are still supported but are deprecated:
 ```
 void houseportal_register (int webport, const char **paths, int count);
 void houseportal_register_more (int webport, const char **paths, int count);
-```
-Once all this was done, the application must periodically renew its paths:
-```
 void houseportal_renew (void);
 ```
+(The newer API is simpler to use and the period of the renewals is defined in a single place.)
 
 ### Discovery client API
 
