@@ -25,6 +25,9 @@ function portalCleanTable (table) {
 
 function portalShowServices (response) {
 
+   var title = document.getElementById ('pagetitle');
+   if (title) title.innerHTML = 'Services on ' + response.host;
+
    var table = document.getElementById ('services');
    portalCleanTable (table);
 
@@ -97,7 +100,7 @@ window.onload = function() {
 };
 </script>
 <head>
-   <title>Service Monitoring</title>
+   <title id='pagetitle'>Service Monitoring</title>
 </head>
 <body>
    <table class="housetopcontainer">
