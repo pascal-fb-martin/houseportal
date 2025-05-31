@@ -74,12 +74,13 @@ int main (int argc, const char **argv) {
     if (count) {
         int portnum = atoi(port);
         printf ("Registering %d redirect paths for port %d\n", count, portnum);
-        houseportal_register (portnum, path, count);
+        houseportal_declare (portnum, path, count);
+        houseportal_background (); // Trigger the initial registrations.
 
         for (i = 0; i < 3000; ++i) {
             sleep (5);
             printf ("Renewing the redirect registration\n");
-            houseportal_renew ();
+            houseportal_background ();
         }
     }
     return 0;
