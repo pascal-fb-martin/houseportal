@@ -83,7 +83,7 @@ typedef struct {
     int hide;
     pid_t pid;
     time_t start;
-    time_t expiration;
+    time_t expiration; // 0: will not expire, 1: expired.
 } HttpRedirection;
 
 #define REDIRECT_MAX 128
@@ -366,8 +366,13 @@ static void AddOnePeer (const char *name, time_t expiration) {
 
     for (i = 0; i < PeerCount; ++i) {
         if (!strcmp(Peers[i].name, name)) {
-            if (Peers[i].expiration > 0 &&
-                Peers[i].expiration < expiration) { // No downgrade.
+            time_t existing = Peers[i].expiration;
+            if ((existing > 0) && (existing < expiration)) { // No downgrade.
+                if (existing < time(0)) {
+                    houselog_event ("PEER", name, "RECOVER",
+                                    "%s EXPIRATION WAS DETECTED",
+                                    (existing == 1)?"AFTER":"BEFORE");
+                }
                 Peers[i].expiration = expiration;
                 DEBUG printf ("Peer %s updated to %ld\n", name, expiration);
             }
@@ -377,6 +382,7 @@ static void AddOnePeer (const char *name, time_t expiration) {
 
     // This is a new peer: add to the list.
     if (PeerCount < REDIRECT_MAX) {
+        houselog_event ("PEER", name, "ADD", expiration?"":"PERMANENT");
         Peers[PeerCount].name = strdup(name);
         Peers[PeerCount].expiration = expiration;
         PeerCount += 1;
@@ -385,10 +391,10 @@ static void AddOnePeer (const char *name, time_t expiration) {
 
 static void AddPeers (int live, char **token, int count) {
 
+    if (!strcmp(HostName, token[0])) return; // Got our own packet.
+
     int i;
     time_t default_expiration = (live)?time(0)+REDIRECT_LIFETIME:0;
-
-    if (!strcmp(HostName, token[0])) return; // Got our own packet.
 
     for (i = 0; i < count; ++i) {
         time_t expiration = default_expiration;
@@ -401,6 +407,20 @@ static void AddPeers (int live, char **token, int count) {
             }
         }
         AddOnePeer (token[i], expiration);
+    }
+}
+
+// Detect expired peers, for logging purpose. This is a way to
+// record some artifacts (on other servers) when a server dies silently.
+//
+static void DetectExpiredPeers (time_t now) {
+    int i;
+    for (i = 0; i < PeerCount; ++i) {
+        time_t expiration = Peers[i].expiration;
+        if ((expiration > 1) && (expiration < now)) {
+            houselog_event ("PEER", Peers[i].name, "EXPIRE", "");
+            Peers[i].expiration = 1; // Do not log it again.
+        }
     }
 }
 
@@ -670,6 +690,8 @@ void hp_redirect_background (void) {
         if (!RestrictUdp2Local) hp_redirect_publish (now);
         LastCheck = now;
     }
+
+    DetectExpiredPeers (now);
 }
 
 static int hp_redirect_preamble (time_t now, char *buffer, int size) {
