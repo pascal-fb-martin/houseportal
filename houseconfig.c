@@ -32,8 +32,9 @@
  *    from the default config file.
  *
  *    This function consumes the following command line options:
- *    -config=STRING         set the name of the configuration file.
- *    -no-local-storage      Do not use a local configuration file.
+ *    -config=STRING         Set the name of the configuration file.
+ *    -use-local-storage     Use a local configuration file.
+ *    -no-local-storage      Do not use a local configuration file (default).
  *
  * const char *houseconfig_name (void);
  *
@@ -94,7 +95,7 @@ static char *ConfigTextCurrent = 0;
 #define HOUSECONFIG_PATH "/etc/house/"
 #define HOUSECONFIG_EXT  ".json"
 
-static int ConfigFileEnabled = 1;
+static int ConfigFileEnabled = 0; // Default: rely on the HouseDepot service.
 
 static const char *ConfigFile = HOUSECONFIG_PATH "portal" HOUSECONFIG_EXT;
 static const char *ConfigName = 0; // Will point to base name in ConfigFile.
@@ -158,6 +159,8 @@ void houseconfig_default (const char *arg) {
                       HOUSECONFIG_PATH "%s%s", name, extension);
             ConfigFile = strdup(buffer);
         }
+    } else if (echttp_option_present ("-use-local-storage", arg)) {
+        ConfigFileEnabled = 1;
     } else if (echttp_option_present ("-no-local-storage", arg)) {
         ConfigFileEnabled = 0;
     }

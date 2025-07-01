@@ -80,6 +80,11 @@
  *
  *    Initial state load when the software starts.
  *
+ *    This function consumes the following command line options:
+ *    -backup=STRING         Set the name of the backup configuration file.
+ *    -use-local-storage     Use a local configuration file.
+ *    -no-local-storage      Do not use a local configuration file (default).
+ *
  * void housedepositor_state_background (time_t now);
  *
  *    Background state activity (mostly: save or reload data when changed).
@@ -123,7 +128,7 @@ static const char *BackupDepot = 0;
 static time_t StateDataHasChanged = 0;
 
 static int ShareStateData = 0;
-static int StateFileEnabled = 1;
+static int StateFileEnabled = 0; // Default: rely on the HouseDepot service.
 
 static char *BackupOutBuffer = 0;
 static int BackupOutBufferSize = 0;
@@ -254,6 +259,10 @@ void housedepositor_state_load (const char *app, int argc, const char **argv) {
     int i;
     for (i = 1; i < argc; ++i) {
         if (echttp_option_match ("-backup=", argv[i], &BackupFile)) continue;
+        if (echttp_option_present ("-use-local-storage", argv[i])) {
+            StateFileEnabled = 1;
+            continue;
+        }
         if (echttp_option_present ("-no-local-storage", argv[i])) {
             StateFileEnabled = 0;
             continue;
