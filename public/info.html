@@ -243,7 +243,7 @@ function showClock () {
     var green = '#10a010';
     showGraph (toPercentage(max, clock.offset));
     if (clock.adjust)
-       showGraph (toPercentage(adjmax, clock.ajust), green);
+       showGraph (toPercentage(adjmax, clock.adjust), green);
     showScaleLeft (''+max+' ms (Offset)');
     if (clock.adjust)
        showScaleRight ('(Adjustments)', green);
