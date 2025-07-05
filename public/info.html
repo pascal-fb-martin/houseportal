@@ -154,6 +154,7 @@ function highMetrics (a, b) {
 }
 
 function showCPU () {
+    if (! MetricsData.Metrics.cpu.busy) return;
     showGraph (MetricsData.Metrics.cpu.busy);
     showScaleLeft ('%');
 }
@@ -233,6 +234,21 @@ function showTemp () {
        showScaleRight ('(GPU)', green);
 }
 
+function showClock () {
+    if (! MetricsData.Metrics.clock) return;
+    var clock = MetricsData.Metrics.clock;
+    var offsetmax = maxMetrics(clock.offset);
+    var adjmax = clock.adjust ? maxMetrics(clock.adjust) : 0;
+    var max = roundBase10 ((offsetmax > adjmax) ? offsetmax : adjmax);
+    var green = '#10a010';
+    showGraph (toPercentage(max, clock.offset));
+    if (clock.adjust)
+       showGraph (toPercentage(adjmax, clock.ajust), green);
+    showScaleLeft (''+max+' ms');
+    if (clock.adjust)
+       showScaleRight ('', green);
+}
+
 function drawView () {
     wipeoutSVG();
     if (MetricsData && SelectedHost && SelectedDraw) SelectedDraw();
@@ -269,6 +285,10 @@ function selectTemp (element) {
     selectView (element, showTemp);
 }
 
+function selectClock (element) {
+    selectView (element, showClock);
+}
+
 function friendlyTime (timestamp) {
     var datetime = new Date(timestamp * 1000);
     datetime = datetime.toLocaleString();;
@@ -303,7 +323,11 @@ function portalGetMetrics () {
     if (!address) return;
 
     var command = new XMLHttpRequest();
-    command.open("GET", "http://"+address+"/metrics/details");
+    if (SelectedDraw == showClock) {
+        command.open("GET", "http://"+address+"/ntp/metrics/details");
+    } else {
+        command.open("GET", "http://"+address+"/metrics/details");
+    }
     command.onreadystatechange = function () {
         if (command.readyState === 4 && command.status === 200) {
             MetricsData = JSON.parse(command.responseText);
@@ -495,18 +519,21 @@ window.onload = function() {
          <table class="housewidetable" border="0">
             <tr><td>
                 <div style="display: flex;"><button style="flex: 1 0 auto;" onclick="selectCPU(this)">CPU</button></div>
+           </td>
+            <td>
+                <div style="display: flex;"><button style="flex: 1 0 auto" onclick="selectNet(this)">Network</button></div>
            </td></tr>
             <tr><td>
                 <div style="display: flex;"><button style="flex: 1 0 auto;" onclick="selectRAM(this)">RAM</button></div>
-           </td></tr>
-            <tr><td>
-                <div style="display: flex;"><button style="flex: 1 0 auto;" onclick="selectIO(this)">I/O</button></div>
-           </td></tr>
-            <tr><td>
-                <div style="display: flex;"><button style="flex: 1 0 auto" onclick="selectNet(this)">Network</button></div>
+           </td>
+            <td>
+                <div style="display: flex;"><button style="flex: 1 0 auto" onclick="selectTemp(this)">Temperature</button></div>
            </td></tr>
            <tr><td>
-                <div style="display: flex;"><button style="flex: 1 0 auto" onclick="selectTemp(this)">Temperature</button></div>
+                <div style="display: flex;"><button style="flex: 1 0 auto;" onclick="selectIO(this)">I/O</button></div>
+           </td>
+           <td>
+                <div style="display: flex;"><button style="flex: 1 0 auto" onclick="selectClock(this)">Clock</button></div>
            </td></tr>
         </table>
       </td>
