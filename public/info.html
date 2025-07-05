@@ -244,9 +244,9 @@ function showClock () {
     showGraph (toPercentage(max, clock.offset));
     if (clock.adjust)
        showGraph (toPercentage(adjmax, clock.ajust), green);
-    showScaleLeft (''+max+' ms');
+    showScaleLeft (''+max+' ms (Offset)');
     if (clock.adjust)
-       showScaleRight ('', green);
+       showScaleRight ('(Adjustments)', green);
 }
 
 function drawView () {
