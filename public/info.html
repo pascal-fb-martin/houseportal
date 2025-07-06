@@ -330,7 +330,10 @@ function portalGetMetrics () {
     }
     command.onreadystatechange = function () {
         if (command.readyState === 4 && command.status === 200) {
-            MetricsData = JSON.parse(command.responseText);
+            if (command.responseText.length > 0)
+                MetricsData = JSON.parse(command.responseText);
+            else
+                MetricsData = null;
             drawView ();
         }
     }
