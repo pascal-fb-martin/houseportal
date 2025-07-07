@@ -343,6 +343,7 @@ function portalGetMetrics () {
 function selectHost (name) {
     SelectedHost = name;
     MetricsData = null;
+    wipeoutSVG();
     if (SelectedRefresh) clearInterval (SelectedRefresh);
     SelectedRefresh = setInterval(portalGetMetrics, 5000);
     portalGetMetrics();
