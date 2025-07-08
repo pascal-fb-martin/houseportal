@@ -132,6 +132,7 @@ function maxMetrics (a) {
 }
 
 function roundBase10 (x) {
+    x += 1; // Keep the graph lines from hitting the labels.
     if (x > 100) {
         return Math.ceil (x / 100) * 100;
     } else if (x > 10) {
@@ -241,12 +242,12 @@ function showClock () {
     var adjmax = clock.adjust ? maxMetrics(clock.adjust) : 0;
     var max = roundBase10 ((offsetmax > adjmax) ? offsetmax : adjmax);
     var green = '#10a010';
-    showGraph (toPercentage(max, clock.offset));
-    if (clock.adjust)
-       showGraph (toPercentage(adjmax, clock.adjust), green);
-    showScaleLeft (''+max+' ms (Offset)');
-    if (clock.adjust)
+    if (clock.adjust) {
+       showGraph (toPercentage(adjmax*4, clock.adjust), green);
        showScaleRight ('(Adjustments)', green);
+    }
+    showGraph (toPercentage(max, clock.offset));
+    showScaleLeft (''+max+' ms (Offset)');
 }
 
 function drawView () {
