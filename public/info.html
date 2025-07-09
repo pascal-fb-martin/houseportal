@@ -58,6 +58,29 @@ function showGraph (data, color) {
     chart.appendChild(line);
 }
 
+function showBars (data, color) {
+    var length = data.length - 1;
+    if (length <= 0) return;
+    var step = Math.floor(960 / (length - 1));
+    var width = ''+(step / 2);
+    var x = 20 + (step / 4) + ((length - 1) * step);
+    var chart = document.getElementsByClassName ('chart')[0];
+    var i = length;
+    while (--i >= 0) {
+        if (data[i]) {
+            var y = 20 + (2 * (100 - data[i]));
+            var line = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+            line.setAttribute('class', 'graph');
+            line.setAttribute('fill', 'none');
+            line.setAttribute('stroke', color);
+            line.setAttribute('stroke-width', width);
+            line.setAttribute('points', '' + x + ' ' + y + ' ' + x + ' 220');
+            chart.appendChild(line);
+        }
+        x -= step;
+    }
+}
+
 function showScale (text, color, x, anchor) {
 
     if (!color) color = '#000000'; // Black for normal people.
@@ -243,7 +266,7 @@ function showClock () {
     var max = roundBase10 ((offsetmax > adjmax) ? offsetmax : adjmax);
     var green = '#10a010';
     if (clock.adjust) {
-       showGraph (toPercentage(adjmax*4, clock.adjust), green);
+       showBars (toPercentage(adjmax*4, clock.adjust), green);
        showScaleRight ('(Adjustments)', green);
     }
     showGraph (toPercentage(max, clock.offset));
