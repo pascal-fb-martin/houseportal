@@ -62,8 +62,10 @@ function showBars (data, color) {
     var length = data.length - 1;
     if (length <= 0) return;
     var step = Math.floor(960 / (length - 1));
-    var width = ''+(step / 2);
     var x = 20 + (step / 4) + ((length - 1) * step);
+    var width = step / 2;
+    if (width < 3) width = 3; // Make sure that something is visible.
+    width = ''+width;
     var chart = document.getElementsByClassName ('chart')[0];
     var i = length;
     while (--i >= 0) {
