@@ -9,6 +9,7 @@ See the [gallery](https://github.com/pascal-fb-martin/houseportal/blob/master/ga
 Having multiple specialized web servers run on the same machine, typically web servers embedded in applications, causes a port conflict situation: which application will claim port 80?
 
 This software is intended to resolve that specific issue by managing redirects in an automatic fashion:
+
 * A machine runs HousePortal as port 80, and applications A, B, C, etc. on different ports (including dynamic port numbers).
 * Each application periodically sends a UDP packet to the portal to register their redirection (by providing their web access port number and root path).
 * When the portal receives a request that match the root path of a registered redirection, it replies with a 302 Found redirect indicating the full URI to use.
@@ -94,6 +95,7 @@ An optional cryptographic signature can be used to authenticate the source of th
 HousePortal will redirect to the specified port any request which absolute path starts with the specified root path. There is no response to the redirect message.
 
 The registration must be periodic:
+
 * This allows HousePortal to detect applications that are no longer active.
 * This allows redirections to recover from a HousePortal restart.
 
@@ -121,6 +123,7 @@ This service discovery is not concerned with parallelism or clustering: the clie
 The intent of the HousePortal service discovery is to provide a single endpoint on each server from which services hosted by this server can be discovered. For example a client would query all known servers to find on which servers reside the services it need to access. HousePortal is not intended to act as a global service discovery service, i.e. there is no single endpoint that will consolidate all the service configuration information for a complete network. An application must query each server independently.
 
 The list of servers to query can itself be discovered by sending a request to the local HousePortal server (See the description of the PEER message in a previous section). Thus any discovery takes two phases:
+
 * The first phase is to request the list of known HousePortal servers to the local one:
 ```
 GET /portal/peers
@@ -171,6 +174,7 @@ The application must then initialize the client interface:
 void houseportal_initialize (int argc, const char **argv);
 ```
 The houseportal_initialize function decodes the following command line options:
+
 * --portal-port=N defines a non-default port for the HousePortal UDP interface.
 * --portal-server=NAME to use a HousePortal server on a different machine.
 * --portal-map=NN:NN declares the port mapping used by a proxy or firewall.
@@ -243,6 +247,7 @@ Because the discovery mechanism involves multiple HTTP queries, it is recommende
 A House service typically keeps two logs: traces (for maintainer) and events (for users). This history is separate for each application.
 
 Deciding when to generate an event or else a trace is not always obvious. After trials and errors, it is recommended to follow a few basic rules:
+
 - If the message indicates a problem that would be resolved only by changing the software, then it should be a trace.
 - If the message indicates a problem that the user can resolve without rebuilding the software, then it should be an event.
 - If interpreting the message requires knowledge of the source code, then it should be a trace.
@@ -261,6 +266,7 @@ A service generating events automatically detects all running history services:
 * If multiple history services are running, events and traces will be duplicated across all history services present: this can be used as a redundancy feature.
 
 The benefits of using a centralized history service are:
+
 * Events and traces from all services are consolidated in one single place, on one system.
 * This considerably lowers the write activity on a Raspberry Pi MicroSD card, increasing its lifetime. The history service is meant to run on a file server.
 
@@ -287,6 +293,7 @@ void houselog_event (const char *category,
                      const char *format, ...);
 ```
 Record one more event. The event is added to the in-memory list of recent event, potentially removing the oldest event, and is stored to the event history file for the hour that matches the provided timestamp.
+
 * The category and object parameters describe what device or resource this event is related to; by convention category describes a type of device or resource, and object provides a user-friendly identifier of the resource.
 * The action parameter indicates what happened to the resource, typically a verb or a state; for some input devices, such as analog sensors, the action parameter typically represents the value of the input.
 * The format and subsequent parameters are used to build a free format text providing additional information specific to the category of the device. See the printf(3) man page for a description of the formatting tags.
@@ -333,6 +340,7 @@ void houseconfig_default (const char *arg);
 ```
 
 This function allows the application to define default options. The options consumed by the configuration API are:
+
 * --config=NAME: the name (and path) of the configuration file.
 * --no-local-storage: ignore local configuration files. A depot service must be running when this option is used.
 
@@ -398,6 +406,7 @@ These functions return the index to a specific object. The first form return a s
 ### Depot Client API (Depositor)
 
 The depot service stores configuration and state files for other services. This approach provides the following benefits:
+
 * If copies of the same service run on multiple machines (for redundancy purpose), they share the same configuration. Configuration changes are automatically propagated.
 * The depot service manages an history, allowing to undo recent changes: see [HouseDepot](https://github.com/pascal-fb-martin/housedepot)
 * Running the depot service on multiple servers provides a redundancy feature.
