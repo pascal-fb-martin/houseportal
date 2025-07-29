@@ -22,6 +22,12 @@
 #
 # - Variable HAPP: the name of the specific house dependent application.
 #
+# - Variable prefix: the path where to install the application, typically
+#   /usr or /usr/local.
+#
+# - Variable DESTDIR (optional): a path where to build the installation.
+#   Typically used for building installation packages.
+#
 # - Target install-app: install the application-specific run-time files,
 #   with the exception of any file specific to the init system.
 #
@@ -40,6 +46,20 @@
 # The rules below perform post-install processing, like refreshing
 # systemd or runit. These rules were written so that none of that
 # post-install is processed when DESTDIR is set. This is tricky..
+
+# Some common targets that create directories potentially used by
+# multiple House applications.
+
+install-preamble:
+	$(INSTALL) -m 0755 -d $(DESTDIR)/etc/house
+	$(INSTALL) -m 0755 -d $(DESTDIR)/var/lib/house
+	$(INSTALL) -m 0755 -d $(DESTDIR)/etc/default
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/bin
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/share/house/public
+
+install-dev-preamble: install-preamble
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/lib
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/include
 
 # Distribution agnostic install for systemd -------------------------
 
@@ -81,7 +101,7 @@ stop-runit:
 
 # Debian GNU/Linux install --------------------------------------
 
-install-debian: stop-systemd clean-systemd install-app install-systemd
+install-debian: install-preamble stop-systemd clean-systemd install-app install-systemd
 
 uninstall-debian: uninstall-systemd uninstall-app
 
@@ -89,7 +109,7 @@ purge-debian: uninstall-debian purge-app purge-config
 
 # Devuan GNU/Linux install (using runit) ------------------------
 
-install-devuan: stop-runit install-app install-runit
+install-devuan: install-preamble stop-runit install-app install-runit
 
 uninstall-devuan: uninstall-runit uninstall-app
 
@@ -97,7 +117,7 @@ purge-devuan: uninstall-devuan purge-app purge-config
 
 # Void Linux install --------------------------------------------
 
-install-void: stop-runit install-app install-runit
+install-void: install-preamble stop-runit install-app install-runit
 
 uninstall-void: uninstall-runit uninstall-app
 

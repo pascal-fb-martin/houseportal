@@ -88,29 +88,22 @@ package:
 
 # Application installation (distribution agnostic) --------------
 
-dev:
-	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/lib
+dev: install-dev-preamble
 	$(INSTALL) -m 0644 libhouseportal.a $(DESTDIR)$(prefix)/lib
-	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -s housediscover $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -s housedepositor $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -s housegetalmanac $(DESTDIR)$(prefix)/bin
-	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/include
 	$(INSTALL) -m 0644 $(EXPORT_INCLUDE) $(DESTDIR)$(prefix)/include
-	$(INSTALL) -m 0755 -d $(DESTDIR)$(SHARE)/public
 	$(INSTALL) -m 0644 public/house.css public/events.js $(DESTDIR)$(SHARE)/public
 	$(INSTALL) -m 0644 -T houseinstall.mak $(DESTDIR)$(SHARE)/install.mak
 
-install-ui:
-	$(INSTALL) -m 0755 -d $(DESTDIR)$(SHARE)/public
+install-ui: install-preamble
 	$(INSTALL) -m 0644 public/* $(DESTDIR)$(SHARE)/public
 	icotool -c -o $(DESTDIR)$(SHARE)/public/favicon.ico favicon.png
 	chown root:root $(DESTDIR)$(SHARE)/public/favicon.ico
 	chmod 644 $(DESTDIR)$(SHARE)/public/favicon.ico
 
 install-app: dev install-ui
-	$(INSTALL) -m 0755 -d $(DESTDIR)/etc/house
-	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -s houseportal $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -T roof.sh $(DESTDIR)$(prefix)/bin/roof
 	touch $(DESTDIR)/etc/default/housegeneric
