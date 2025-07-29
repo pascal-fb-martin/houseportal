@@ -17,9 +17,12 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor,
 # Boston, MA  02110-1301, USA.
 
+prefix=/usr/local
+
 HAPP=houseportal
-HROOT=/usr/local
-SHARE=$(HROOT)/share/house
+SHARE=$(prefix)/share/house
+
+INSTALL=/usr/bin/install
 
 # Local build ---------------------------------------------------
 
@@ -59,7 +62,7 @@ clean:
 rebuild: clean all
 
 %.o: %.c
-	gcc -c -Wall -g -Os -o $@ $<
+	gcc -c -Wall -g -Os -fPIC -o $@ $<
 
 libhouseportal.a: $(LIBOJS)
 	ar r $@ $^
@@ -86,73 +89,51 @@ package:
 # Application installation (distribution agnostic) --------------
 
 dev:
-	mkdir -p $(HROOT)/lib
-	cp libhouseportal.a $(HROOT)/lib
-	chown root:root $(HROOT)/lib/libhouseportal.a
-	chmod 644 $(HROOT)/lib/libhouseportal.a
-	mkdir -p $(HROOT)/bin
-	cp housediscover $(HROOT)/bin
-	chown root:root $(HROOT)/bin/housediscover
-	chmod 755 $(HROOT)/bin/housediscover
-	cp housedepositor $(HROOT)/bin
-	chown root:root $(HROOT)/bin/housedepositor
-	chmod 755 $(HROOT)/bin/housedepositor
-	cp housegetalmanac $(HROOT)/bin
-	chown root:root $(HROOT)/bin/housegetalmanac
-	chmod 755 $(HROOT)/bin/housegetalmanac
-	mkdir -p $(HROOT)/include
-	cp $(EXPORT_INCLUDE) $(HROOT)/include
-	for i in $(EXPORT_INCLUDE) ; do chown root:root $(HROOT)/include/$$i ; done
-	for i in $(EXPORT_INCLUDE) ; do chmod 644 $(HROOT)/include/$$i ; done
-	mkdir -p $(SHARE)/public
-	chmod 755 $(SHARE) $(SHARE)/public
-	cp public/house.css public/events.js $(SHARE)/public
-	chown root:root $(SHARE)/public/*
-	chmod 644 $(SHARE)/public/*.*
-	cp houseinstall.mak $(SHARE)/install.mak
-	chown root:root $(SHARE)/install.mak
-	chmod 644 $(SHARE)/install.mak
-	chmod 644 $(SHARE)/install.mak
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/lib
+	$(INSTALL) -m 0644 libhouseportal.a $(DESTDIR)$(prefix)/lib
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/bin
+	$(INSTALL) -m 0755 -s housediscover $(DESTDIR)$(prefix)/bin
+	$(INSTALL) -m 0755 -s housedepositor $(DESTDIR)$(prefix)/bin
+	$(INSTALL) -m 0755 -s housegetalmanac $(DESTDIR)$(prefix)/bin
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/include
+	$(INSTALL) -m 0644 $(EXPORT_INCLUDE) $(DESTDIR)$(prefix)/include
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(SHARE)/public
+	$(INSTALL) -m 0644 public/house.css public/events.js $(DESTDIR)$(SHARE)/public
+	$(INSTALL) -m 0644 -T houseinstall.mak $(DESTDIR)$(SHARE)/install.mak
 
 install-ui:
-	mkdir -p $(SHARE)/public
-	chown root:root $(SHARE)/public
-	chmod 755 $(SHARE) $(SHARE)/public
-	cp public/* $(SHARE)/public
-	icotool -c -o $(SHARE)/public/favicon.ico favicon.png
-	chown root:root $(SHARE)/public/*
-	chmod 644 $(SHARE)/public/*.*
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(SHARE)/public
+	$(INSTALL) -m 0644 public/* $(DESTDIR)$(SHARE)/public
+	icotool -c -o $(DESTDIR)$(SHARE)/public/favicon.ico favicon.png
+	chown root:root $(DESTDIR)$(SHARE)/public/favicon.ico
+	chmod 644 $(DESTDIR)$(SHARE)/public/favicon.ico
 
 install-app: dev install-ui
-	mkdir -p /etc/house
-	if [ -e /etc/houseportal/houseportal.config ] ; then mv /etc/houseportal/houseportal.config /etc/house/portal.config; fi
-	mkdir -p $(HROOT)/bin
-	chmod 755 $(HROOT)/bin
-	rm -f $(HROOT)/bin/houseportal $(HROOT)/bin/roof
-	cp houseportal $(HROOT)/bin
-	cp roof.sh $(HROOT)/bin/roof
-	chown root:root $(HROOT)/bin/houseportal $(HROOT)/bin/roof
-	chmod 755 $(HROOT)/bin/houseportal $(HROOT)/bin/roof
-	touch /etc/default/housegeneric
-	touch /etc/default/houseportal
-	touch /etc/house/portal.config
+	$(INSTALL) -m 0755 -d $(DESTDIR)/etc/house
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/bin
+	$(INSTALL) -m 0755 -s houseportal $(DESTDIR)$(prefix)/bin
+	$(INSTALL) -m 0755 -T roof.sh $(DESTDIR)$(prefix)/bin/roof
+	touch $(DESTDIR)/etc/default/housegeneric
+	touch $(DESTDIR)/etc/default/houseportal
+	touch $(DESTDIR)/etc/house/portal.config
 
 uninstall-app:
-	rm -f $(HROOT)/bin/houseportal
-	rm -f $(HROOT)/bin/housediscover
-	rm -f $(HROOT)/bin/housedepositor
-	rm -f $(SHARE)/public/*.html
+	rm -f $(DESTDIR)$(prefix)/bin/houseportal
+	rm -f $(DESTDIR)$(prefix)/bin/housediscover
+	rm -f $(DESTDIR)$(prefix)/bin/housedepositor
+	rm -f $(DESTDIR)$(prefix)/bin/roof
+	rm -f $(DESTDIR)$(SHARE)/public/*.html
 
 purge-app:
-	for i in $(EXPORT_INCLUDE) ; do rm -f $(HROOT)/include/$$i ; done
-	rm -f $(SHARE)/public/house.css $(SHARE)/public/events.js
-	rm -f $(SHARE)/public/favicon.ico
-	rm -f $(SHARE)/install.mak
-	rmdir --ignore-fail-on-non-empty $(SHARE)/public
-	rmdir --ignore-fail-on-non-empty $(SHARE)
+	for i in $(EXPORT_INCLUDE) ; do rm -f $(DESTDIR)$(prefix)/include/$$i ; done
+	rm -f $(DESTDIR)$(SHARE)/public/house.css $(DESTDIR)$(SHARE)/public/events.js
+	rm -f $(DESTDIR)$(SHARE)/public/favicon.ico
+	rm -f $(DESTDIR)$(SHARE)/install.mak
+	rmdir --ignore-fail-on-non-empty $(DESTDIR)$(SHARE)/public
+	rmdir --ignore-fail-on-non-empty $(DESTDIR)$(SHARE)
 
 purge-config:
-	rm -f /etc/default/houseportal /etc/house/portal.config
+	rm -f $(DESTDIR)/etc/default/houseportal $(DESTDIR)/etc/house/portal.config
 
 # System installation. ------------------------------------------
 
@@ -164,9 +145,9 @@ docker: all
 	rm -rf build
 	mkdir -p build
 	cp Dockerfile build
-	mkdir -p build$(HROOT)/bin
-	cp houseportal build$(HROOT)/bin
-	chmod 755 build$(HROOT)/bin/houseportal
+	mkdir -p build$(prefix)/bin
+	cp houseportal build$(prefix)/bin
+	chmod 755 build$(prefix)/bin/houseportal
 	mkdir -p build$(SHARE)/public
 	cp public/* build$(SHARE)/public
 	chmod 644 build$(SHARE)/public/*

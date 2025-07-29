@@ -34,20 +34,24 @@
 #
 # In addition, the unit file for Systemd must be locally named systemd.service
 # and the local service script for runit must be named runit.run.
+#
+# WARNING:
+#
+# The rules below perform post-install processing, like refreshing
+# systemd or runit. These rules were written so that none of that
+# post-install is processed when DESTDIR is set. This is tricky..
 
 # Distribution agnostic install for systemd -------------------------
 
 install-systemd:
-	grep -q '^house:' /etc/passwd || useradd -r house -s /usr/sbin/nologin -d /var/lib/house
-	cp systemd.service /lib/systemd/system/$(HAPP).service
-	chown root:root /lib/systemd/system/$(HAPP).service
-	systemctl daemon-reload
-	systemctl enable $(HAPP)
-	systemctl start $(HAPP)
+	$(INSTALL) -m 0644 -T systemd.service $(DESTDIR)/lib/systemd/system/$(HAPP).service
+	if [ "x$(DESTDIR)" = "x" ] ; then grep -q '^house:' /etc/passwd || useradd -r house -s /usr/sbin/nologin -d /var/lib/house ; systemctl daemon-reload ; systemctl enable $(HAPP) ; systemctl start $(HAPP) ; fi
 
 uninstall-systemd:
-	if [ -e /etc/init.d/$(HAPP) ] ; then systemctl stop $(HAPP) ; systemctl disable $(HAPP) ; rm -f /etc/init.d/$(HAPP) ; fi
-	if [ -e /lib/systemd/system/$(HAPP).service ] ; then systemctl stop $(HAPP) ; systemctl disable $(HAPP) ; rm -f /lib/systemd/system/$(HAPP).service ; systemctl daemon-reload ; fi
+	if [ "x$(DESTDIR)" = "x" ] ; then if [ -e /etc/init.d/$(HAPP) ] ; then systemctl stop $(HAPP) ; systemctl disable $(HAPP) ; fi ; fi
+	rm -f $(DESTDIR)/etc/init.d/$(HAPP)
+	if [ "x$(DESTDIR)" = "x" ] ; then if [ -e /lib/systemd/system/$(HAPP).service ] ; then systemctl stop $(HAPP) ; systemctl disable $(HAPP) ; rm -f /lib/systemd/system/$(HAPP).service ; systemctl daemon-reload ; fi ; fi
+	rm -f $(DESTDIR)/lib/systemd/system/$(HAPP).service
 
 stop-systemd: uninstall-systemd
 
@@ -61,20 +65,19 @@ clean-systemd::
 # Distribution agnostic install for runit ---------------------------
 
 install-runit:
-	mkdir -p /etc/sv/$(HAPP)
-	cp runit.run /etc/sv/$(HAPP)/run
-	chown root:root /etc/sv/$(HAPP) /etc/sv/$(HAPP)/run
-	chmod 755 /etc/sv/$(HAPP)/run
-	rm -f /etc/runit/runsvdir/default/$(HAPP)
-	ln -s /etc/sv/$(HAPP) /etc/runit/runsvdir/default/$(HAPP)
-	/bin/sleep 5
-	/usr/bin/sv up $(HAPP)
+	$(INSTALL) -m 0755 -d $(DESTDIR)/etc/sv/$(HAPP)
+	$(INSTALL) -m 0755 -T runit.run $(DESTDIR)/etc/sv/$(HAPP)/run
+	rm -f $(DESTDIR)/etc/runit/runsvdir/default/$(HAPP)
+	ln -s /etc/sv/$(HAPP) $(DESTDIR)/etc/runit/runsvdir/default/$(HAPP)
+	if [ "x$(DESTDIR)" = "x" ] ; then /bin/sleep 5 ; /usr/bin/sv up $(HAPP) ; fi
 
 uninstall-runit:
-	if [ -e /etc/sv/$(HAPP) ] ; then /usr/bin/sv stop $(HAPP) ; rm -rf /etc/sv/$(HAPP) ; rm -f /etc/runit/runsvdir/default/$(HAPP) ; /bin/sleep 5 ; fi
+	if [ x$(DESTDIR)" = "x" ] ; then if [ -e /etc/sv/$(HAPP) ] ; then /usr/bin/sv stop $(HAPP) ; /bin/sleep 5 ; fi ; fi
+	rm -rf $(DESTDIR)/etc/sv/$(HAPP)
+	rm -rf $(DESTDIR)/etc/runit/runsvdir/default/$(HAPP)
 
 stop-runit:
-	if [ -e /etc/sv/$(HAPP) ] ; then /usr/bin/sv stop $(HAPP) ; fi
+	if [ x$(DESTDIR)" = "x" ] ; then if [ -e /etc/sv/$(HAPP) ] ; then /usr/bin/sv stop $(HAPP) ; fi ; fi
 
 # Debian GNU/Linux install --------------------------------------
 
