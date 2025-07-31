@@ -69,16 +69,16 @@ libhouseportal.a: $(LIBOJS)
 	ranlib $@
 
 houseportal: $(OBJS) libhouseportal.a
-	gcc -g -Os -o houseportal $(OBJS) libhouseportal.a -lechttp -lssl -lcrypto -lrt
+	gcc -g -Os -o houseportal $(OBJS) libhouseportal.a -lechttp -lssl -lcrypto -lmagic -lrt
 
 housediscover: housediscoverclient.c libhouseportal.a
-	gcc -Os -o housediscover housediscoverclient.c libhouseportal.a -lechttp -lssl -lcrypto -lrt
+	gcc -Os -o housediscover housediscoverclient.c libhouseportal.a -lechttp -lssl -lcrypto -lmagic -lrt
 
 housedepositor: housedepositorclient.c libhouseportal.a
-	gcc -Os -o housedepositor housedepositorclient.c libhouseportal.a -lechttp -lssl -lcrypto -lrt
+	gcc -Os -o housedepositor housedepositorclient.c libhouseportal.a -lechttp -lssl -lcrypto -lmagic -lrt
 
 housegetalmanac: housegetalmanac.c libhouseportal.a
-	gcc -Os -o housegetalmanac housegetalmanac.c libhouseportal.a -lechttp -lssl -lcrypto -lrt
+	gcc -Os -o housegetalmanac housegetalmanac.c libhouseportal.a -lechttp -lssl -lcrypto -lmagic -lrt
 
 # Minimal tar file for installation. ----------------------------
 
