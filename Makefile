@@ -100,7 +100,6 @@ dev: install-dev-preamble
 install-ui: install-preamble
 	$(INSTALL) -m 0644 public/* $(DESTDIR)$(SHARE)/public
 	icotool -c -o $(DESTDIR)$(SHARE)/public/favicon.ico favicon.png
-	chown root:root $(DESTDIR)$(SHARE)/public/favicon.ico
 	chmod 644 $(DESTDIR)$(SHARE)/public/favicon.ico
 
 install-app: dev install-ui

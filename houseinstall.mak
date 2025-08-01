@@ -64,6 +64,7 @@ install-dev-preamble: install-preamble
 # Distribution agnostic install for systemd -------------------------
 
 install-systemd:
+	$(INSTALL) -m 0755 -d $(DESTDIR)/lib/systemd/system
 	$(INSTALL) -m 0644 -T systemd.service $(DESTDIR)/lib/systemd/system/$(HAPP).service
 	if [ "x$(DESTDIR)" = "x" ] ; then grep -q '^house:' /etc/passwd || useradd -r house -s /usr/sbin/nologin -d /var/lib/house ; systemctl daemon-reload ; systemctl enable $(HAPP) ; systemctl start $(HAPP) ; fi
 
