@@ -457,6 +457,22 @@ void housedepositor_periodic (time_t now);
 ```
 This background function must be called periodically. It handles the discovery of, and queries to, the depot services.
 
+## Debian Packaging
+
+The provided Makefile supports building private Debian packages. These are _not_ official packages:
+
+- They do not follow all Debian policies.
+
+- They are not built using Debian standard conventions and tools.
+
+- The packaging is not separate from the upstream sources, and there is
+  no source package.
+
+To build a Debian package, use the `debian-package` target:
+```
+make debian-package
+```
+
 ## Docker
 
 The project supports a Docker container build, which was tested on an ARM board running Debian. To make it work, all the house containers should be run in host network mode (`--network host` option). This is because of the way [houseportal](https://github.com/pascal-fb-martin/houseportal) manages access to each service: using dynamically assigned ports does not mesh well with Docker's port mapping.

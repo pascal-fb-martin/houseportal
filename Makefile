@@ -56,6 +56,8 @@ EXPORT_INCLUDE=houselog.h \
 
 all: libhouseportal.a houseportal housediscover housedepositor housegetalmanac
 
+dev: install-dev
+
 clean:
 	rm -f *.o *.a houseportal housediscover housedepositor housegetalmanac
 
@@ -88,13 +90,12 @@ package:
 
 # Application installation (distribution agnostic) --------------
 
-dev: install-dev-preamble
+install-dev: install-dev-preamble
 	$(INSTALL) -m 0644 libhouseportal.a $(DESTDIR)$(prefix)/lib
 	$(INSTALL) -m 0755 -s housediscover $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -s housedepositor $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -s housegetalmanac $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0644 $(EXPORT_INCLUDE) $(DESTDIR)$(prefix)/include
-	$(INSTALL) -m 0644 public/house.css public/events.js $(DESTDIR)$(SHARE)/public
 	$(INSTALL) -m 0644 -T houseinstall.mak $(DESTDIR)$(SHARE)/install.mak
 
 install-ui: install-preamble
@@ -102,12 +103,14 @@ install-ui: install-preamble
 	icotool -c -o $(DESTDIR)$(SHARE)/public/favicon.ico favicon.png
 	chmod 644 $(DESTDIR)$(SHARE)/public/favicon.ico
 
-install-app: dev install-ui
+install-runtime: install-preamble
 	$(INSTALL) -m 0755 -s houseportal $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -T roof.sh $(DESTDIR)$(prefix)/bin/roof
 	touch $(DESTDIR)/etc/default/housegeneric
 	touch $(DESTDIR)/etc/default/houseportal
 	touch $(DESTDIR)/etc/house/portal.config
+
+install-app: install-dev install-ui install-runtime
 
 uninstall-app:
 	rm -f $(DESTDIR)$(prefix)/bin/houseportal
@@ -130,6 +133,28 @@ purge-config:
 # System installation. ------------------------------------------
 
 include ./houseinstall.mak
+
+# Build a private Debian package. -------------------------------
+
+install-package: install-ui install-runtime install-systemd
+
+debian-package:
+	rm -rf build
+	install -m 0755 -d build/houseportal/DEBIAN
+	cat debian/control-common debian/control | sed "s/{{arch}}/`dpkg --print-architecture`/" > build/houseportal/DEBIAN/control
+	install -m 0644 debian/copyright build/houseportal/DEBIAN
+	install -m 0644 debian/changelog build/houseportal/DEBIAN
+	install -m 0755 debian/postinst build/houseportal/DEBIAN
+	install -m 0755 debian/prerm build/houseportal/DEBIAN
+	install -m 0755 debian/postrm build/houseportal/DEBIAN
+	make DESTDIR=build/houseportal install-package
+	cd build ; fakeroot dpkg-deb -b houseportal .
+	install -m 0755 -d build/houseportal-dev/DEBIAN
+	cat debian/control-common debian/control-dev | sed "s/{{arch}}/`dpkg --print-architecture`/" > build/houseportal-dev/DEBIAN/control
+	install -m 0644 debian/copyright build/houseportal-dev/DEBIAN
+	install -m 0644 debian/changelog build/houseportal-dev/DEBIAN
+	make DESTDIR=build/houseportal-dev install-dev
+	cd build ; fakeroot dpkg-deb -b houseportal-dev .
 
 # Docker install ------------------------------------------------
 

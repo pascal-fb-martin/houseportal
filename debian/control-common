@@ -1,0 +1,7 @@
+Source: houseportal
+Version: 2.5
+Section: Web servers
+Maintainer: Pascal Martin <pascal.fb.martin@gmail.com>
+Priority: optional
+Homepage: https://github.com/pascal-fb-martin/houseportal
+Standard-Version: 4.7.0

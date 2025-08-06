@@ -1,0 +1,10 @@
+Package: houseportal-dev
+Architecture: {{arch}}
+Depends: echttp-dev
+Description: The HTTP portal to the House suite of web services
+ Houseportal is a web server that redirects HTTP requests to multiple
+ specialized web services. Together they collectively look like
+ an integrated web server to the outside.
+ .
+ This is the development environment used to create new web services.
+
