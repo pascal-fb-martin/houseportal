@@ -47,19 +47,31 @@
 # systemd or runit. These rules were written so that none of that
 # post-install is processed when DESTDIR is set. This is tricky..
 
+HMAN=/var/lib/house/note/content/manuals
+HMANCACHE=/var/lib/house/note/cache
+
 # Some common targets that create directories potentially used by
 # multiple House applications.
 
-install-preamble:
+install-generic-preamble:
 	$(INSTALL) -m 0755 -d $(DESTDIR)/etc/house
 	$(INSTALL) -m 0755 -d $(DESTDIR)/var/lib/house
 	$(INSTALL) -m 0755 -d $(DESTDIR)/etc/default
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/share/house/public
 
-install-dev-preamble: install-preamble
+install-preamble: install-generic-preamble
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(HMAN)/$(HCAT)
+	$(INSTALL) -m 0644 -T README.md $(DESTDIR)$(HMAN)/$(HCAT)/$(HAPP).md
+	if [ -d $(DESTDIR)$(HMANCACHE) ] ; then rm -rf $(DESTDIR)$(HMANCACHE)/* ; fi
+
+install-dev-preamble: install-generic-preamble
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/lib
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/include
+
+uninstall-preamble:
+	rm -f $(DESTDIR)$(HMAN)/$(HCAT)/$(HAPP).md
+	if [ -d $(DESTDIR)$(HMANCACHE) ] ; then rm -rf $(DESTDIR)$(HMANCACHE)/* ; fi
 
 # Distribution agnostic install for systemd -------------------------
 
@@ -104,7 +116,7 @@ stop-runit:
 
 install-debian: install-preamble stop-systemd clean-systemd install-app install-systemd
 
-uninstall-debian: uninstall-systemd uninstall-app
+uninstall-debian: uninstall-preamble uninstall-systemd uninstall-app
 
 purge-debian: uninstall-debian purge-app purge-config
 
@@ -112,7 +124,7 @@ purge-debian: uninstall-debian purge-app purge-config
 
 install-devuan: install-preamble stop-runit install-app install-runit
 
-uninstall-devuan: uninstall-runit uninstall-app
+uninstall-devuan: uninstall-preamble uninstall-runit uninstall-app
 
 purge-devuan: uninstall-devuan purge-app purge-config
 
@@ -120,7 +132,7 @@ purge-devuan: uninstall-devuan purge-app purge-config
 
 install-void: install-preamble stop-runit install-app install-runit
 
-uninstall-void: uninstall-runit uninstall-app
+uninstall-void: uninstall-preamble uninstall-runit uninstall-app
 
 purge-void: uninstall-void purge-app purge-config
 

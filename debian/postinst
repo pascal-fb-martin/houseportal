@@ -4,6 +4,7 @@ HAPP=houseportal
 
 case $1 in
     configure|abort-upgrade|abort-deconfigure|abort-remove)
+        if [ -d /var/lib/house/note/cache ] ; then rm -rf /var/lib/house/note/cache/* ; fi
         grep -q '^house:' /etc/passwd || useradd -r house -s /usr/sbin/nologin -d /var/lib/house
         systemctl daemon-reload
         if systemctl is-active --quiet $HAPP ; then

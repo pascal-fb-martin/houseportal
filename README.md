@@ -68,6 +68,7 @@ If no cryptographic key is provided, HousePortal will accept all redirection mes
 UDP port 70 is used for redirection registrations, because this port is assigned to the Gopher protocol and, let's be serious, who use Gopher nowadays?
 
 A redirection message is a space-separated text that follows the syntax below:
+
 ```
 'REDIRECT' time [host:]port [HIDE] [PID:pid] [[service:]path ..] [SHA-256 signature]
 ```
@@ -79,17 +80,23 @@ The "/portal" path name is reserved for HousePortal's own status.
 If the host is missing, HousePortal uses the host name of the local machine.
 
 The HIDE option is meant to simplify redirection rules when the original web server's URLs do not have an identifiable root. It allows the portal to rely on a URL prefix to select the redirection, but not convey that prefix to the target. For example the redirection message:
+
 ```
       REDIRECT 12345678 8080 HIDE /app
 ```
+
 causes the HTTP request
+
 ```
       http://myserver/app/complex/application/path
 ```
+
 to be redirected as:
+
 ```
       http://myserver:8080/complex/application/path
 ```
+
 An optional cryptographic signature can be used to authenticate the source of the redirection. That signature is calculated over the text of the redirection message, excluding the signature portion. The signature is defined as a SHA-256 HMAC.
 
 HousePortal will redirect to the specified port any request which absolute path starts with the specified root path. There is no response to the redirect message.
@@ -125,10 +132,13 @@ The intent of the HousePortal service discovery is to provide a single endpoint 
 The list of servers to query can itself be discovered by sending a request to the local HousePortal server (See the description of the PEER message in a previous section). Thus any discovery takes two phases:
 
 * The first phase is to request the list of known HousePortal servers to the local one:
+
 ```
 GET /portal/peers
 ```
+
 The response is a JSON object with the list of known HousePortal server names:
+
 ```
 {
     portal : {
@@ -138,11 +148,15 @@ The response is a JSON object with the list of known HousePortal server names:
     }
 }
 ```
+
 * The second phase is to request the list of known services to each of the listed HousePortal servers:
+
 ```
 GET /portal/service?name=...
 ```
+
 The name parameter is mandatory. The response is a JSON object as shown below:
+
 ```
 {
     portal : {
@@ -155,6 +169,7 @@ The name parameter is mandatory. The response is a JSON object as shown below:
     }
 }
 ```
+
 The url item is a list of root URL for the service's endpoints. HousePortal will typically point each URL to itself, with the proper path associated with the target. This way the client may not need to refresh the service's URL list as often as if the URL strings were denoting the actual targets.
 
 ## House Library API
@@ -166,13 +181,17 @@ The HousePortal library includes a set of generic modules that are shared among 
 A web server can be coded to advertize its port number to HousePortal using the HousePortal client API.
 
 The application must include the client header file:
+
 ```
 #include "houseportalclient.h"
 ```
+
 The application must then initialize the client interface:
+
 ```
 void houseportal_initialize (int argc, const char **argv);
 ```
+
 The houseportal_initialize function decodes the following command line options:
 
 * --portal-port=N defines a non-default port for the HousePortal UDP interface.
@@ -182,25 +201,32 @@ The houseportal_initialize function decodes the following command line options:
 (The port mapping option can be repeated for each port used by the application.  HousePortal does not support any load balancing: the same service cannot be declared by more than one application to a single HousePortal server.)
 
 If any cryptographic signature is required, the key must be provided:
+
 ```
 void houseportal_signature (const char *cypher, const char *key);
 ```
+
 The next step is to declare the various URI paths:
+
 ```
 void houseportal_declare (int webport, const char **paths, int count);
 void houseportal_declare_more (int webport, const char **paths, int count);
 ```
+
 Once all this was done, the application must periodically call the background function, which renews the registered paths:
+
 ```
 void houseportal_background (time_t now);
 ```
 
 The following API functions are still supported but are deprecated:
+
 ```
 void houseportal_register (int webport, const char **paths, int count);
 void houseportal_register_more (int webport, const char **paths, int count);
 void houseportal_renew (void);
 ```
+
 (The newer API is simpler to use and the period of the renewals is defined in a single place.)
 
 ### Discovery client API
@@ -210,26 +236,35 @@ This API can used by a web client to automatically find which services are runni
 The HousePortal web API for discovery can always be used raw. This API hides the complete discovery sequence, performs the discovery in an asynchronous mode and caches the result.
 
 The application must include the client header file:
+
 ```
 #include "housediscover.h"
 ```
+
 The application must then initialize the client interface:
+
 ```
 void housediscover_initialize (int argc, const char **argv);
 ```
+
 The application must then proceed with the background discovery, either periodically or, whenever possible, at least 10 seconds before the result is needed:
+
 ```
 void housediscover (const char *service);
 ```
+
 This function must be called for each service that the application needs. It is asynchronous: the result of the discovery wil be available later, when the HousePortal servers responses have been received.
 
 The application may find if a new service has been detected by periodically walk the local discovery cache:
+
 ```
 int housediscover_changed (const char *service, time_t since);
 ```
+
 This returns true if any new service was detected since the specified time.
 
 The application gets the result of the discovery by walking through the local discovery cache:
+
 ```
 typedef void housediscover_consumer
                  (const char *service, void *context, const char *url);
@@ -273,6 +308,7 @@ The benefits of using a centralized history service are:
 The log API depends on the service discovery mechanism: the application must call the discovery client API.
 
 The application must include the client header file:
+
 ```
 #include "houselog.h"
 ```
@@ -281,17 +317,20 @@ The application must include the client header file:
 void houselog_initialize (const char *application,
                           int argc, const char **argv);
 ```
+
 This initializes the memory storage for the recent logs and register all the URI paths with echttp. Note that the log module declares its own WEB API: the application does not need to declare routes on its own. The application name is used to build the URI paths, and the name of the event files.
 
 It is possible to force a different history storage path with the "-log=PATH" command line option. This is however not recommended.
 
 This function consumes the same "--portal-host=NAME" option as houseportal_initialize.
+
 ```
 void houselog_event (const char *category,
                      const char *object,
                      const char *action,
                      const char *format, ...);
 ```
+
 Record one more event. The event is added to the in-memory list of recent event, potentially removing the oldest event, and is stored to the event history file for the hour that matches the provided timestamp.
 
 * The category and object parameters describe what device or resource this event is related to; by convention category describes a type of device or resource, and object provides a user-friendly identifier of the resource.
@@ -306,6 +345,7 @@ void houselog_event_local (const char *category,
                            const char *action,
                            const char *format, ...);
 ```
+
 This function is similar to houselog_event(), with the exception that this event
 will _not_ be saved to files. This is typically used for verbose minor events, which value is only for immediate diagnostics.
 
@@ -314,16 +354,19 @@ void houselog_trace (HOUSE_INFO or HOUSE_WARNING or HOUSE_FAILURE,
                      const char *object,
                      const char *format, ...);
 ```
+
 The three macros above actually hide the file name, line number and level parameters. The object parameter can be used as a filtering criteria when going through the logs, and the application is free to use any name it wants; it is recommended to populate it with an ID of the resource that the trace is related to. The other parameters are used to generate a free format text.
 
 ```
 void houselog_background (time_t now);
 ```
+
 This function must be called at regular intervals for background processing, such as cleanup of expired resources, saving data to permanent storage, etc.
 
 ```
 const char *houselog_host (void);
 ```
+
 This function returns the name of the local machine, as used in the logs.
 
 ### Configuration API
@@ -331,6 +374,7 @@ This function returns the name of the local machine, as used in the logs.
 This module provides a simplified API to handle configuration files in JSON format. This API is easier to use than the general purpose echttp JSON API, but it assumes that there is only one JSON context, for a single file which name is specified by the application.
 
 The application must include the client header file:
+
 ```
 #include "houseconfig.h"
 ```
@@ -345,42 +389,50 @@ This function allows the application to define default options. The options cons
 * --no-local-storage: ignore local configuration files. A depot service must be running when this option is used.
 
 The name provided with the --config option is either a full path (starting with '/') or a path relative to `/etc/house`. If the path is relative, the file extension may also be omitted, in which case ".json" is used. All three examples below are equivalent:
+
 ```
 houseconfig_default ("--config=/etc/house/app.json");
 houseconfig_default ("--config=app.json");
 houseconfig_default ("--config=app");
 ```
+
 An application must call houseconfig_default() so that the default name of the configuration file matches the name of the application. It is recommended to always use the shortest form (see third example above), to keep the default file path consistent between applications, and defined only once. However an application may use an alternate scheme if needed.
 
 ```
 const char *houseconfig_load (int argc, const char **argv);
 ```
+
 This function loads the existing configuration. This is called on application startup. The argc and argv parameters should represent the command line arguments. See houseconfig_default() for a description of the command line options supported.
 
 ```
 int houseconfig_active (void);
 ```
+
 This function returns true if a configuration was successfully activated.
 
 ```
 const char *houseconfig_current (void);
 ```
+
 This function returns the JSON text matching the most recent successfully activated configuration. Invalid configurations activated since then are ignored.
 
 ```
 const char *houseconfig_name (void);
 ```
+
 This function returns the base name of the configuration. This is typically
 used when interfacing with the HomeDepot service.
 
 ```
 const char *houseconfig_update (const char *text);
 ```
+
 This function provides a replacement configuration. This is typically used after the user edited and posted a new configuration. The module first proceed with the decoding of the JSON data. If successful, the string is saved to the configuration file. On return the application can then start accessing and applying the new configuration.
 
 ```
 int houseconfig_find (int parent, const char *path, int type);
 ```
+
 This function searches for the specified path, starting at the specified index of the parent object. Index 0 is the whole JSON data structure.
 
 ```
@@ -388,19 +440,21 @@ const char *houseconfig_string (int parent, const char *path);
 int         houseconfig_integer (int parent, const char *path);
 int         houseconfig_boolean (int parent, const char *path);
 ```
+
 These functions return the value of the specified item.
 
 ```
 int houseconfig_array        (int parent, const char *path);
 int houseconfig_array_length (int array);
 ```
-The first function returns the index to the specified array, while the second function returns the number of item (length) of the array referenced by its index.
 
+The first function returns the index to the specified array, while the second function returns the number of item (length) of the array referenced by its index.
 
 ```
 int houseconfig_object (int parent, const char *path);
 int houseconfig_array_object (int parent, int index);
 ```
+
 These functions return the index to a specific object. The first form return a sub-object of the specified parent. The second form returns the Nth object in an array of objects.
 
 ### Depot Client API (Depositor)
@@ -424,11 +478,13 @@ The application must include the client header file:
 ```
 void housedepositor_default (const char *arg);
 ```
+
 This function sets default values for command line options. Call the function once for each options to set a default for. This function must be called before housedepositor_initialize().
 
 ```
 void housedepositor_initialize (int argc, const char **argv);
 ```
+
 This function initializes the client context. One configuration parameter is consumed: `--group=STRING` (hardcoded default is 'home'). The group name is used to distinguish between multiple instances of the same service that would use separate configurations.
 
 Some services are hardware-dependent, i.e. the configuration is specific to the machine that the service runs on. In this case, the service should set a default group based on the name of the machine it runs on.
@@ -441,6 +497,7 @@ void housedepositor_subscribe (const char *repository,
                                const char *name,
                                housedepositor_listener *listener);
 ```
+
 This function declares an application listener, which will be called whenever a new revision of the file identified by `repository` and `name` is detected.
 
 The depositor client supports listening on multiple files. Using multiple configuration files is typically done when the overall configuration is split into separate sets, such as a user-entered configuration ('config' repository), or application-generated state to be restored on restart ('state' repository).
@@ -450,11 +507,13 @@ int housedepositor_put (const char *repository,
                         const char *name,
                         const char *data, int size);
 ```
+
 This function submits a new revision of the specified configuration file to all depot services currently detected. If other services listen to the same file, they will all be notified of the new revision.
 
 ```
 void housedepositor_periodic (time_t now);
 ```
+
 This background function must be called periodically. It handles the discovery of, and queries to, the depot services.
 
 ## Debian Packaging
@@ -469,6 +528,7 @@ The provided Makefile supports building private Debian packages. These are _not_
   no source package.
 
 To build a Debian package, use the `debian-package` target:
+
 ```
 make debian-package
 ```

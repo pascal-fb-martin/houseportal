@@ -20,6 +20,7 @@
 prefix=/usr/local
 
 HAPP=houseportal
+HCAT=infrastructure
 SHARE=$(prefix)/share/house
 
 INSTALL=/usr/bin/install
@@ -92,9 +93,6 @@ package:
 
 install-dev: install-dev-preamble
 	$(INSTALL) -m 0644 libhouseportal.a $(DESTDIR)$(prefix)/lib
-	$(INSTALL) -m 0755 -s housediscover $(DESTDIR)$(prefix)/bin
-	$(INSTALL) -m 0755 -s housedepositor $(DESTDIR)$(prefix)/bin
-	$(INSTALL) -m 0755 -s housegetalmanac $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0644 $(EXPORT_INCLUDE) $(DESTDIR)$(prefix)/include
 	$(INSTALL) -m 0644 -T houseinstall.mak $(DESTDIR)$(SHARE)/install.mak
 
@@ -105,6 +103,9 @@ install-ui: install-preamble
 
 install-runtime: install-preamble
 	$(INSTALL) -m 0755 -s houseportal $(DESTDIR)$(prefix)/bin
+	$(INSTALL) -m 0755 -s housediscover $(DESTDIR)$(prefix)/bin
+	$(INSTALL) -m 0755 -s housedepositor $(DESTDIR)$(prefix)/bin
+	$(INSTALL) -m 0755 -s housegetalmanac $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -T roof.sh $(DESTDIR)$(prefix)/bin/roof
 	touch $(DESTDIR)/etc/default/housegeneric
 	touch $(DESTDIR)/etc/default/houseportal
