@@ -1,6 +1,6 @@
 Package: houseportal
 Architecture: {{arch}}
-Depends: 
+Depends: libmagic1,libssl3
 Description: The HTTP portal to the House suite of web services
  Houseportal is a web server that redirects HTTP requests to multiple
  specialized web micro services. Together they collectively look like
