@@ -16,14 +16,16 @@ function compareService (a, b) {
 
 function portalShowServices (address, response) {
 
-   var table = document.getElementById ('services-'+response.host);
+   var table = document.getElementById ('services-'+address);
+   if (!table) return;
 
-   for (var i = table.childNodes.length - 1; i >= 0; i--) {
-       table.removeChild(table.childNodes[i]);
+   for (var i = table.rows.length - 1; i >= 0; i--) {
+       table.deleteRow(i);
    }
 
-   var services = response.portal.redirect.sort(compareService);
-   var outer = document.createElement("tr");
+   var services =
+       response ? response.portal.redirect.sort(compareService) : new Array();
+   var outer = table.insertRow (-1);
    for (var i = 0; i < services.length; i++) {
         var service = services[i];
 
@@ -41,15 +43,18 @@ function portalShowServices (address, response) {
         inner.appendChild(label);
         outer.appendChild(inner);
    }
-   table.appendChild(outer);
 }
 
 function portalServices (host) {
     var command = new XMLHttpRequest();
     command.open("GET", "http://"+host+"/portal/service");
     command.onreadystatechange = function () {
-        if (command.readyState === 4 && command.status === 200) {
-            portalShowServices (host, JSON.parse(command.responseText));
+        if (command.readyState === 4) {
+            if (command.status === 200) {
+                portalShowServices (host, JSON.parse(command.responseText));
+            } else {
+                portalShowServices (host);
+            }
         }
     }
     command.send(null);
@@ -72,16 +77,15 @@ function portalPeersCleanup (table, peers) {
     }
     if (refresh) {
         // The table will be rebuilt: remove all known entries.
-        for (var i = PortalKnownPeers.length - 1; i >= 0; i--) {
-            var child = document.getElementById ('peer-'+PortalKnownPeers[i]);
-            if (child) table.removeChild(child);
+        for (var i = table.rows.length - 1; i > 0; i--) {
+            table.deleteRow (i);
         }
     } else {
         // .. otherwise, just eliminate those entries that disappeared.
         for  (var i = PortalKnownPeers.length - 1; i >= 0; i--) {
             if (!peers.includes(PortalKnownPeers[i])) {
                 var child = document.getElementById ('peer-'+PortalKnownPeers[i]);
-                if (child) table.removeChild(child);
+                if (child) child.remove();
             }
         }
     }
@@ -93,15 +97,23 @@ function portalPeersReceived (response) {
     var title = response.host+' - Portal';
     document.getElementsByTagName ('title')[0].innerHTML = title;
     var peers = response.portal.peers.sort();
+    portalPeersUpdate (response.portal.peers);
+}
 
+function portalPeersUpdate (peers) {
+
+    peers = peers.sort();
     var servicelist = document.getElementById ('servicelist');
 
     if (portalPeersCleanup (servicelist, peers)) {
         for (var i = 0; i < peers.length; ++i) {
-            var outer = document.createElement("tr");
+
+            var peername = peers[i].split(':')[0];
+            var outer = servicelist.insertRow (-1);
+            outer.id = 'peer-'+peers[i];
+
             var inner = document.createElement("td");
             var label = document.createElement("a");
-            var peername = peers[i].split(':')[0];
             label.innerHTML = peername;
             label.href = 'http://'+peers[i]+'/index.html';
             inner.appendChild(label);
@@ -109,13 +121,10 @@ function portalPeersReceived (response) {
 
             inner = document.createElement("td");
             table2 = document.createElement("table");
-            table2.id = "services-"+peername;
+            table2.id = "services-"+peers[i];
             table2.style = "border-spacing: 60px 10px";
             inner.appendChild(table2);
-
             outer.appendChild(inner);
-            outer.id = 'peer-'+peername;
-            servicelist.appendChild(outer);
         }
     }
 
