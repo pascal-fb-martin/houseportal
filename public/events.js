@@ -23,9 +23,9 @@ function eventNewColumn (text) {
    return column;
 }
 
-function eventRow (event) {
+function eventRow (table, event) {
    var timestamp = new Date(event[0]);
-   var row = document.createElement("tr");
+   var row = table.insertRow();
    row.appendChild(eventNewColumn(timestamp.toLocaleString('en-US', dateOption)));
    if (event.length > 6) {
        row.appendChild(eventNewColumn(event[5]+'/'+event[6]));
@@ -61,18 +61,18 @@ function eventShow (response) {
 
    eventLastId[app] = response[app].latest;
 
-   var table = document.getElementsByClassName ('eventlist')[0];
-   for (var i = table.childNodes.length - 1; i > 1; i--) {
-      table.removeChild(table.childNodes[i]);
+   var table = document.getElementById ('eventlist');
+   for (var i = table.rows.length - 1; i > 0; i--) {
+      table.deleteRow(i);
    }
    if (response[app].invert) {
       var end = response[app].events.length;
       for (var i = 0; i < end; ++i) {
-         table.appendChild(eventRow(response[app].events[i]));
+         eventRow(table, response[app].events[i]);
       }
    } else {
       for (var i = response[app].events.length-1; i >= 0; --i) {
-         table.appendChild(eventRow(response[app].events[i]));
+         eventRow(table, response[app].events[i]);
       }
    }
 }

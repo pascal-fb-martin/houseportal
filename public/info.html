@@ -388,15 +388,15 @@ function portalRefreshInfo () {
     var table = document.getElementById ('hostinfo');
     if (! table) return;
 
-    for (var i = table.childNodes.length - 1; i > 1; i--) {
-        table.removeChild(table.childNodes[i]);
+    for (var i = table.rows.length - 1; i > 0; i--) {
+        table.deleteRow(i);
     }
 
     var hosts = Object.keys(ActivePeers);
     hosts.sort();
     for (var i = 0; i < hosts.length; ++i) {
         var hostname = hosts[i].split(':')[0];
-        var line = document.createElement("tr");
+        var line = table.insertRow();
         if (SelectedHost == hostname)
             line.appendChild(radioColumn (hostname, "checked"));
         else
@@ -415,7 +415,6 @@ function portalRefreshInfo () {
             line.appendChild(textColumn (info.os));
             if (info.kernel) line.appendChild(textColumn (info.kernel));
         }
-        table.appendChild(line);
     }
 }
 
@@ -484,6 +483,10 @@ function portalServices (address) {
 function portalPeersReceived (response) {
 
     var peers = response.portal.peers;
+    var shown = Object.keys(ActivePeers);
+    for (var i = 0; i < shown.length; ++i) {
+        if (!peers.includes(shown[i])) delete ActivePeers[shown[i]];
+    }
     for (var i = 0; i < peers.length; ++i) {
         portalServices (peers[i]);
     }
