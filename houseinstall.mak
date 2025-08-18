@@ -114,6 +114,22 @@ stop-runit:
 
 # Debian GNU/Linux install --------------------------------------
 
+debian-package-generic:
+	rm -rf build
+	install -m 0755 -d build/$(HAPP)/DEBIAN
+	cat debian/control | sed "s/{{arch}}/`dpkg --print-architecture`/" > build/$(HAPP)/DEBIAN/control
+	chmod 0644 build/$(HAPP)/DEBIAN/control
+	install -m 0644 debian/copyright build/$(HAPP)/DEBIAN
+	install -m 0644 debian/changelog build/$(HAPP)/DEBIAN
+	if [ -e debian/preinst ] ; then install -m 0755 debian/preinst build/$(HAPP)/DEBIAN ; fi
+	if [ -e debian/postinst ] ; then install -m 0755 debian/postinst build/$(HAPP)/DEBIAN ; fi
+	if [ -e debian/prerm ] ; then install -m 0755 debian/prerm build/$(HAPP)/DEBIAN ; fi
+	if [ -e debian/postrm ] ; then install -m 0755 debian/postrm build/$(HAPP)/DEBIAN ; fi
+	make DESTDIR=build/$(HAPP) install-package
+	cd build/$(HAPP) ; find etc -type f | sed 's/etc/\/etc/' > DEBIAN/conffiles
+	chmod 0644 build/$(HAPP)/DEBIAN/conffiles
+	cd build ; fakeroot dpkg-deb -b $(HAPP) .
+
 install-debian: install-preamble stop-systemd clean-systemd install-app install-systemd
 
 uninstall-debian: uninstall-preamble uninstall-systemd uninstall-app
