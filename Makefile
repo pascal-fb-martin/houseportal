@@ -149,6 +149,7 @@ debian-package:
 	install -m 0755 debian/prerm build/houseportal/DEBIAN
 	install -m 0755 debian/postrm build/houseportal/DEBIAN
 	make DESTDIR=build/houseportal install-package
+	cd build/houseportal ; find etc -type f | sed 's/etc/\/etc/' > DEBIAN/conffiles
 	cd build ; fakeroot dpkg-deb -b houseportal .
 	install -m 0755 -d build/houseportal-dev/DEBIAN
 	cat debian/control-common debian/control-dev | sed "s/{{arch}}/`dpkg --print-architecture`/" > build/houseportal-dev/DEBIAN/control
