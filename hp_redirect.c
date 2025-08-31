@@ -167,7 +167,9 @@ static void PruneRedirect (time_t now) {
         houselog_event ("ROUTE", Redirections[i].path, "REMOVED",
                         "%s", Redirections[i].target);
 
-        // Do not free path: the echhtp route still uses it.
+        echttp_route_remove (Redirections[i].path);
+
+        free (Redirections[i].path);
         free (Redirections[i].target);
         if (Redirections[i].service) free (Redirections[i].service);
 
