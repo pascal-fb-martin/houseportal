@@ -36,6 +36,7 @@ OBJS= hp_udp.o \
 LIBOJS= houselog_live.o \
         houselog_sensor.o \
         houselog_storage.o \
+        housecapture.o \
         houseconfig.o \
         houseportalclient.o \
         houseportaludp.o \
@@ -53,7 +54,8 @@ EXPORT_INCLUDE=houselog.h \
                housedepositorstate.h \
                housealmanac.h \
                houselog_sensor.h \
-               houselog_storage.h
+               houselog_storage.h \
+               housecapture.h
 
 all: libhouseportal.a houseportal housediscover housedepositor housegetalmanac
 
