@@ -7,6 +7,7 @@
 
 var captureURLbase = null;
 var captureRunning = false;
+var captureLatestKnown = 0;
 
 const dateOption = {year: 'numeric',
                     month: 'numeric',
@@ -33,6 +34,24 @@ function captureRow (table, event) {
    return row;
 }
 
+function captureChangeState (state) {
+
+   captureRunning = state;
+
+   var elmt = document.getElementById ('capture-onoff');
+   if (state)
+      elmt.innerHTML = "Stop Capture"; // next click.
+   else
+      elmt.innerHTML = "Start Capture"; // next click.
+
+   elmt = document.getElementById ('capture-category');
+   elmt.disabled = state;
+   elmt = document.getElementById ('capture-act');
+   elmt.disabled = state;
+   elmt = document.getElementById ('capture-data');
+   elmt.disabled = state;
+}
+
 function captureShow (response) {
 
    var table = document.getElementById ('capturelist');
@@ -49,17 +68,25 @@ function captureShow (response) {
          captureRow(table, response.capture[i]);
       }
    }
+   if (response.latest) captureLatestKnown = response.latest;
 }
 
 function captureUpdate () {
 
    if (!captureRunning) return;
 
+   var url = captureURLbase + "/capture/get";
+   if (captureLatestKnown) url += "?known=" + captureLatestKnown;
+
    var command = new XMLHttpRequest();
-   command.open("GET", captureURLbase + "/capture/get");
+   command.open("GET", url);
    command.onreadystatechange = function () {
-       if (command.readyState === 4 && command.status === 200) {
-           captureShow (JSON.parse(command.responseText));
+       if (command.readyState === 4) {
+           if (command.status === 200) {
+               captureShow (JSON.parse(command.responseText));
+           } else if (command.status === 409) {
+               captureChangeState (false); // Stop.
+           }
        }
    }
    command.send(null);
@@ -90,26 +117,17 @@ function captureFilter () {
 
 function captureOnOff () {
 
-   var input = document.getElementById ('capture-onoff');
    var uri;
    var disable;
    if (captureRunning) {
       uri = '/stop';
-      input.innerHTML = "Start Capture"; // next click.
       disable = false;
    } else {
       uri = '/start' + captureFilter();
-      input.innerHTML = "Stop Capture"; // next click.
       disable = true;
    }
-   captureRunning = ~captureRunning;
 
-   var elmt = document.getElementById ('capture-category');
-   elmt.disabled = disable;
-   var elmt = document.getElementById ('capture-act');
-   elmt.disabled = disable;
-   var elmt = document.getElementById ('capture-data');
-   elmt.disabled = disable;
+   captureChangeState (disable);
 
    var command = new XMLHttpRequest();
    command.open("GET", captureURLbase + "/capture" + uri);

@@ -119,6 +119,9 @@ static int CaptureFilterCount = 0;
 #define CAPTURE_DEADLINE 5
 static time_t CaptureLastRequest = 0;
 
+static long CaptureLatestId = 0;
+
+
 static void safecpy (char *t, const char *s, int size) {
     if (s) {
         strncpy (t, s, size);
@@ -126,6 +129,16 @@ static void safecpy (char *t, const char *s, int size) {
     } else {
         t[0] = 0;
     }
+}
+
+static void housecapture_updated (void) {
+
+    if (CaptureLatestId == 0) {
+       // Seed the latest capture ID based on the currrent time,
+       // to make it random enough.
+       CaptureLatestId = (long) (time(0) & 0xffff);
+    }
+    CaptureLatestId += 1;
 }
 
 static void housecapture_stop (void) {
@@ -149,8 +162,8 @@ static void housecapture_stop (void) {
 static int housecapture_head (time_t now, char *buffer, int size) {
 
     return snprintf (buffer, size,
-                     "{\"host\":\"%s\",\"timestamp\":%lld,\"capture\":[",
-                     LocalHost, (long long)now);
+                     "{\"host\":\"%s\",\"timestamp\":%lld,\"latest\":%ld,\"capture\":[",
+                     LocalHost, (long long)now, CaptureLatestId);
 }
 
 static const char *housecapture_json (time_t now) {
@@ -198,13 +211,20 @@ static const char *housecapture_webget (const char *method, const char *uri,
     echttp_content_type_json ();
 
     if (!CaptureLastRequest) {
-        static char buffer[128];
-        int length = housecapture_head (now, buffer, sizeof(buffer));
-        buffer[length] = '}';
-        buffer[length+1] = 0;
-        return buffer;
+        echttp_error (409, "No active capture");
+        return "";
     }
     CaptureLastRequest = now;
+
+    // This is a way to check if there is something new without having
+    // to submit a second request if there is something. Derived from
+    // the If-Modified-Since HTTP header item.
+    //
+    const char *known = echttp_parameter_get("known");
+    if (known && (CaptureLatestId == atol (known))) {
+       echttp_error (304, "Not Modified");
+       return "";
+    }
     return housecapture_json (now); // Show the most recent data.
 }
 
@@ -262,6 +282,7 @@ static const char *housecapture_webstart (const char *method, const char *uri,
        }
     }
     CaptureLastRequest = now;
+    housecapture_updated ();
     return "";
 }
 
@@ -287,6 +308,8 @@ static void housecapture_new (const char *category,
     if (CaptureCursor >= CAPTURE_DEPTH) CaptureCursor = 0;
     cursor = CaptureHistory + CaptureCursor;
     cursor->timestamp.tv_sec = 0;
+
+    housecapture_updated ();
 }
 
 int housecapture_register (const char *category) {
