@@ -57,6 +57,7 @@
  *    to another thread.
  *
  * void housecapture_record (int category,
+ *                           const char *object,
  *                           const char *action,
  *                           const char *format, ...);
  *
@@ -104,6 +105,7 @@ static char LocalHost[256] = {0};
 struct CaptureRecord {
     struct timeval timestamp;
     char   category[16];
+    char   object[32];
     char   action[16];
     char   data[128];
 };
@@ -186,11 +188,12 @@ static const char *housecapture_json (time_t now) {
         if (!(cursor->timestamp.tv_sec)) continue;
 
         int wrote = snprintf (buffer+length, sizeof(buffer)-length,
-                              "%s[%lld%03d,\"%s\",\"%s\",\"%s\"]",
+                              "%s[%lld%03d,\"%s\",\"%s\",\"%s\",\"%s\"]",
                               prefix,
                               (long long)(cursor->timestamp.tv_sec),
                               (int)(cursor->timestamp.tv_usec/1000),
                               cursor->category,
+                              cursor->object,
                               cursor->action,
                               cursor->data);
         if (wrote >= sizeof(buffer)-length) {
@@ -249,40 +252,50 @@ static const char *housecapture_webinfo (const char *method, const char *uri,
     return buffer;
 }
 
+static void housecapture_setfilter (int index, time_t now,
+                                    const char *object,
+                                    const char *action,
+                                    const char *data) {
+
+    struct CaptureRecord *filter = CaptureFilter + index;
+
+    filter->timestamp.tv_sec = now;
+    if (object) safecpy (filter->object, object, sizeof(filter->object));
+    else filter->object[0] = 0;
+    if (action) safecpy (filter->action, action, sizeof(filter->action));
+    else filter->action[0] = 0;
+    if (data) safecpy (filter->data, data, sizeof(filter->data));
+    else filter->data[0] = 0;
+}
+
 static const char *housecapture_webstart (const char *method, const char *uri,
                                           const char *data, int length) {
 
     const char *category = echttp_parameter_get("cat");
+    const char *object = echttp_parameter_get("obj");
     const char *action = echttp_parameter_get("act");
     const char *pattern = echttp_parameter_get("data");
 
+    int i;
     time_t now = time(0);
     if (category) {
-       int i;
        for (i = CaptureFilterCount - 1; i >= 0; --i) {
-          if (!strcmp (CaptureFilter[i].category, category)) {
-              CaptureFilter[i].timestamp.tv_sec = now;
-              break;
-          }
+          if (!strcmp (CaptureFilter[i].category, category)) break;
        }
-       if (i < 0) return ""; // Invalid, ignore.
-
-       if (action) safecpy (CaptureFilter[i].action, action, sizeof(CaptureFilter[0].action));
-       else CaptureFilter[i].action[0] = 0;
-       if (pattern) safecpy (CaptureFilter[i].data, pattern, sizeof(CaptureFilter[0].data));
-       else CaptureFilter[i].data[0] = 0;
+       if (i < 0) goto failed; // Invalid category, ignore.
+       housecapture_setfilter (i, now, object, action, pattern);
     } else {
-       int i;
+       if (CaptureFilterCount <= 0) goto failed; // Edge case protection.
        for (i = CaptureFilterCount - 1; i >= 0; --i) {
-          CaptureFilter[i].timestamp.tv_sec = now;
-          if (action) safecpy (CaptureFilter[i].action, action, sizeof(CaptureFilter[0].action));
-          else CaptureFilter[i].action[0] = 0;
-          if (pattern) safecpy (CaptureFilter[i].data, pattern, sizeof(CaptureFilter[0].data));
-          else CaptureFilter[i].data[0] = 0;
+          housecapture_setfilter (i, now, object, action, pattern);
        }
     }
     CaptureLastRequest = now;
     housecapture_updated ();
+    return "";
+
+failed:
+    echttp_error (404, "No category");
     return "";
 }
 
@@ -293,6 +306,7 @@ static const char *housecapture_webstop (const char *method, const char *uri,
 }
 
 static void housecapture_new (const char *category,
+                              const char *object,
                               const char *action,
                               const char *text) {
 
@@ -301,6 +315,7 @@ static void housecapture_new (const char *category,
     gettimeofday (&(cursor->timestamp), 0);
 
     safecpy (cursor->category, category, sizeof(cursor->category));
+    safecpy (cursor->object, object, sizeof(cursor->object));
     safecpy (cursor->action, action, sizeof(cursor->action));
     safecpy (cursor->data, text, sizeof(cursor->data));
 
@@ -342,43 +357,43 @@ time_t housecapture_active (int index) {
 }
 
 void housecapture_record (int category,
+                          const char *object,
                           const char *action,
                           const char *format, ...) {
 
     if (!housecapture_active (category)) return;
 
-    if (CaptureFilter[category].action[0] &&
-        (!strstr (action, CaptureFilter[category].action))) return;
+    struct CaptureRecord *filter = CaptureFilter + category;
 
-    char text[sizeof(CaptureHistory[0].data)];
+    if (filter->object[0] && (!strstr (object, filter->object))) return;
+    if (filter->action[0] && (!strstr (action, filter->action))) return;
+
+    char text[sizeof(filter->data)];
     va_list ap;
     va_start (ap, format);
     vsnprintf (text, sizeof(text), format, ap);
     va_end (ap);
 
-    if (CaptureFilter[category].data[0] &&
-        (!strstr (text, CaptureFilter[category].data))) return;
+    if (filter->data[0] && (!strstr (text, filter->data))) return;
 
-    housecapture_new (CaptureFilter[category].category, action, text);
+    housecapture_new (filter->category, object, action, text);
+}
+
+static void housecapture_route (const char *root,
+                                const char *endpoint, echttp_callback *call) {
+    char uri[256];
+    snprintf (uri, sizeof(uri), "%s/capture/%s", root, endpoint);
+    echttp_route_uri (strdup(uri), call);
 }
 
 void housecapture_initialize (const char *root, int argc, const char **argv) {
 
-    char uri[256];
-
     gethostname (LocalHost, sizeof(LocalHost));
 
-    snprintf (uri, sizeof(uri), "%s/capture/info", root);
-    echttp_route_uri (strdup(uri), housecapture_webinfo);
-
-    snprintf (uri, sizeof(uri), "%s/capture/get", root);
-    echttp_route_uri (strdup(uri), housecapture_webget);
-
-    snprintf (uri, sizeof(uri), "%s/capture/start", root);
-    echttp_route_uri (strdup(uri), housecapture_webstart);
-
-    snprintf (uri, sizeof(uri), "%s/capture/stop", root);
-    echttp_route_uri (strdup(uri), housecapture_webstop);
+    housecapture_route (root, "info",  housecapture_webinfo);
+    housecapture_route (root, "get",   housecapture_webget);
+    housecapture_route (root, "start", housecapture_webstart);
+    housecapture_route (root, "stop",  housecapture_webstop);
 }
 
 void housecapture_background (time_t now) {

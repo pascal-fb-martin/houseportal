@@ -25,31 +25,29 @@ function captureNewColumn (text) {
 }
 
 function captureRow (table, event) {
+
    var timestamp = new Date(event[0]);
    var row = table.insertRow();
    row.appendChild(captureNewColumn(timestamp.toLocaleString('en-US', dateOption)));
    row.appendChild(captureNewColumn(event[1]));
    row.appendChild(captureNewColumn(event[2]));
    row.appendChild(captureNewColumn(event[3]));
+   row.appendChild(captureNewColumn(event[4]));
    return row;
 }
 
-function captureChangeState (state) {
+function captureChangeState (running) {
 
-   captureRunning = state;
+   // Set the button label to match the next click effect.
+   document.getElementById ('capture-onoff').innerHTML =
+      running ? "Stop Capture" : "Start Capture";
 
-   var elmt = document.getElementById ('capture-onoff');
-   if (state)
-      elmt.innerHTML = "Stop Capture"; // next click.
-   else
-      elmt.innerHTML = "Start Capture"; // next click.
+   document.getElementById ('capture-category').disabled = running;
+   document.getElementById ('capture-object').disabled = running;
+   document.getElementById ('capture-action').disabled = running;
+   document.getElementById ('capture-data').disabled = running;
 
-   elmt = document.getElementById ('capture-category');
-   elmt.disabled = state;
-   elmt = document.getElementById ('capture-act');
-   elmt.disabled = state;
-   elmt = document.getElementById ('capture-data');
-   elmt.disabled = state;
+   captureRunning = running;
 }
 
 function captureShow (response) {
@@ -102,7 +100,12 @@ function captureFilter () {
       param += prefix + 'cat=' + selected;
       prefix = '&';
    }
-   input = document.getElementById ('capture-act');
+   input = document.getElementById ('capture-object');
+   if (input.value) {
+      param += prefix + 'obj=' + input.value;
+      prefix = '&';
+   }
+   input = document.getElementById ('capture-action');
    if (input.value) {
       param += prefix + 'act=' + input.value;
       prefix = '&';
@@ -170,7 +173,16 @@ function capturePrepare (response) {
    column = document.createElement("td");
    input = document.createElement('input');
    input.type = 'text';
-   input.id = 'capture-act';
+   input.id = 'capture-object';
+   input.name = 'object';
+   input.placeholder = 'Substring';
+   column.appendChild(input);
+   row.appendChild (column);
+
+   column = document.createElement("td");
+   input = document.createElement('input');
+   input.type = 'text';
+   input.id = 'capture-action';
    input.name = 'action';
    input.placeholder = 'Substring';
    column.appendChild(input);

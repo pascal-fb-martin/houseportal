@@ -27,6 +27,7 @@ int housecapture_registered (void);
 time_t housecapture_active (int category);
 
 void housecapture_record (int category,
+                          const char *object,
                           const char *action,
                           const char *format, ...);
 
