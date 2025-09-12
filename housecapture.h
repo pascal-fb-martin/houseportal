@@ -26,10 +26,13 @@ int housecapture_registered (void);
 
 time_t housecapture_active (int category);
 
-void housecapture_record (int category,
-                          const char *object,
-                          const char *action,
-                          const char *format, ...);
+void housecapture_record_timed (const struct timeval *timestamp,
+                                int category,
+                                const char *object,
+                                const char *action,
+                                const char *format, ...);
+
+#define housecapture_record(C, O, A, F, ...) housecapture_record_timed (0, C, O, A, F, ##__VA_ARGS__)
 
 void housecapture_background (time_t now);
 

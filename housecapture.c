@@ -56,10 +56,11 @@
  *    the actual timer value might be used to propagate the capture state
  *    to another thread.
  *
- * void housecapture_record (int category,
- *                           const char *object,
- *                           const char *action,
- *                           const char *format, ...);
+ * void housecapture_record_timed (const struct timeval *timestamp,
+ *                                 int category,
+ *                                 const char *object,
+ *                                 const char *action,
+ *                                 const char *format, ...);
  *
  *    Record new capture data. All capture data is local: there is no
  *    intent to consolidate and archive capture data. Use events for
@@ -72,6 +73,20 @@
  *    "RECEIVE", "SEND", "TRIGGER", "IGNORE", etc. An action will typically
  *    not appear in the data itself. The action also provides an additional
  *    filter criteria.
+ *
+ *    If timestamp is null, the housecapture module uses the current time.
+ *    Using a null timestamp is fine in most applications, except if captured
+ *    events are buffered outside of this module and recorded on a periodic
+ *    basis.
+ *
+ * void housecapture_record (int category,
+ *                           const char *object,
+ *                           const char *action,
+ *                           const char *format, ...);
+ *
+ *    This is a variant of housecapture_record_timed() with a null timestamp,
+ *    declared as a macro in housecapture.h but described here because this
+ *    is the main API for most applications.
  *
  * void housecapture_background (time_t now);
  *
@@ -305,14 +320,19 @@ static const char *housecapture_webstop (const char *method, const char *uri,
     return "";
 }
 
-static void housecapture_new (const char *category,
+static void housecapture_new (const struct timeval *timestamp,
+                              const char *category,
                               const char *object,
                               const char *action,
                               const char *text) {
 
     struct CaptureRecord *cursor = CaptureHistory + CaptureCursor;
 
-    gettimeofday (&(cursor->timestamp), 0);
+    if (timestamp) {
+       cursor->timestamp = *timestamp;
+    } else {
+       gettimeofday (&(cursor->timestamp), 0);
+    }
 
     safecpy (cursor->category, category, sizeof(cursor->category));
     safecpy (cursor->object, object, sizeof(cursor->object));
@@ -356,10 +376,14 @@ time_t housecapture_active (int index) {
     return 0;
 }
 
-void housecapture_record (int category,
-                          const char *object,
-                          const char *action,
-                          const char *format, ...) {
+// Note: housecapture_record() is a macro that invokes
+// housecapture_record_timed() with a null timestamp.
+//
+void housecapture_record_timed (const struct timeval *timestamp,
+                                int category,
+                                const char *object,
+                                const char *action,
+                                const char *format, ...) {
 
     if (!housecapture_active (category)) return;
 
@@ -376,7 +400,7 @@ void housecapture_record (int category,
 
     if (filter->data[0] && (!strstr (text, filter->data))) return;
 
-    housecapture_new (filter->category, object, action, text);
+    housecapture_new (timestamp, filter->category, object, action, text);
 }
 
 static void housecapture_route (const char *root,
