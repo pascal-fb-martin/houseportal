@@ -84,6 +84,10 @@
  * void housedepositor_periodic (time_t now);
  *
  *    Background updates.
+ *
+ * const char *housedepositor_group (void);
+ *
+ *    Return the current group name used for all deposited files.
  */
 
 #include <string.h>
@@ -713,5 +717,9 @@ void housedepositor_periodic (time_t now) {
         DepotCheckStart = now;
     else
         DEBUG ("No depot services detected\n");
+}
+
+const char *housedepositor_group (void) {
+   return DepotGroup;
 }
 
