@@ -47,8 +47,8 @@
 # systemd or runit. These rules were written so that none of that
 # post-install is processed when DESTDIR is set. This is tricky..
 
-HMAN=/var/lib/house/note/content/manuals
-HMANCACHE=/var/lib/house/note/cache
+HMAN=/var/lib/house/note/manuals
+HMANCACHE=/var/cache/house/note
 
 # Some common targets that create directories potentially used by
 # multiple House applications.
