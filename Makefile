@@ -38,6 +38,7 @@ LIBOJS= houselog_live.o \
         houselog_storage.o \
         housecapture.o \
         houseconfig.o \
+        housestate.o \
         houseportalclient.o \
         houseportaludp.o \
         houseportalhmac.o \
@@ -48,6 +49,7 @@ LIBOJS= houselog_live.o \
 
 EXPORT_INCLUDE=houselog.h \
                houseconfig.h \
+               housestate.h \
                houseportalclient.h \
                housediscover.h \
                housedepositor.h \
