@@ -110,6 +110,7 @@
 #include "echttp.h"
 #include "echttp_static.h"
 
+#include "housestate.h"
 #include "housecapture.h"
 
 static char LocalHost[256] = {0};
@@ -136,7 +137,7 @@ static int CaptureFilterCount = 0;
 #define CAPTURE_DEADLINE 5
 static time_t CaptureLastRequest = 0;
 
-static long CaptureLatestId = 0;
+static int CaptureState = -1;
 
 
 static void safecpy (char *t, const char *s, int size) {
@@ -146,16 +147,6 @@ static void safecpy (char *t, const char *s, int size) {
     } else {
         t[0] = 0;
     }
-}
-
-static void housecapture_updated (void) {
-
-    if (CaptureLatestId == 0) {
-       // Seed the latest capture ID based on the currrent time,
-       // to make it random enough.
-       CaptureLatestId = (long) (time(0) & 0xffff);
-    }
-    CaptureLatestId += 1;
 }
 
 static void housecapture_stop (void) {
@@ -179,8 +170,9 @@ static void housecapture_stop (void) {
 static int housecapture_head (time_t now, char *buffer, int size) {
 
     return snprintf (buffer, size,
-                     "{\"host\":\"%s\",\"timestamp\":%lld,\"latest\":%ld,\"capture\":[",
-                     LocalHost, (long long)now, CaptureLatestId);
+                     "{\"host\":\"%s\",\"timestamp\":%lld,\"latest\":%lu,\"capture\":[",
+                     LocalHost, (long long)now,
+                     housestate_current(CaptureState));
 }
 
 static const char *housecapture_json (time_t now) {
@@ -226,23 +218,15 @@ static const char *housecapture_webget (const char *method, const char *uri,
                                         const char *data, int length) {
 
     time_t now = time(0);
-    echttp_content_type_json ();
 
     if (!CaptureLastRequest) {
         echttp_error (409, "No active capture");
         return "";
     }
     CaptureLastRequest = now;
+    if (housestate_same (CaptureState)) return "";
 
-    // This is a way to check if there is something new without having
-    // to submit a second request if there is something. Derived from
-    // the If-Modified-Since HTTP header item.
-    //
-    const char *known = echttp_parameter_get("known");
-    if (known && (CaptureLatestId == atol (known))) {
-       echttp_error (304, "Not Modified");
-       return "";
-    }
+    echttp_content_type_json ();
     return housecapture_json (now); // Show the most recent data.
 }
 
@@ -306,7 +290,7 @@ static const char *housecapture_webstart (const char *method, const char *uri,
        }
     }
     CaptureLastRequest = now;
-    housecapture_updated ();
+    housestate_changed (CaptureState);
     return "";
 
 failed:
@@ -344,7 +328,7 @@ static void housecapture_new (const struct timeval *timestamp,
     cursor = CaptureHistory + CaptureCursor;
     cursor->timestamp.tv_sec = 0;
 
-    housecapture_updated ();
+    housestate_changed (CaptureState);
 }
 
 int housecapture_register (const char *category) {
@@ -413,6 +397,8 @@ static void housecapture_route (const char *root,
 void housecapture_initialize (const char *root, int argc, const char **argv) {
 
     gethostname (LocalHost, sizeof(LocalHost));
+
+    CaptureState = housestate_declare ("capture");
 
     housecapture_route (root, "info",  housecapture_webinfo);
     housecapture_route (root, "get",   housecapture_webget);
