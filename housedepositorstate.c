@@ -326,7 +326,7 @@ long housedepositor_state_get (const char *path) {
     int i = echttp_json_search(BackupParsed, path);
     if (i < 0) return 0;
     switch (BackupParsed[i].type) {
-        case PARSER_BOOL: value = BackupParsed[i].value.bool; break;
+        case PARSER_BOOL: value = BackupParsed[i].value.boolean; break;
         case PARSER_INTEGER: value = BackupParsed[i].value.integer; break;
     }
     return value;

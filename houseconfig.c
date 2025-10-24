@@ -228,7 +228,7 @@ int houseconfig_integer (int parent, const char *path) {
 
 int houseconfig_boolean (int parent, const char *path) {
     int i = houseconfig_find(parent, path, PARSER_BOOL);
-    return (i >= 0) ? ConfigParsed[i].value.bool : 0;
+    return (i >= 0) ? ConfigParsed[i].value.boolean : 0;
 }
 
 int houseconfig_array (int parent, const char *path) {
