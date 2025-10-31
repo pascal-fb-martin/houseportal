@@ -115,6 +115,9 @@
 
 static char LocalHost[256] = {0};
 
+static struct timeval CaptureLatestTimestamp = {0, 0};
+static int CaptureNeedSort = 0;
+
 // Keep the most recent capture records. This is a relatively long
 // history because this is used to feed the web capture pages.
 //
@@ -164,15 +167,20 @@ static void housecapture_stop (void) {
           CaptureHistory[i].timestamp.tv_sec = 0;
        }
        CaptureLastRequest = 0;
+       CaptureLatestTimestamp.tv_sec = 0;
+       CaptureNeedSort = 0;
     }
 }
 
 static int housecapture_head (time_t now, char *buffer, int size) {
 
+    char *needsort = "";
+    if (CaptureNeedSort) needsort = ",\"sort\":true";
+
     return snprintf (buffer, size,
-                     "{\"host\":\"%s\",\"timestamp\":%lld,\"latest\":%lu,\"capture\":[",
+                     "{\"host\":\"%s\",\"timestamp\":%lld,\"latest\":%lu%s,\"capture\":[",
                      LocalHost, (long long)now,
-                     housestate_current(CaptureState));
+                     housestate_current(CaptureState), needsort);
 }
 
 static const char *housecapture_json (time_t now) {
@@ -184,6 +192,7 @@ static const char *housecapture_json (time_t now) {
     int i;
 
     length = housecapture_head (now, buffer, sizeof(buffer));
+    long long base = now * 1000;
 
     for (i = CaptureCursor + 1; i != CaptureCursor; ++i) {
         if (i >= CAPTURE_DEPTH) {
@@ -194,11 +203,13 @@ static const char *housecapture_json (time_t now) {
 
         if (!(cursor->timestamp.tv_sec)) continue;
 
+        long long timestamp =
+            (cursor->timestamp.tv_sec*1000) + (cursor->timestamp.tv_usec/1000);
+
         int wrote = snprintf (buffer+length, sizeof(buffer)-length,
-                              "%s[%lld%03d,\"%s\",\"%s\",\"%s\",\"%s\"]",
+                              "%s[%lld,\"%s\",\"%s\",\"%s\",\"%s\"]",
                               prefix,
-                              (long long)(cursor->timestamp.tv_sec),
-                              (int)(cursor->timestamp.tv_usec/1000),
+                              timestamp - base,
                               cursor->category,
                               cursor->object,
                               cursor->action,
@@ -314,8 +325,17 @@ static void housecapture_new (const struct timeval *timestamp,
 
     if (timestamp) {
        cursor->timestamp = *timestamp;
+       if (timestamp->tv_sec < CaptureLatestTimestamp.tv_sec) {
+           CaptureNeedSort = 1;
+       } else if ((timestamp->tv_sec == CaptureLatestTimestamp.tv_sec) &&
+                  (timestamp->tv_usec < CaptureLatestTimestamp.tv_usec)) {
+           CaptureNeedSort = 1;
+       } else {
+           CaptureLatestTimestamp = *timestamp;
+       }
     } else {
-       gettimeofday (&(cursor->timestamp), 0);
+       gettimeofday (&CaptureLatestTimestamp, 0);
+       cursor->timestamp = CaptureLatestTimestamp;
     }
 
     safecpy (cursor->category, category, sizeof(cursor->category));

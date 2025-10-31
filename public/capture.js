@@ -24,9 +24,15 @@ function captureNewColumn (text) {
    return column;
 }
 
-function captureRow (table, event) {
+function captureRow (table, base, event) {
 
-   var timestamp = new Date(event[0]);
+   // Compatible with both absolute timestamps and timestamps relative to
+   // the response timestamp.
+   //
+   var ms = event[0];
+   if (ms < 1600000000000) ms += base;
+
+   var timestamp = new Date(ms);
    var row = table.insertRow();
    row.appendChild(captureNewColumn(timestamp.toLocaleString('en-US', dateOption)));
    row.appendChild(captureNewColumn(event[1]));
@@ -50,20 +56,27 @@ function captureChangeState (running) {
    captureRunning = running;
 }
 
+function captureSort (a, b) {
+   return a[0] - b[0];
+}
+
 function captureShow (response) {
 
    var table = document.getElementById ('capturelist');
    for (var i = table.rows.length - 1; i > 1; i--) {
       table.deleteRow(i);
    }
+   var base = response.timestamp * 1000;
+   var capture = response.capture;
+   if (response.sort) capture = capture.sort (captureSort);
    if (response.invert) {
-      var end = response.capture.length;
+      var end = capture.length;
       for (var i = 0; i < end; ++i) {
-         captureRow(table, response.capture[i]);
+         captureRow(table, base, capture[i]);
       }
    } else {
-      for (var i = response.capture.length-1; i >= 0; --i) {
-         captureRow(table, response.capture[i]);
+      for (var i = capture.length-1; i >= 0; --i) {
+         captureRow(table, base, capture[i]);
       }
    }
    if (response.latest) captureLatestKnown = response.latest;
