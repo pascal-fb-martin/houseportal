@@ -1,3 +1,14 @@
+houseportal (2.7) UNRELEASED; urgency=medium
+
+   * Fix some HTML table updates
+   * Refresh the main HTML page
+   * Declare the files in /etc as config files in the debian package
+   * Make the cache location conform to the Linux FHS
+   * Add a capture module to the library
+   * Add a state module to make optimized poll support easier and consistent.
+
+ -- Pascal Martin <pascal.fb.martin@gmail.com>  Fri, 31 Oct 2025 12:00:00 PDT
+
 houseportal (2.6) UNRELEASED; urgency=medium
 
    * Install README.md as an online manual.
