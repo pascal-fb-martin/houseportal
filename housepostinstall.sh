@@ -17,7 +17,7 @@ if [ -d /var/cache/house/note ] ; then rm -rf /var/cache/house/note/* ; fi
 if [ "x$HOUSEAPP" != "x" ] ; then
    grep -q '^house:' /etc/passwd || useradd -r house -s /usr/sbin/nologin -d /var/lib/house
    if [ "x$HOUSEGROUP" != "x" ] ; then
-      usermod -G $HOUSEGROUP house
+      grep -q "^$HOUSEGROUP:" /etc/group && usermod -G $HOUSEGROUP house
    fi
    systemctl daemon-reload
    if systemctl is-active --quiet $HOUSEAPP ; then
