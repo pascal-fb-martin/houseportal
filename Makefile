@@ -106,6 +106,7 @@ install-ui: install-preamble
 	chmod 644 $(DESTDIR)$(SHARE)/public/favicon.ico
 
 install-runtime: install-preamble
+	$(INSTALL) -m 0644 -T housepostinstall.sh $(DESTDIR)$(SHARE)/postinstall
 	$(INSTALL) -m 0755 -s houseportal $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -s housediscover $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -s housedepositor $(DESTDIR)$(prefix)/bin
