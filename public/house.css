@@ -1,4 +1,5 @@
 @import url(http://fonts.googleapis.com/css?family=Metrophobic);
+@import url(http://fonts.googleapis.com/css?family=Delius);
 
 body {
    display: grid;
@@ -107,7 +108,7 @@ header span {
     text-align: left;
 }
 .housedata {
-   font-family: 'Metrophobic', sans-serif;
+   font-family: 'Delius', sans-serif;
    font-size: 20px;
    color: white;
 }
@@ -136,6 +137,20 @@ header span {
 button:disabled {
    background-color: #808080;
    border: 2px solid #808080;
+}
+
+button.objectaction {
+   font-family:'Metrophobic', sans-serif;
+   font-weight: 500;
+   font-size: 16px;
+   border: 2px solid #3673ad;
+   padding: 2px;
+   margin: 0px;
+   border-radius: 3px;
+   -webkit-border-radius: 3px;
+   -moz-border-radius: 3px;
+   background-color: #3673ad;
+   color: #f5f5f5;
 }
 
 button {
