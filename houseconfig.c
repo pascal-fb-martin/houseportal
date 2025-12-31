@@ -55,6 +55,7 @@
  *
  * const char *houseconfig_string  (int parent, const char *path);
  * int         houseconfig_integer (int parent, const char *path);
+ * int         houseconfig_positive (int parent, const char *path);
  * double      houseconfig_boolean (int parent, const char *path);
  *
  *    Access individual items starting from the specified parent
@@ -95,7 +96,7 @@ static char *ConfigTextCurrent = 0;
 #define HOUSECONFIG_PATH "/etc/house/"
 #define HOUSECONFIG_EXT  ".json"
 
-static int ConfigFileEnabled = 0; // Default: rely on the HouseDepot service.
+static int ConfigFileEnabled = 0; // Default: no local configuration file.
 
 static const char *ConfigFile = HOUSECONFIG_PATH "portal" HOUSECONFIG_EXT;
 static const char *ConfigName = 0; // Will point to base name in ConfigFile.
@@ -159,6 +160,7 @@ void houseconfig_default (const char *arg) {
                       HOUSECONFIG_PATH "%s%s", name, extension);
             ConfigFile = strdup(buffer);
         }
+        ConfigFileEnabled = 1;
     } else if (echttp_option_present ("-use-local-storage", arg)) {
         ConfigFileEnabled = 1;
     } else if (echttp_option_present ("-no-local-storage", arg)) {
@@ -224,6 +226,13 @@ const char *houseconfig_string (int parent, const char *path) {
 int houseconfig_integer (int parent, const char *path) {
     int i = houseconfig_find(parent, path, PARSER_INTEGER);
     return (i >= 0) ? ConfigParsed[i].value.integer : 0;
+}
+
+int houseconfig_positive (int parent, const char *path) {
+    int i = houseconfig_find(parent, path, PARSER_INTEGER);
+    if (i < 0) return 0;
+    if (ConfigParsed[i].value.integer < 0) return 0;
+    return ConfigParsed[i].value.integer;
 }
 
 int houseconfig_boolean (int parent, const char *path) {

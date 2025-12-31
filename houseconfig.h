@@ -32,6 +32,7 @@ int houseconfig_find (int parent, const char *path, int type);
 
 const char *houseconfig_string  (int parent, const char *path);
 int         houseconfig_integer (int parent, const char *path);
+int         houseconfig_positive (int parent, const char *path);
 int         houseconfig_boolean (int parent, const char *path);
 
 int houseconfig_array        (int parent, const char *path);
