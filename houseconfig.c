@@ -148,12 +148,12 @@ static void houseconfig_write (const char *text, int length) {
 void houseconfig_default (const char *arg) {
 
     const char *name = 0;
+    char buffer[1024];
 
     if (echttp_option_match ("-config=", arg, &name)) {
         if ((name[0] == '/') || (name[0] == '.')) {
             ConfigFile = strdup(name);
         } else {
-            char buffer[1024];
             const char *extension = HOUSECONFIG_EXT;
             if (strchr (name, '.')) extension = "";
             snprintf (buffer, sizeof(buffer),
@@ -161,6 +161,11 @@ void houseconfig_default (const char *arg) {
             ConfigFile = strdup(buffer);
         }
         ConfigFileEnabled = 1;
+    } else if (echttp_option_match ("-config-name=", arg, &name)) {
+        const char *extension = HOUSECONFIG_EXT;
+        if (strchr (name, '.')) extension = "";
+        snprintf (buffer, sizeof(buffer), "%s%s", name, extension);
+        ConfigName = strdup(buffer);
     } else if (echttp_option_present ("-use-local-storage", arg)) {
         ConfigFileEnabled = 1;
     } else if (echttp_option_present ("-no-local-storage", arg)) {
@@ -175,10 +180,11 @@ const char *houseconfig_load (int argc, const char **argv) {
     for (i = 1; i < argc; ++i) {
         houseconfig_default (argv[i]);
     }
-    char *basename = strrchr (ConfigFile, '/');
-    if (basename) ConfigName = basename + 1;
-    else ConfigName = ConfigFile;
-
+    if (!ConfigName) {
+        char *basename = strrchr (ConfigFile, '/');
+        if (basename) ConfigName = basename + 1;
+        else ConfigName = ConfigFile;
+    }
     if (!ConfigFileEnabled) return 0; // No error.
 
     houselog_event ("CONFIG", "DATA", "LOADING", "FROM %s", ConfigFile);
