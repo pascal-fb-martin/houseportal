@@ -20,6 +20,15 @@
  *
  * housecapture.c - An IO capture modules
  *
+ * This module is like a logic analyzer, or a network sniffer, in a software
+ * module form. The application calls it to record data received or sent on
+ * any of its interfaces. The data is stored in RAM and can be queried through
+ * a web UI.
+ *
+ * Because this is quite intrusive, and potentially creates significant
+ * overhead, it is disabled by default. Enabling it eventually times out
+ * to avoid leaving it on inadvertently.
+ *
  * SYNOPSYS:
  *
  * void housecapture_initialize (const char *root,
