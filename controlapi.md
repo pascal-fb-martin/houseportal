@@ -22,7 +22,7 @@ Each controllable point supports at least two device controls:
 - off: turn the device off (regardless of its current state except "silent")
 - on: turn the device on (regardless of its current state except "silent")
 
-Controllable or input points may support the following controls:
+Controllable points may also support the following controls:
 
 - alert: turn the point to the alert state
 - clear: change the point state from "alert" to "on". This control has no effect if the point is not in the alert state.
