@@ -130,14 +130,14 @@ A client requesting both changes and status must use the `/(service)/changes` re
 
 The JSON data returned contains the following elements:
 
-- host:                   Name of the host machine this service runs on.
-- timestamp:              Time of the response.
-- control.changes:        An object that describes the input points that changed, or an empty object when no change history is available.
-- control.changes.start:  Time of the oldest state.
-- control.changes.step:   Interval between two consecutive values.
-- control.sequend.end:    Time of the most recent state (relative to changes.start).
-- control.changes.data:   An object that lists every input point that changed. Each input point is an array of sequential values (i.e. a time series) sampled at `control.changes.step` intervals.
-- control.status:         If sync is requested. See the status request.
+- `host`:                   Name of the host machine this service runs on.
+- `timestamp`:              Time of the response.
+- `control.changes`:        An object that describes the input points that changed, or an empty object when no change history is available.
+- `control.changes.start`:  Time of the oldest state.
+- `control.changes.step`:   Interval between two consecutive values.
+- `control.sequend.end`:    Time of the most recent state (relative to changes.start).
+- `control.changes.data`:   An object that lists every input point that changed. Each input point is an array of sequential values (i.e. a time series) sampled at `control.changes.step` intervals.
+- `control.status`:         If sync is requested. See the status request.
 
 All time values in the control.changes object are in millisecond units.
 
