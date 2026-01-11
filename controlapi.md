@@ -87,7 +87,7 @@ Each point object has the following fields:
 GET /(service)/set?point=NAME&state=off|on|clear[&pulse=N][&cause=TEXT]
 ```
 
-Request the specified control point to transition to the specified state. If the pulse parameter is present the point is maintained for the specified number of seconds, then reverted to the "off" state when the control expires. If the pulse parameter is not present or its value is 0, the specified state is maintained until the next set request is issued.
+Request the specified control point to transition to the specified state. If the pulse parameter is present, the state is maintained for the specified number of seconds and then reverted to the "off" state when the control expires. If the pulse parameter is not present or its value is 0, the specified state is maintained until the next set request is issued.
 
 The `cause` text is reflected in the events that record the point changes. This helps identifying which service requested the control, especially when this is a scheduled control, or a control issued based on some automated logic. In addition, some services use the `cause` parameter to decide on the control request's priority level: if the `cause` parameter is missing or set to "MANUAL", the priority is high; otherwise the priority is low. This priority is typically used to avoid an automated logic fighting with a human's manual control. For example if there is an automatism to turn a light on for a few minutes on specific condition, but a human operator turned the switch on manually, you do not want the automatism to turn the light off on the operator. This is particularly useful for devices such as wall switches, which can be operated directly.
 
