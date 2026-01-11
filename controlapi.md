@@ -6,7 +6,11 @@ A common API to control the physical world.
 
 This API gives access to physical world devices, regardless of the communication protocol or hardware interfaces used to access them. It provides two main features: report on the current state of devices and offer a way to control this state.
 
-Each device state is represented by a point, which has at least two possible states:
+This API was designed to be as generic as possible. The goal is to reuse the same API for different classes of hardware.
+
+Each device state is represented by a point. Every point is identified by a name that should be unique across the network, i.e. two separate service instances should not return the same point name. This allows clients to discover which servers offer access to the devices that they are controlling, without having to configure this manually.
+
+A point has at least two possible states:
 
 - off: the device is not active (provides no light, motor is not moving, etc).
 - on: the device is active (provides light, motor is moving, etc.)
