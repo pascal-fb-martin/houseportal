@@ -103,8 +103,8 @@ struct EventRecord {
 
 static struct EventRecord EventHistory[EVENT_DEPTH];
 static int EventCursor = 0;
-static long EventLatestId = 0;
-static long EventLastFlushed = 0;
+static long long EventLatestId = 0;
+static long long EventLastFlushed = 0;
 
 // Keep the most recent traces. This is a short history
 // because it is only used to buffer before sending to storage.
@@ -142,15 +142,16 @@ static int houselog_getheader (time_t now, char *buffer, int size) {
     if (PortalHost) {
         return snprintf (buffer, size,
                         "{\"host\":\"%s\",\"proxy\":\"%s\",\"apps\":[\"%s\"],"
-                            "\"timestamp\":%lld,\"%s\":{\"latest\":%ld",
+                            "\"timestamp\":%lld,\"latest\":%lld,\"%s\":{\"latest\":%lld",
                         LocalHost, PortalHost, LogName,
-                            (long long)now, LogName, EventLatestId);
+                            (long long)now, EventLatestId, LogName, EventLatestId);
     }
     return snprintf (buffer, size,
                     "{\"host\":\"%s\",\"apps\":[\"%s\"],"
-                        "\"timestamp\":%lld,\"%s\":{\"latest\":%ld",
+                        "\"timestamp\":%lld,\"latest\":%lld,\"%s\":{\"latest\":%lld",
                     LocalHost, LogName,
-                        (long long)now, LogName, EventLatestId);
+                        (long long)now, EventLatestId, LogName, EventLatestId);
+    // (The second iteration of EventLatestId is for compatibility only.)
 }
 
 static const char *houselog_trace_json (time_t now) {
@@ -271,6 +272,9 @@ static void houselog_trace_flush (void) {
     }
 }
 
+// This request is deprecated. Use the "GET /log/events" request with
+// the "known" parameter instead for a more efficient polling.
+//
 static const char *houselog_weblatest (const char *method, const char *uri,
                                        const char *data, int length) {
 
@@ -283,6 +287,11 @@ static const char *houselog_weblatest (const char *method, const char *uri,
 static const char *houselog_webget (const char *method, const char *uri,
                                     const char *data, int length) {
 
+    const char *known = echttp_parameter_get("known");
+    if (known && (atoll (known) == EventLatestId)) {
+        echttp_error (304, "Not Modified");
+        return "";
+    }
     echttp_content_type_json ();
     return houselog_event_json (time(0), 0); // Show the most recent data.
 }
@@ -355,7 +364,7 @@ static void houselog_event_new (const char *category,
         // Seed the latest event ID based on the first event's time.
         // This makes it random enough to make its value change after
         // a restart.
-        EventLatestId = (long) (time(0) & 0xffff);
+        EventLatestId = (long long) (time(0) & 0xffff);
     }
     EventLatestId += 1;
 }
@@ -405,14 +414,14 @@ void houselog_initialize (const char *name, int argc, const char **argv) {
     snprintf (uri, sizeof(uri), "/%s/log/events", LogName);
     echttp_route_uri (strdup(uri), houselog_webget);
 
-    snprintf (uri, sizeof(uri), "/%s/log/latest", LogName);
+    snprintf (uri, sizeof(uri), "/%s/log/latest", LogName); // Deprecated.
     echttp_route_uri (strdup(uri), houselog_weblatest);
 
     // Alternate paths for application-independent web pages.
     // (The log files are stored at the same place for all applications.)
     //
     echttp_route_uri ("/log/events", houselog_webget);
-    echttp_route_uri ("/log/latest", houselog_weblatest);
+    echttp_route_uri ("/log/latest", houselog_weblatest); // Deprecated.
 
     houselog_background (time(0)); // Initial state (with nothing to flush).
 
