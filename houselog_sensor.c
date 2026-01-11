@@ -95,8 +95,8 @@ struct SensorRecord {
 
 static struct SensorRecord SensorHistory[SENSOR_DEPTH];
 static int SensorCursor = 0;
-static long SensorLatestId = 0;
-static long SensorLastFlushed = 0;
+static long long SensorLatestId = 0;
+static long long SensorLastFlushed = 0;
 
 static time_t SensorLastFlushTime = 0;
 
@@ -114,15 +114,15 @@ static int houselog_sensor_getheader (time_t now, char *buffer, int size) {
     if (PortalHost) {
         return snprintf (buffer, size,
                         "{\"host\":\"%s\",\"proxy\":\"%s\",\"apps\":[\"%s\"],"
-                            "\"timestamp\":%ld,\"%s\":{\"latest\":%ld",
+                            "\"timestamp\":%lld,\"%s\":{\"latest\":%lld",
                         LocalHost, PortalHost, LogName,
-                            (long)now, LogName, SensorLatestId);
+                            (long long)now, LogName, SensorLatestId);
     }
     return snprintf (buffer, size,
                     "{\"host\":\"%s\",\"apps\":[\"%s\"],"
-                        "\"timestamp\":%ld,\"%s\":{\"latest\":%ld",
+                        "\"timestamp\":%lld,\"%s\":{\"latest\":%lld",
                     LocalHost, LogName,
-                        (long)now, LogName, SensorLatestId);
+                        (long long)now, LogName, SensorLatestId);
 }
 
 static const char *houselog_sensor_json (time_t now) {
@@ -215,7 +215,7 @@ void houselog_sensor_data (const struct timeval *timestamp,
         // Seed the latest event ID based on the first event's time.
         // This makes it random enough to make its value change after
         // a restart.
-        SensorLatestId = (long) (time(0) & 0xffff);
+        SensorLatestId = (long long) (time(0) & 0xffff);
     }
     SensorLatestId += 1;
 }
