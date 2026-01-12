@@ -20,7 +20,9 @@
 # This file is meant to be included from the main make file of dependent
 # applications. The main make file must have defined the following:
 #
-# - Variable HAPP: the name of the specific house dependent application.
+# - Variable HAPP: the name of the specific house dependent service.
+#
+# - Variable HPKG: the name of the Debian package (default: HAPP)
 #
 # - Variable prefix: the path where to install the application, typically
 #   /usr or /usr/local.
@@ -47,6 +49,7 @@
 # systemd or runit. These rules were written so that none of that
 # post-install is processed when DESTDIR is set. This is tricky..
 
+HPKG?=$(HAPP)
 HMAN=/var/lib/house/note/manuals
 HMANCACHE=/var/cache/house/note
 
@@ -62,7 +65,7 @@ install-generic-preamble:
 
 install-preamble: install-generic-preamble
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(HMAN)/$(HCAT)
-	$(INSTALL) -m 0644 -T README.md $(DESTDIR)$(HMAN)/$(HCAT)/$(HAPP).md
+	$(INSTALL) -m 0644 -T README.md $(DESTDIR)$(HMAN)/$(HCAT)/$(HPKG).md
 	if [ -d $(DESTDIR)$(HMANCACHE) ] ; then rm -rf $(DESTDIR)$(HMANCACHE)/* ; fi
 
 install-dev-preamble: install-generic-preamble
@@ -70,7 +73,7 @@ install-dev-preamble: install-generic-preamble
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(prefix)/include
 
 uninstall-preamble:
-	rm -f $(DESTDIR)$(HMAN)/$(HCAT)/$(HAPP).md
+	rm -f $(DESTDIR)$(HMAN)/$(HCAT)/$(HPKG).md
 	if [ -d $(DESTDIR)$(HMANCACHE) ] ; then rm -rf $(DESTDIR)$(HMANCACHE)/* ; fi
 
 # Distribution agnostic install for systemd -------------------------
@@ -116,19 +119,19 @@ stop-runit:
 
 debian-package-generic:
 	rm -rf build
-	install -m 0755 -d build/$(HAPP)/DEBIAN
-	cat debian/control | sed "s/{{arch}}/`dpkg --print-architecture`/" > build/$(HAPP)/DEBIAN/control
-	chmod 0644 build/$(HAPP)/DEBIAN/control
-	install -m 0644 debian/copyright build/$(HAPP)/DEBIAN
-	install -m 0644 debian/changelog build/$(HAPP)/DEBIAN
-	if [ -e debian/preinst ] ; then install -m 0755 debian/preinst build/$(HAPP)/DEBIAN ; fi
-	if [ -e debian/postinst ] ; then install -m 0755 debian/postinst build/$(HAPP)/DEBIAN ; fi
-	if [ -e debian/prerm ] ; then install -m 0755 debian/prerm build/$(HAPP)/DEBIAN ; fi
-	if [ -e debian/postrm ] ; then install -m 0755 debian/postrm build/$(HAPP)/DEBIAN ; fi
-	make DESTDIR=build/$(HAPP) install-package
-	cd build/$(HAPP) ; find etc -type f | sed 's/etc/\/etc/' > DEBIAN/conffiles
-	chmod 0644 build/$(HAPP)/DEBIAN/conffiles
-	cd build ; fakeroot dpkg-deb -b $(HAPP) .
+	install -m 0755 -d build/$(HPKG)/DEBIAN
+	cat debian/control | sed "s/{{arch}}/`dpkg --print-architecture`/" > build/$(HPKG)/DEBIAN/control
+	chmod 0644 build/$(HPKG)/DEBIAN/control
+	install -m 0644 debian/copyright build/$(HPKG)/DEBIAN
+	install -m 0644 debian/changelog build/$(HPKG)/DEBIAN
+	if [ -e debian/preinst ] ; then install -m 0755 debian/preinst build/$(HPKG)/DEBIAN ; fi
+	if [ -e debian/postinst ] ; then install -m 0755 debian/postinst build/$(HPKG)/DEBIAN ; fi
+	if [ -e debian/prerm ] ; then install -m 0755 debian/prerm build/$(HPKG)/DEBIAN ; fi
+	if [ -e debian/postrm ] ; then install -m 0755 debian/postrm build/$(HPKG)/DEBIAN ; fi
+	make DESTDIR=build/$(HPKG) install-package
+	cd build/$(HPKG) ; find etc -type f | sed 's/etc/\/etc/' > DEBIAN/conffiles
+	chmod 0644 build/$(HPKG)/DEBIAN/conffiles
+	cd build ; fakeroot dpkg-deb -b $(HPKG) .
 
 install-debian: install-preamble stop-systemd clean-systemd install-app install-systemd
 
