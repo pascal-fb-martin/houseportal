@@ -104,6 +104,9 @@ install-ui: install-preamble
 	$(INSTALL) -m 0644 public/* $(DESTDIR)$(SHARE)/public
 	icotool -c -o $(DESTDIR)$(SHARE)/public/favicon.ico favicon.png
 	chmod 644 $(DESTDIR)$(SHARE)/public/favicon.ico
+	$(INSTALL) -m 0644 controlapi.md $(DESTDIR)$(HMAN)/$(HCAT)
+	$(INSTALL) -m 0755 -d $(DESTDIR)/var/lib/house/note/.$(HPKG)/gallery
+	$(INSTALL) -m 0644 gallery/* $(DESTDIR)/var/lib/house/note/.$(HPKG)/gallery
 
 install-runtime: install-preamble
 	$(INSTALL) -m 0644 -T housepostinstall.sh $(DESTDIR)$(SHARE)/postinstall
