@@ -581,10 +581,9 @@ Retrieve all the elements of an array or object. The index array must be large e
 
 ```
 int houseconfig_object (int parent, const char *path);
-int houseconfig_array_object (int parent, int index);
 ```
 
-These functions return the index to a specific object. The first form return a sub-object of the specified parent. The second form returns the Nth object in an array of objects.
+This functions returns the index to the specified object. The returned index can be used to retrieve this object's individual items.
 
 ### Depot Client API (Depositor)
 

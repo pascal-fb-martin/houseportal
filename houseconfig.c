@@ -74,10 +74,10 @@
  *
  *    This function returns the actual length of the array, or -1 on error.
  *
- * int houseconfig_object       (int parent, const char *path);
- * int houseconfig_array_object (int parent, int index);
+ * int houseconfig_object (int parent, const char *path);
  *
- *    Retrieve an object (2nd form: as element of an array).
+ *    Retrieve an object. This returns an index that can be used to retrieve
+ *    the object's individual items.
  * 
  */
 
@@ -256,12 +256,6 @@ int houseconfig_boolean (int parent, const char *path) {
 
 int houseconfig_array (int parent, const char *path) {
     return houseconfig_find(parent, path, PARSER_ARRAY);
-}
-
-int houseconfig_array_object (int parent, int index) {
-    char path[32];
-    snprintf (path, sizeof(path), "[%d]", index);
-    return houseconfig_find(parent, path, PARSER_OBJECT);
 }
 
 int houseconfig_array_length (int array) {
