@@ -59,7 +59,8 @@
  * int         houseconfig_boolean (int parent, const char *path);
  *
  *    Access individual items starting from the specified parent
- *    (the config root is index 0).
+ *    (the config root is index 0). If the path is an empty string,
+ *    the entry being accessed is the parent itself.
  *
  * int houseconfig_array (int parent, const char *path);
  * int houseconfig_array_length (int array);

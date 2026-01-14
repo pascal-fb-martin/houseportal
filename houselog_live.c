@@ -315,6 +315,8 @@ void houselog_trace (const char *file, int line, const char *level,
     safecpy (cursor->object, object, sizeof(cursor->object));
     cursor->unsaved = 1;
 
+    char *description = cursor->description; // Keep a reference for later.
+
     TraceCursor += 1;
     if (TraceCursor >= TRACE_DEPTH) TraceCursor = 0;
     cursor = TraceHistory + TraceCursor;
@@ -333,7 +335,7 @@ void houselog_trace (const char *file, int line, const char *level,
     TraceLatestId += 1;
 
     if (echttp_isdebug())
-        printf ("%s %s, %d: %s %s\n", level, file, line, object, cursor->description);
+        printf ("%s %s, %d: %s %s\n", level, file, line, object, description);
 }
 
 static void houselog_event_new (const char *category,

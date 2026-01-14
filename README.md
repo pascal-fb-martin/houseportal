@@ -564,7 +564,7 @@ int         houseconfig_integer (int parent, const char *path);
 int         houseconfig_boolean (int parent, const char *path);
 ```
 
-These functions return the value of the specified item.
+These functions return the value of the specified item. If the path is an empty string, the entry being accessed is the parent itself.
 
 ```
 int houseconfig_array        (int parent, const char *path);
