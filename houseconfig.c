@@ -66,6 +66,13 @@
  *
  *    Retrieve an array.
  * 
+ * int houseconfig_enumerate (int parent, int *index, int size);
+ *
+ *    Retrieve all the elements of an array or object. The index array
+ *    must be large enough.
+ *
+ *    This function returns the actual length of the array, or -1 on error.
+ *
  * int houseconfig_object       (int parent, const char *path);
  * int houseconfig_array_object (int parent, int index);
  *
@@ -265,5 +272,21 @@ int houseconfig_array_length (int array) {
 
 int houseconfig_object (int parent, const char *path) {
     return houseconfig_find(parent, path, PARSER_OBJECT);
+}
+
+int houseconfig_enumerate (int parent, int *index, int size) {
+
+    int i, length;
+
+    if (parent < 0 || parent >= ConfigTokenCount) return 0;
+    const char *error = echttp_json_enumerate (ConfigParsed+parent, index, size);
+    if (error) {
+        fprintf (stderr, "Cannot enumerate %s: %s\n",
+                 ConfigParsed[parent].key, error);
+        return -1;
+    }
+    length = ConfigParsed[parent].length;
+    for (i = 0; i < length; ++i) index[i] += parent;
+    return length;
 }
 

@@ -574,6 +574,12 @@ int houseconfig_array_length (int array);
 The first function returns the index to the specified array, while the second function returns the number of item (length) of the array referenced by its index.
 
 ```
+int houseconfig_enumerate (int parent, int *index, int size);
+```
+
+Retrieve all the elements of an array or object. The index array must be large enough. This is more efficient that retrieving each element of an array one by one. This is also a way to discover the fields of an "unknown" object. This returns the actual number of elements in the array or object.
+
+```
 int houseconfig_object (int parent, const char *path);
 int houseconfig_array_object (int parent, int index);
 ```

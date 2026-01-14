@@ -38,5 +38,8 @@ int         houseconfig_boolean (int parent, const char *path);
 int houseconfig_array        (int parent, const char *path);
 int houseconfig_array_length (int array);
 
+int houseconfig_enumerate    (int parent, int *index, int size);
+
 int houseconfig_object       (int parent, const char *path);
 int houseconfig_array_object (int parent, int index);
+
