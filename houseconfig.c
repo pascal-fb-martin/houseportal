@@ -56,7 +56,7 @@
  * const char *houseconfig_string  (int parent, const char *path);
  * int         houseconfig_integer (int parent, const char *path);
  * int         houseconfig_positive (int parent, const char *path);
- * double      houseconfig_boolean (int parent, const char *path);
+ * int         houseconfig_boolean (int parent, const char *path);
  *
  *    Access individual items starting from the specified parent
  *    (the config root is index 0).

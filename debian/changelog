@@ -1,3 +1,18 @@
+houseportal (2.10) UNRELEASED; urgency=medium
+
+   * Fix the array size limit issue with echttp_json_enumerate()
+   * Install more documentation
+   * Add support for the standard poll for changes mechanism
+   * 64 bit compatibility fixes
+   * Add generic documentation of the control web API
+   * Add better comments for context
+   * New option -config-name=NAME to allow setting the depot name without enabling local storage
+   * Add shorthand for positive numbers, fix -config option
+   * Support sprinkler style merge
+   * Use a more semantic web UI with better layout.
+
+ -- Pascal Martin <pascal.fb.martin@gmail.com>  Tue, 13 Jan 2026 12:00:00 PDT
+
 houseportal (2.9) UNRELEASED; urgency=medium
 
    * Use a more semantic web UI with better layout.

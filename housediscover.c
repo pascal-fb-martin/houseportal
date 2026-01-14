@@ -198,7 +198,8 @@ static void housediscover_service_response
         houselog_trace (HOUSE_FAILURE, "service", "invalid redirect data");
         return;
     }
-    error = echttp_json_enumerate (DiscoveryTokens+list, DiscoveryInnerList);
+    error = echttp_json_enumerate (DiscoveryTokens+list,
+                                   DiscoveryInnerList, DiscoveryTokensAllocated);
     if (error) {
         houselog_trace (HOUSE_FAILURE, "service", "%s", error);
         return;
@@ -293,7 +294,8 @@ static void housediscover_peers_response (void *origin,
         return;
     }
 
-    error = echttp_json_enumerate (DiscoveryTokens+peers, DiscoveryInnerList);
+    error = echttp_json_enumerate (DiscoveryTokens+peers,
+                                   DiscoveryInnerList, DiscoveryTokensAllocated);
     if (error) {
         DEBUG ("no peers array on portal request: %s\n", error);
         houselog_trace (HOUSE_FAILURE, "peers", "%s", error);

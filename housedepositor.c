@@ -504,7 +504,7 @@ static void housedepositor_scan_response
     if (n <= 0) return;
 
     int innerlist[256];
-    error = echttp_json_enumerate (tokens+files, innerlist);
+    error = echttp_json_enumerate (tokens+files, innerlist, 256);
     if (error) {
         houselog_trace (HOUSE_FAILURE, repository, "bad file list");
         return;
