@@ -82,6 +82,7 @@ install-systemd:
 	$(INSTALL) -m 0755 -d $(DESTDIR)/lib/systemd/system
 	$(INSTALL) -m 0644 -T systemd.service $(DESTDIR)/lib/systemd/system/$(HAPP).service
 	if [ "x$(DESTDIR)" = "x" ] ; then grep -q '^house:' /etc/passwd || useradd -r house -s /usr/sbin/nologin -d /var/lib/house ; systemctl daemon-reload ; systemctl enable $(HAPP) ; systemctl start $(HAPP) ; fi
+	if [ "x$(DESTDIR)" = "x" ] ; then chown -R house:house /etc/house ; fi
 
 uninstall-systemd:
 	if [ "x$(DESTDIR)" = "x" ] ; then if [ -e /etc/init.d/$(HAPP) ] ; then systemctl stop $(HAPP) ; systemctl disable $(HAPP) ; fi ; fi

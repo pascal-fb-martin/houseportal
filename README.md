@@ -494,7 +494,20 @@ This function must be called a regular intervals for background processing.
 
 ### Configuration API
 
-This module provides a simplified API to handle configuration files in JSON format. This API is easier to use than the general purpose echttp JSON API, but it assumes that there is only one JSON context, for a single file which name is specified by the application.
+This module provides a simplified API to handle configuration data in JSON format. This API is easier to use than the general purpose echttp JSON API, but it assumes that there is only one JSON context, for a single file which name is specified by the application.
+
+This module supports two modes:
+
+- In depot mode, the configuration data is stored in a HouseDepot service's repository. When the data changes in the repository, the application's active configuration will automatically be updated.
+- In local file mode, the configuration data is stored in a file on the computer where the application is running. If the content of the local file changes, the application's active configuration will automatically be updated.
+
+The depot mode allows consolidating all configuration data to one location. There are a few benefits:
+
+- Most services can be migrated to another computer without having to handle any configuration file.
+- Multiple instances of the application can share the same configuration. Any configuration change is reflected in all instances automatically.
+- When using Raspberry Pi computers, relying on the HouseDepot for configuration, and on the HouseSaga service for logging, means that there will be no file activity causing the MicroSD card to wear out. Just run the HouseDepot and HouseSaga services on a computer equipped with a standard storage device (SSD or hard drive).
+
+It is possible to use the local configuration file as a fallback method when the HouseDepot service is not available.
 
 The application must include the client header file:
 
@@ -506,12 +519,15 @@ The application must include the client header file:
 void houseconfig_default (const char *arg);
 ```
 
-This function allows the application to define default options. The options consumed by the configuration API are:
+This function allows the application to define its own default options. The options supported are:
 
-* --config=NAME: the name (and path) of the configuration file.
-* --no-local-storage: ignore local configuration files. A depot service must be running when this option is used.
+* `--use-depot-storage`: load the configuration from a HouseDepot service (default).
+* `--use-local-storage`: load the configuration from a local file.
+* `--use-local-fallback`: load the configuration from a HouseDepot service, but save that configuration locally when it changes.
+* `--config=NAME`: the name (and path) of the configuration file. This also enable local storage.
+* `--no-local-storage`: deprecated name for `--use-depot-storage`.
 
-The name provided with the --config option is either a full path (starting with '/') or a path relative to `/etc/house`. If the path is relative, the file extension may also be omitted, in which case ".json" is used. All three examples below are equivalent:
+The name provided with the `--config` option is either a full path (starting with '/') or a path relative to `/etc/house`. If the path is relative, the file extension may also be omitted, in which case ".json" is used. All three examples below are equivalent:
 
 ```
 houseconfig_default ("--config=/etc/house/app.json");
@@ -519,13 +535,31 @@ houseconfig_default ("--config=app.json");
 houseconfig_default ("--config=app");
 ```
 
-An application must call houseconfig_default() so that the default name of the configuration file matches the name of the application. It is recommended to always use the shortest form (see third example above), to keep the default file path consistent between applications, and defined only once. However an application may use an alternate scheme if needed.
+The logic applied when the `--use-local-fallback` option has been selected works as follow:
+
+- The application normally loads its configuration from a depot service.
+- If the application has not been able to load a (valid) configuration from a depot after 2 minutes, it loads the configuration from the local file instead.
+- The application keeps attempting to discover a configuration from a depot service. If a depot service appears later on, the configuration from the depot will be loaded.
+- The local configuration file serving as fallback is updated whenever the configuration changes.
+
+This `--use-local-fallback` option is a way to use the local configuration file as a backup method if HouseDepot has failed.
+
+When using the `--use-local-storage` or `--config` option, the application will check the content of the configuration file every 10 seconds. If the content does not match the current configuration, the file is reloaded. This makes it possible to change the application's configuration without restarting it. This is useful when the application has no user interface for changing its configuration.
 
 ```
-const char *houseconfig_load (int argc, const char **argv);
+typedef void ConfigListener (void);
+const char *houseconfig_initialize (const char *name, ConfigListener *update,
+                                    int argc, const char **argv);
 ```
 
-This function loads the existing configuration. This is called on application startup. The argc and argv parameters should represent the command line arguments. See houseconfig_default() for a description of the command line options supported.
+This function initializes the configuration module. This is called on application startup. The argc and argv parameters should represent the command line arguments. See `houseconfig_default()` above for a description of the command line options supported. If the local storage mode was selected, this loads the existing configuration.
+
+The `name` parameter must represent the name of the application, and is used to build up the application's configuration name (by happending ".json"). By convention, an application "houseabcd" must be named "abcd" here (the "house" prefix should be omitted).
+
+> [!NOTE]
+> There is no command line option to change the name of the configuration as used with the HouseDepot repository. If one wants to use multiple different configurations for different instances of the same application, use the `--group` option.
+
+The `update` function is a callback that is triggered when a new valid configuration was loaded. The purpose of this callback is to activate the new configuration within the application.
 
 ```
 int houseconfig_active (void);
@@ -547,10 +581,22 @@ This function returns the base name of the configuration. This is typically
 used when interfacing with the HomeDepot service.
 
 ```
-const char *houseconfig_update (const char *text);
+const char *houseconfig_update (const char *text, const char *reason);
+const char *houseconfig_save   (const char *text, const char *reason);
 ```
 
-This function provides a replacement configuration. This is typically used after the user edited and posted a new configuration. The module first proceed with the decoding of the JSON data. If successful, the string is saved to the configuration file. On return the application can then start accessing and applying the new configuration.
+These two functions update the current configuration. This is typically used after the user has edited and posted a new configuration using the application's own user interface. The `reason` parameter is used in events, to identify what caused the update. That parameter can be null or an empty string.
+
+The JSON data is decoded first. If successful, the configuration is saved to the depot service or to the local configuration file.
+
+The houseconfig_update() function also activates the new configuration, while the houseconfig_save() does not. The later is to be used when the new configuration is already active.
+
+There are two functions mostly because there are two different web API styles for applying configuration changes:
+
+- The web request is a POST that provides a complete new configuration data. In that case houseconfig_update() should be used.
+- The web request is a GET that changes one individual item in the configuration. That change is applied live first, then houseconfig_save() is called to update the permanent storage (depot service or file).
+
+There is yet another use case for houseconfig_save(), when part of the configuration is automatically detected, and activated. For example, some smart switches or bulbes can be discovered on the network. They are automatically added to the configuration so that the user may edit their name or some location information. It would be inconvenient for the user to have to type the whole configuration manually, as a portion of it is a hardware ID or MAC address that is not really know in advance, and sometime cannot be obtained without monitoring the network.
 
 ```
 int houseconfig_find (int parent, const char *path, int type);
@@ -583,7 +629,13 @@ Retrieve all the elements of an array or object. The index array must be large e
 int houseconfig_object (int parent, const char *path);
 ```
 
-This functions returns the index to the specified object. The returned index can be used to retrieve this object's individual items.
+This function returns the index to the specified object. The returned index can be used to retrieve this object's individual items.
+
+```
+void houseconfig_background (time_t now);
+```
+
+This function must be called periodically.
 
 ### Depot Client API (Depositor)
 

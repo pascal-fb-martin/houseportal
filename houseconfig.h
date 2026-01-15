@@ -20,13 +20,17 @@
  */
 
 void        houseconfig_default (const char *arg);
-const char *houseconfig_load (int argc, const char **argv);
+
+typedef void ConfigListener (void);
+const char *houseconfig_initialize (const char *name, ConfigListener *update,
+                                    int argc, const char **argv);
 
 int         houseconfig_active (void);
 const char *houseconfig_current (void);
 const char *houseconfig_name (void);
 
-const char *houseconfig_update (const char *text);
+const char *houseconfig_update (const char *text, const char *reason);
+const char *houseconfig_save   (const char *text, const char *reason);
 
 int houseconfig_find (int parent, const char *path, int type);
 
@@ -41,4 +45,6 @@ int houseconfig_array_length (int array);
 int houseconfig_enumerate    (int parent, int *index, int size);
 
 int houseconfig_object       (int parent, const char *path);
+
+void houseconfig_background (time_t now);
 
