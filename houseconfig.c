@@ -26,7 +26,7 @@
  *
  *    Set a hardcoded default for a command line option.
  *
- * typedef void ConfigListener (void);
+ * typedef const char *ConfigListener (void);
  * const char *houseconfig_initialize (const char *name, ConfigListener *update,
  *                                     int argc, const char **argv);
  *
@@ -47,6 +47,8 @@
  *
  *    The update callback will be called everytime a new configuration has
  *    been loaded. The application can then activate the new configuration.
+ *    This callback should return 0 on success, or a pointer to an error
+ *    message otherwise.
  *
  * const char *houseconfig_name (void);
  *
@@ -176,8 +178,14 @@ static const char *houseconfig_parse (void) {
     // The new proposed config is in service now.
     if (ConfigTextCurrent) free (ConfigTextCurrent);
     ConfigTextCurrent = proposedconfig;
-    if (ConfigCallback) ConfigCallback();
 
+    if (ConfigCallback) {
+        const char *error = ConfigCallback();
+        if (error) {
+            houselog_event ("CONFIG", AppName, "INVALID", "%s", error);
+            return error;
+        }
+    }
     return 0;
 }
 

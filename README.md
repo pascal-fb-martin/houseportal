@@ -547,7 +547,7 @@ This `--use-local-fallback` option is a way to use the local configuration file 
 When using the `--use-local-storage` or `--config` option, the application will check the content of the configuration file every 10 seconds. If the content does not match the current configuration, the file is reloaded. This makes it possible to change the application's configuration without restarting it. This is useful when the application has no user interface for changing its configuration.
 
 ```
-typedef void ConfigListener (void);
+typedef const char *ConfigListener (void);
 const char *houseconfig_initialize (const char *name, ConfigListener *update,
                                     int argc, const char **argv);
 ```
@@ -555,6 +555,8 @@ const char *houseconfig_initialize (const char *name, ConfigListener *update,
 This function initializes the configuration module. This is called on application startup. The argc and argv parameters should represent the command line arguments. See `houseconfig_default()` above for a description of the command line options supported. If the local storage mode was selected, this loads the existing configuration.
 
 The `name` parameter must represent the name of the application, and is used to build up the application's configuration name (by happending ".json"). By convention, an application "houseabcd" must be named "abcd" here (the "house" prefix should be omitted).
+
+The callback should return 0 on success, or the pointer to an error message otherwise. The config module will generate an event when an error is returned.
 
 > [!NOTE]
 > There is no command line option to change the name of the configuration as used with the HouseDepot repository. If one wants to use multiple different configurations for different instances of the same application, use the `--group` option.

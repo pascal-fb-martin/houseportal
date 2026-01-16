@@ -21,7 +21,7 @@
 
 void        houseconfig_default (const char *arg);
 
-typedef void ConfigListener (void);
+typedef const char *ConfigListener (void);
 const char *houseconfig_initialize (const char *name, ConfigListener *update,
                                     int argc, const char **argv);
 
