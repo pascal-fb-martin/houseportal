@@ -81,9 +81,10 @@
  *    Initial state load when the software starts.
  *
  *    This function consumes the following command line options:
- *    -backup=STRING         Set the name of the backup configuration file.
- *    -use-local-storage     Use a local configuration file.
- *    -no-local-storage      Do not use a local configuration file (default).
+ *    -backup=STRING         Set the name of the local backup data file.
+ *    -use-local-storage     Use a local backup data file.
+ *    -use-depot-storage     Get the backup data from a depot service (default).
+ *    -no-local-storage      Same as above, deprecated.
  *
  * void housedepositor_state_background (time_t now);
  *
@@ -261,6 +262,10 @@ void housedepositor_state_load (const char *app, int argc, const char **argv) {
         if (echttp_option_match ("-backup=", argv[i], &BackupFile)) continue;
         if (echttp_option_present ("-use-local-storage", argv[i])) {
             StateFileEnabled = 1;
+            continue;
+        }
+        if (echttp_option_present ("-use-depot-storage", argv[i])) {
+            StateFileEnabled = 0;
             continue;
         }
         if (echttp_option_present ("-no-local-storage", argv[i])) {
