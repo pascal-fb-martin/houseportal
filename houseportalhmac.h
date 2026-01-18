@@ -24,3 +24,5 @@
 const char *houseportalhmac (const char *cypher,
                              const char *hexkey, const char *data);
 
+int houseportalhmac_size (const char *cypher);
+

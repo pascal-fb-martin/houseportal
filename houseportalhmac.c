@@ -29,6 +29,10 @@
  *
  *    Return a signature as a hex string (static), or null if error.
  *
+ * int houseportalhmac_size (const char *cypher);
+ *
+ *    Return the size of a signature for the specified cypher.
+ *
  * LIMITATIONS:
  *
  * Only supports SHA-256 for the time being.
@@ -97,6 +101,14 @@ const char *houseportalhmac (const char *cypher,
             return signature;
         }
         return 0;
+    }
+    return 0;
+}
+
+int houseportalhmac_size (const char *cypher) {
+
+    if (strcmp(cypher, "SHA-256") == 0) {
+        return 8; // See above.
     }
     return 0;
 }

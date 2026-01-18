@@ -404,7 +404,7 @@ static void AddPeers (int live, char **token, int count) {
             // Extract the sender's expiration time.
             char *s = strchr (token[i], '=');
             if (s) {
-                expiration = atol(s+1);
+                expiration = atoll(s+1);
                 *s = 0;
             }
         }
@@ -429,12 +429,12 @@ static void DetectExpiredPeers (time_t now) {
 static void DecodeMessage (char *buffer, int live) {
 
     int i, start, count;
-    char *token[16];
+    char *token[REDIRECT_MAX];
 
     // Split the line
     for (i = start = count = 0; buffer[i] >= ' '; ++i) {
         if (buffer[i] == ' ') {
-            if (count >= 14) {
+            if (count >= REDIRECT_MAX) {
                 houselog_trace (HOUSE_WARNING, "HousePortal",
                                 "Too many tokens at %s", buffer+i);
                 if (!live) exit(1);
@@ -622,19 +622,31 @@ static void hp_redirect_publish (time_t now) {
     int i;
     int length;
     char buffer[1400];
+    int size = sizeof(buffer);
 
-    snprintf (buffer, sizeof(buffer), "PEER %ld", now);
-    length = strlen(buffer);
+    if (IntermediateDecodeLength) {
+        // Reserve enought room for the upcoming HMAC signature.
+        size -= houseportalhmac_size (IntermediateDecode[0].method) + 2;
+    }
+
+    length = snprintf (buffer, size, "PEER %lld", (long long)now);
 
     for (i = 0; i < PeerCount; ++i) {
         time_t expiration = Peers[i].expiration;
+        int vested = length;
         if (expiration >= now)
-            snprintf (buffer+length, sizeof(buffer)-length,
-                      " %s=%ld", Peers[i].name, (long)expiration);
+            length +=
+                snprintf (buffer+length, size-length,
+                          " %s=%lld", Peers[i].name, (long long)expiration);
         else if (!expiration)
-            snprintf (buffer+length, sizeof(buffer)-length,
-                      " %s", Peers[i].name);
-        length += strlen(buffer+length);
+            length += snprintf (buffer+length, size-length,
+                                " %s", Peers[i].name);
+        if (length >= size) {
+            // The buffer is too small: revert to the last good item and stop.
+            length = vested;
+            buffer[vested] = 0;
+            break;
+        }
     }
 
     if (IntermediateDecodeLength) {
@@ -643,9 +655,8 @@ static void hp_redirect_publish (time_t now) {
                              IntermediateDecode[0].value,
                              buffer);
         if (!signature) return;
-        snprintf (buffer+length, sizeof(buffer)-length,
-                  " %s %s", IntermediateDecode[0].method, signature);
-        length += strlen(buffer+length);
+        length += snprintf (buffer+length, sizeof(buffer)-length,
+                            " %s %s", IntermediateDecode[0].method, signature);
     }
 
     // There are two ways of publishing:
@@ -698,10 +709,9 @@ void hp_redirect_background (void) {
 
 static int hp_redirect_preamble (time_t now, char *buffer, int size) {
 
-    snprintf (buffer, size,
-             "{\"host\":\"%s\",\"timestamp\":%lld,\"portal\":{",
-             HostName, (long long)now);
-    return strlen(buffer);
+    return snprintf (buffer, size,
+                     "{\"host\":\"%s\",\"timestamp\":%lld,\"portal\":{",
+                     HostName, (long long)now);
 }
 
 void hp_redirect_list_json (int services, char *buffer, int size) {
@@ -717,8 +727,7 @@ void hp_redirect_list_json (int services, char *buffer, int size) {
     length = hp_redirect_preamble (now, buffer, size);
     cursor = buffer + length;
 
-    int delta = snprintf (cursor, size-length, "\"redirect\":[");
-    length += delta;
+    length += snprintf (cursor, size-length, "\"redirect\":[");
     cursor = buffer + length;
 
     for (i = 0; i < RedirectionCount; ++i) {
@@ -764,8 +773,7 @@ void hp_redirect_peers_json (char *buffer, int size) {
     length = hp_redirect_preamble (now, buffer, size);
     cursor = buffer + length;
 
-    snprintf (cursor, size-length, "\"peers\":[");
-    length += strlen(cursor);
+    length += snprintf (cursor, size-length, "\"peers\":[");
     cursor = buffer + length;
 
     for (i = 0; i < PeerCount; ++i) {
@@ -774,8 +782,8 @@ void hp_redirect_peers_json (char *buffer, int size) {
 
         if (expiration && expiration <= now) continue;
 
-        snprintf (cursor, size-length, "%s\"%s\"", prefix, Peers[i].name);
-        length += strlen(cursor);
+        length +=
+            snprintf (cursor, size-length, "%s\"%s\"", prefix, Peers[i].name);
         prefix = ",";
         cursor = buffer + length;
     }
@@ -796,9 +804,8 @@ void hp_redirect_service_json (const char *name, char *buffer, int size) {
     length = hp_redirect_preamble (now, buffer, size);
     cursor = buffer + length;
 
-    snprintf (cursor, size-length,
-              "\"service\":{\"name\":\"%s\",\"url\":[", name);
-    length += strlen(cursor);
+    length += snprintf (cursor, size-length,
+                        "\"service\":{\"name\":\"%s\",\"url\":[", name);
     cursor = buffer + length;
 
     if (port == 80) {
@@ -817,9 +824,8 @@ void hp_redirect_service_json (const char *name, char *buffer, int size) {
         if (!Redirections[i].service) continue;
         if (strcmp(Redirections[i].service, name)) continue;
 
-        snprintf (cursor, size-length, "%s\"http://%s%s\"",
-                  prefix, hostaddress, Redirections[i].path);
-        length += strlen(cursor);
+        length += snprintf (cursor, size-length, "%s\"http://%s%s\"",
+                            prefix, hostaddress, Redirections[i].path);
         prefix = ",";
         cursor = buffer + length;
     }
