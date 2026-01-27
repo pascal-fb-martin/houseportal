@@ -186,8 +186,8 @@ static void PruneRedirect (time_t now) {
     DEBUG {
         printf ("After pruning:\n");
         for (i = 0; i < RedirectionCount; ++i) {
-            printf ("REDIRECT %ld%s %s -> %s\n",
-                    Redirections[i].expiration,
+            printf ("REDIRECT %lld%s %s -> %s\n",
+                    (long long)(Redirections[i].expiration),
                     Redirections[i].hide?" HIDE":"",
                     Redirections[i].path,
                     Redirections[i].target);
@@ -376,7 +376,7 @@ static void AddOnePeer (const char *name, time_t expiration) {
                                     (existing == 1)?"AFTER":"BEFORE");
                 }
                 Peers[i].expiration = expiration;
-                DEBUG printf ("Peer %s updated to %ld\n", name, expiration);
+                DEBUG printf ("Peer %s updated to %lld\n", name, (long long)expiration);
             }
             return;
         }
