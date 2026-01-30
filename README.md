@@ -54,7 +54,9 @@ These static declarations never expire.
 
 ## Security
 
-A simple form of security is possible by accepting only local UDP packets, i.e. HousePortal to bind its UDP socket to IP address 127.0.0.1. This is typically used when all local applications are trusted, usually because the local machine's access is strictly restricted. That mode is activated when the LOCAL keyword is present in the HousePortal configuration at the time HousePortal starts:
+A simple and brutal form of security is possible by accepting only local UDP packets, i.e. HousePortal to bind its UDP sockets to the looopback interface only (e.g. IP v4 address 127.0.0.1). This is typically used when no remote server is trusted but all local applications are trusted, usually because the local machine's access is strictly restricted. This mode is only useful when no local application need to discover remote services.
+
+That mode is activated when the LOCAL keyword is present in the HousePortal configuration at the time HousePortal starts:
 
        'LOCAL'
 
@@ -64,7 +66,7 @@ To support security in an open access network, the use of cryptographic signatur
 
 Where the key is an hexadecimal string (64 bytes) that must be used by clients when computing their signature. The SIGN keyword may be used multiple times: HousePortal will try to use each key matching the cypher used by the client until the source has been authenticated successfully. If no match was found, for any reason, the packet is ignored. It is valid to declare a key for an unknown cypher, but it will never get used.
 
-It is valid to combine both the local mode and cryptographic authentication. This is typically used if multiple users have access to the host and the outside network is not trusted at all.
+It is valid to combine both the local mode and cryptographic authentication. This could be used if multiple users have access to the host and the outside network is not trusted at all.
 
 If no cryptographic key is provided, HousePortal will accept all redirection messages, with or without signature. If at least one cryptographic key is provided, HousePortal will require every redirection message to be signed: if no signature matches, or if no key is applicable to the provided root path, the redirection message is ignored.
 
