@@ -38,7 +38,6 @@ void hp_redirect_background (void);
 
 int  hp_udp_server (const char *service, int local, int *sockets, int size);
 int  hp_udp_receive (int socket, char *buffer, int size);
-int  hp_udp_has_broadcast (void);;
 void hp_udp_response (const char *data, int length);
 void hp_udp_broadcast (const char *data, int length);
 void hp_udp_unicast (const char *destination, const char *data, int length);

@@ -56,11 +56,6 @@
  *    the packet multiple times if the destination name matches multiple
  *    addresses, including IPv4 and IPv6 addresses.
  *
- * int hp_udp_has_broadcast (void);
- *
- *    Return true if there is a broadcast socket available, or false
- *    otherwise.
- *
  * LIMITATIONS:
  *
  * Require an IPv4 addresses for broadcast.
@@ -95,6 +90,8 @@ struct UdpSocketInterface {
 #define UDPBROADCAST_MAX 16
 static struct UdpSocketInterface UdpBroadcast[UDPBROADCAST_MAX];
 static int UdpBroadcastCount = 0;
+
+static int UdpBroadcastNeeded = 0;
 
 static int UdpSockets[2] = {-1, -1}; // 0: IPv4 (mandatory), 1: IPv6 (optional)
 
@@ -150,9 +147,11 @@ static int hp_udp_socket (const char *interface, int family,
 //
 static void hp_udp_enumerate (const char *service) {
 
+    int firsttime = (UdpBroadcastCount <= 0);
+
     int i;
     for (i = 0; i < UdpBroadcastCount; ++i) {
-       close (UdpSockets[i]);
+       close (UdpBroadcast[i].socket);
     }
     UdpBroadcastCount = 0;
 
@@ -208,9 +207,14 @@ static void hp_udp_enumerate (const char *service) {
         }
         UdpBroadcast[i].address.sin_port = UdpPort;
 
-        houselog_trace (HOUSE_INFO, "HousePortal",
-                        "UDP broadcast is open on %s", cursor->ifa_name);
-
+        if (firsttime) {
+            houselog_trace (HOUSE_INFO, "HousePortal",
+                            "UDP broadcast socket %d is open on %s",
+                            s, cursor->ifa_name);
+        } else {
+            DEBUG printf ("UDP broadcast socket %d is open on %s\n",
+                          s, cursor->ifa_name);
+        }
         if (++UdpBroadcastCount >= UDPBROADCAST_MAX) break;
     }
     freeifaddrs(cards);
@@ -271,8 +275,8 @@ static int hp_udp_listen (const char *service, int local) {
         count += 1;
 
         houselog_trace (HOUSE_INFO, "HousePortal",
-                        "Unicast UDP port %s is open (%s)",
-                        service, (family==AF_INET6)?"ipv6":"ipv4");
+                        "Unicast UDP socket %d, port %s is open (%s)",
+                        s, service, (family==AF_INET6)?"ipv6":"ipv4");
     }
     freeaddrinfo(resolved);
     return count;
@@ -297,6 +301,7 @@ int hp_udp_server (const char *service, int local, int *sockets, int size) {
     }
 
     if (!local) {
+        UdpBroadcastNeeded = 1;
         hp_udp_enumerate (service);
     }
 
@@ -306,16 +311,16 @@ int hp_udp_server (const char *service, int local, int *sockets, int size) {
 }
 
 
-int hp_udp_has_broadcast (void) {
-    return (UdpBroadcastCount >= 0);
-}
-
 int hp_udp_receive (int socket, char *buffer, int size) {
 
     return recvfrom (socket, buffer, size, 0, 0, 0);
 }
 
 void hp_udp_broadcast (const char *data, int length) {
+
+    if (!UdpBroadcastNeeded) return;
+
+    hp_udp_enumerate (UdpService); // The list of interfaces may have changed.
 
     int i;
     for (i = 0; i < UdpBroadcastCount; ++i) {

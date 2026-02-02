@@ -594,7 +594,7 @@ static void hp_redirect_udp (int fd, int mode) {
     }
 }
 
-static void hp_redirect_open(void) {
+static void hp_redirect_open (void) {
 
     int count;
 
@@ -618,6 +618,8 @@ static void hp_redirect_open(void) {
 }
 
 static void hp_redirect_publish (time_t now) {
+
+    if (RestrictUdp2Local) return;
 
     int i;
     int length;
@@ -680,11 +682,11 @@ void hp_redirect_background (void) {
     struct stat fileinfo;
 
     if (now > LastCheck + 30) {
+
+        // Keep reinitializing the UDP ports until it succeeds.
+        if (PortalUdpPointsCount <= 0) hp_redirect_open ();
+
         int pruned = 0;
-        if (!RestrictUdp2Local && !hp_udp_has_broadcast()) {
-            hp_redirect_open();
-            return;
-        }
         if (stat (ConfigurationPath, &fileinfo) == 0) {
             if (ConfigurationTime != fileinfo.st_mtim.tv_sec) {
                 houselog_trace (HOUSE_INFO, "HousePortal",
@@ -700,7 +702,7 @@ void hp_redirect_background (void) {
                             "Cannot stat %s", ConfigurationPath);
         }
         if (!pruned) PruneRedirect (now);
-        if (!RestrictUdp2Local) hp_redirect_publish (now);
+        hp_redirect_publish (now);
         LastCheck = now;
     }
 
@@ -859,6 +861,6 @@ void hp_redirect_start (int argc, const char **argv) {
     }
     LoadConfig (ConfigurationPath);
 
-    hp_redirect_open();
+    hp_redirect_open ();
 }
 
