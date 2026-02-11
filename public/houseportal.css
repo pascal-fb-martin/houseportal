@@ -1,0 +1,12 @@
+.servicegrid {
+   display: grid;
+   grid-template-columns: repeat(8, minmax(100px, 1fr));
+   gap: 5px;
+   text-align: left;
+}
+
+.serviceitem {
+   padding: 5px;
+   text-align: center;
+}
+

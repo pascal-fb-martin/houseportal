@@ -2,6 +2,7 @@
 <html>
 <head>
 <link rel=stylesheet type="text/css" href="/house.css" title="House">
+<link rel=stylesheet type="text/css" href="/houseportal.css" title="House">
 <script>
 
 var PortalKnownPeers = null;
@@ -16,20 +17,19 @@ function compareService (a, b) {
 
 function portalShowServices (address, response) {
 
-   var table = document.getElementById ('services-'+address);
-   if (!table) return;
+   var grid = document.getElementById ('services-'+address);
+   if (!grid) return;
 
-   for (var i = table.rows.length - 1; i >= 0; i--) {
-       table.deleteRow(i);
-   }
+   grid.replaceChildren();
 
    var services =
        response ? response.portal.redirect.sort(compareService) : new Array();
-   var outer = table.insertRow (-1);
+
    for (var i = 0; i < services.length; i++) {
         var service = services[i];
 
-        var inner = document.createElement("td");
+        var item = document.createElement("div");
+        item.className = 'serviceitem';
         var label = document.createElement("a");
         label.innerHTML = service.path.substring(1); // Skip the leading '/'.
         if (service.hide) {
@@ -40,8 +40,8 @@ function portalShowServices (address, response) {
             label.href = 'http://'+address+service.path+'/index.html';
         }
         label.target = '_blank';
-        inner.appendChild(label);
-        outer.appendChild(inner);
+        item.appendChild(label);
+        grid.appendChild(item);
    }
 }
 
@@ -120,10 +120,10 @@ function portalPeersUpdate (peers) {
             outer.appendChild(inner);
 
             inner = document.createElement("td");
-            table2 = document.createElement("table");
-            table2.id = "services-"+peers[i];
-            table2.style = "border-spacing: 60px 10px";
-            inner.appendChild(table2);
+            var grid = document.createElement("div");
+            grid.id = 'services-'+peers[i];
+            grid.className = 'servicegrid';
+            inner.appendChild(grid);
             outer.appendChild(inner);
         }
     }
