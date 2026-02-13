@@ -92,7 +92,7 @@ static char LocalHost[256] = {0};
 //
 struct EventRecord {
     struct timeval timestamp;
-    int    unsaved;
+    int    unsaved;           // 0: saved, 1: to be saved, 2: being saved.
     char   category[32];
     char   object[32];
     char   action[16];
@@ -319,10 +319,9 @@ void houselog_trace (const char *file, int line, const char *level,
 
     TraceCursor += 1;
     if (TraceCursor >= TRACE_DEPTH) TraceCursor = 0;
+    houselog_trace_flush (); // Try to save traces asap.
+
     cursor = TraceHistory + TraceCursor;
-    if ((cursor->timestamp.tv_sec) && (cursor->unsaved)) {
-        houselog_trace_flush (); // Send for storage before deleting.
-    }
     cursor->timestamp.tv_sec = 0;
     cursor->unsaved = 0;
 

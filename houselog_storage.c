@@ -43,17 +43,38 @@
 
 #define DEBUG if (echttp_isdebug()) printf
 
-struct PendingRequest {
+struct PendingContext {
     const char *logtype;
     char       *data;
     int         length;
-    int         count;
+    int         busy;
 };
+
+#define REQUESTSMAX 8
+static struct PendingContext StoragePendingRequests[REQUESTSMAX];
+static int                   StoragePendingRequestsCount = 0;
+
+static struct PendingContext *houselog_storage_start (const char *logtype) {
+
+    int i;
+    for (i = 0; i < StoragePendingRequestsCount; ++i) {
+        if (strcmp (logtype, StoragePendingRequests[i].logtype)) continue;
+        if (StoragePendingRequests[i].busy > 0) return 0;
+        return StoragePendingRequests + i;
+    }
+    // New log type.
+    if (StoragePendingRequestsCount >= REQUESTSMAX) return 0; // Filled up.
+    StoragePendingRequests[i].logtype = strdup (logtype);
+    StoragePendingRequests[i].busy = 0;
+    StoragePendingRequestsCount += 1;
+
+    return StoragePendingRequests + i;
+}
 
 static void houselog_storage_response
                 (void *context, int status, char *data, int length) {
 
-   struct PendingRequest *request = (struct PendingRequest *)context;
+   struct PendingContext *request = (struct PendingContext *)context;
 
    status = echttp_redirected("POST");
    if (!status) {
@@ -62,9 +83,9 @@ static void houselog_storage_response
        return;
    }
 
-   if ((--request->count) <= 0) { // Last response
+   if ((--request->busy) <= 0) { // Last response
        free (request->data);
-       free (request);
+       request->data = 0;
    }
 }
 
@@ -73,7 +94,7 @@ static void houselog_storage_send
 
     DEBUG ("Sendig data to %s\n", provider);
 
-    struct PendingRequest *request = (struct PendingRequest *)context;
+    struct PendingContext *request = (struct PendingContext *)context;
     char url[1024];
     snprintf (url, sizeof(url), "%s/log/%s", provider, request->logtype);
 
@@ -83,26 +104,25 @@ static void houselog_storage_send
     echttp_content_type_json();
     echttp_submit (request->data, request->length,
                    houselog_storage_response, context);
-    request->count += 1;
+    request->busy += 1;
 }
 
 int houselog_storage_flush (const char *logtype, const char *data) {
 
     DEBUG ("Flushing: %s\n", data);
 
-    struct PendingRequest *request = malloc (sizeof(struct PendingRequest));
+    struct PendingContext *request = houselog_storage_start (logtype);
+    if (!request) return 0; // Cannot do it for now.
 
-    request->logtype = logtype;
     request->data = strdup (data);
     request->length = strlen(request->data);
-    request->count = 0;
 
     housediscovered ("history", request, houselog_storage_send);
-    if (request->count) return 1; // Pending.
+    if (request->busy) return 1; // Pending.
 
     // No request was issued: no service is available. Cancel the request.
     free (request->data);
-    free (request);
+    request->data = 0;
     return 0;
 }
 
