@@ -471,7 +471,9 @@ static void housedepositor_scan_response
     }
     
     if (status != 200) {
-        houselog_trace (HOUSE_FAILURE, repository, "HTTP code %d", status);
+        if (status != 404)
+           houselog_trace (HOUSE_FAILURE, repository,
+                           "HTTP code %d: %s", status, echttp_reason());
         return;
     }
     DEBUG ("response to scan of %s: %s\n", repository, data);
