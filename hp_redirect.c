@@ -66,7 +66,7 @@
 #include "houseportalhmac.h"
 
 
-static const char *NamedCluster = 0;
+static char *NamedCluster = 0;
 
 static const char *ConfigurationPath = "/etc/house/portal.config";
 static time_t ConfigurationTime = 0;
@@ -138,11 +138,14 @@ static const HttpRedirection *SearchBestRedirect (const char *path) {
     return found;
 }
 
-static void DeprecatePermanentConfiguration (void) {
+static void DeprecateCurrentConfiguration (void) {
     int i;
 
     for (i = 0; i < RedirectionCount; ++i) {
-        if (Redirections[i].expiration == 0) Redirections[i].expiration = 1;
+        Redirections[i].expiration = 1;
+    }
+    for (i = 1; i < PeerCount; ++i) { // Don't deprecate ourself.
+        Peers[i].expiration = 1;
     }
     for (i = 0; i < IntermediateDecodeLength; ++i) {
         if (IntermediateDecode[i].method) {
@@ -156,6 +159,10 @@ static void DeprecatePermanentConfiguration (void) {
     }
     IntermediateDecodeLength = 0;
     RestrictUdp2Local = 0;
+    if (NamedCluster) {
+        free (NamedCluster);
+        NamedCluster = 0;
+    }
 }
 
 static void PruneRedirect (time_t now) {
@@ -379,6 +386,8 @@ static void AddOnePeer (const char *name, time_t expiration) {
                 }
                 Peers[i].expiration = expiration;
                 DEBUG printf ("Peer %s updated to %lld\n", name, (long long)expiration);
+            } else if (!expiration) {
+                Peers[i].expiration = 0; // Made permanent.
             }
             return;
         }
@@ -735,7 +744,7 @@ void hp_redirect_background (void) {
                 houselog_trace (HOUSE_INFO, "HousePortal",
                                 "Configuration file %s changed",
                                 ConfigurationPath);
-                DeprecatePermanentConfiguration();
+                DeprecateCurrentConfiguration();
                 LoadConfig (ConfigurationPath);
                 PruneRedirect (now+3000); // Force immediate expiration.
                 pruned = 1;
