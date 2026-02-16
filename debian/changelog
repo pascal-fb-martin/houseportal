@@ -1,3 +1,18 @@
+houseportal (2.11) UNRELEASED; urgency=medium
+
+   * Allow separate systems to coexist on the same network (named clusters)
+   * Avoid overlapping storage requests, store traces as soon as possible
+   * HTTP code 404 is not a bug or failure
+   * Use CSS grid for services (better layout in index.html)
+   * Add support for multi-homed configurations and hotplugs networks
+   * Fix time size mismatch
+   * Remove the limit to 14 services, handle buffer overflow
+   * Manage the depot API in houseconfig.c
+   * More consistent rules between depot and local file storage
+   * A faster API to walkthrough JSON or XML arrays and objects
+
+ -- Pascal Martin <pascal.fb.martin@gmail.com>  Tue, 15 Feb 2026 12:00:00 PDT
+
 houseportal (2.10) UNRELEASED; urgency=medium
 
    * Fix the array size limit issue with echttp_json_enumerate()
