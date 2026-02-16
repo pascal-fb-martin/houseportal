@@ -66,6 +66,8 @@
 #include "houseportalhmac.h"
 
 
+static const char *NamedCluster = 0;
+
 static const char *ConfigurationPath = "/etc/house/portal.config";
 static time_t ConfigurationTime = 0;
 static int RestrictUdp2Local = 0;
@@ -399,6 +401,7 @@ static void AddPeers (int live, char **token, int count) {
     time_t default_expiration = (live)?time(0)+REDIRECT_LIFETIME:0;
 
     for (i = 0; i < count; ++i) {
+        if (*(token[i]) == '!') continue; // Protect against pre-cluster code
         time_t expiration = default_expiration;
         if (live) {
             // Extract the sender's expiration time.
@@ -470,7 +473,31 @@ static void DecodeMessage (char *buffer, int live) {
             if (!live) exit(1);
             return;
         }
-        AddPeers (live, token+live+1, count-1); // remove the keyword
+
+        if (*(token[1]) == '!') {
+
+            if (!live) return; // A cluster name is invalid for static peers.
+
+            // The remote server is part of a named cluster: ignore this if
+            // the local server is part of the anonymous cluster or part
+            // of a different named cluster.
+            if (!NamedCluster || strcmp (token[1]+1, NamedCluster)) return;
+
+            // Skip the cluster name item.
+            count -= 1;
+            live += 1;
+            if (count < 2) {
+                houselog_trace (HOUSE_WARNING, "HousePortal",
+                                "Incomplete cluster peer (%d argument)", count);
+                return;
+            }
+        } else if (live) {
+            // Ignore the anonymous cluster when part of a named one.
+            // (This does not apply to static peers.)
+            if (NamedCluster) return;
+        }
+
+        AddPeers (live, token+live+1, count-1); // Skip the 'PEER' keyword
 
     } else if (live) {
 
@@ -490,6 +517,19 @@ static void DecodeMessage (char *buffer, int live) {
             IntermediateDecode[index].value = strdup(token[2]);
             DEBUG printf ("%s signature key\n", token[1]);
             houselog_event ("SYSTEM", "HousePortal", "SET", "SIGNATURE");
+        }
+
+    } else if (strcmp("CLUSTER", token[0]) == 0) {
+
+        if (count >= 2) {
+            if (*(token[1]) == '!') {
+                houselog_event ("SYSTEM", "HousePortal",
+                                "INVALID", "CLUSTER NAME %s", token[1]);
+                return;
+            }
+            NamedCluster = strdup (token[1]);
+            houselog_event ("SYSTEM", "HousePortal",
+                            "SET", "CLUSTER TO %s", NamedCluster);
         }
 
     } else {
@@ -632,6 +672,9 @@ static void hp_redirect_publish (time_t now) {
     }
 
     length = snprintf (buffer, size, "PEER %lld", (long long)now);
+
+    if (NamedCluster)
+        length += snprintf (buffer+length, size-length, " !%s", NamedCluster);
 
     for (i = 0; i < PeerCount; ++i) {
         time_t expiration = Peers[i].expiration;

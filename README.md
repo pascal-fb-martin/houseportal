@@ -20,6 +20,8 @@ This makes HousePortal a discovery service that is compatible with the HTTP prot
 
 HousePortal may register targets from remote machines, but this is not the main goal. HousePortal was intended as a single endpoint from which multiple independent local service can be accessed, hiding the local machine configuration and presenting a single web interface to the outside.
 
+HousePortal services running on separate servers also discover each others using periodic broadcast messages. Each HousePortal service can report its list of known peers through a web API. This mechanism allows clients to discover services across a local network. The reach of the discovery mechanism can be constrained by assigning an optional cluster name to each HousePortal service, allowing multiple server clusters to coexist independently on the same network.
+
 A few common web APIs are shared by multiple services and are described here:
 
 - [A control web API](https://github.com/pascal-fb-martin/houseportal/blob/master/controlapi.md) is used to control physical devices, regardless of which protocol or interface is used to access these devices.
@@ -51,6 +53,14 @@ The HousePortal servers discover each other within the local subnet, using broad
       'PEER' host ..
 
 These static declarations never expire.
+
+## Clustering
+
+Servers on the same local network can be organized in separate cluster by assigning a cluster name to each server:
+
+      'CLUSTER' name
+
+The list of peers will be restricted to only services advertizing the same cluster name, if any. If no cluster name was assigned, the peer discovery is then restricted to only services with no cluster name assigned.
 
 ## Security
 
@@ -115,7 +125,7 @@ The registration must be periodic:
 
 All HousePortal servers talk to each other through the PEER message, which follows the syntax below:
 
-      'PEER' time host host[=expiration] .. [SHA-256 signature]
+      'PEER' time [!cluster] host host[=expiration] .. [SHA-256 signature]
 
 Each instance reports all the peer hosts it knows about, listing itself first. The message is sent as a broadcast, and as a unicast to each statically declared peer. This makes it possible to do discovery even through a router:
 
