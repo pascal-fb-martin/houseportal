@@ -468,33 +468,33 @@ static void DecodeMessage (char *buffer, int live) {
 
         if (live) count -= 1; // Do not count the timestamp.
         if (count < 2) {
-            houselog_trace (HOUSE_WARNING, "HousePortal",
-                            "Incomplete peer (%d argument)", count);
+            DEBUG printf ("Incomplete PEER message\n");
             if (!live) exit(1);
             return;
         }
 
-        if (*(token[1]) == '!') {
+        if (live) {
+            if (*(token[2]) == '!') {
 
-            if (!live) return; // A cluster name is invalid for static peers.
+                // The remote server is part of a named cluster: ignore this
+                // if the local server is part of the anonymous cluster or
+                // part of a different named cluster.
+                DEBUG printf ("PEER message indicate cluster %s\n", token[2]+1);
+                if (!NamedCluster || strcmp (token[2]+1, NamedCluster)) return;
 
-            // The remote server is part of a named cluster: ignore this if
-            // the local server is part of the anonymous cluster or part
-            // of a different named cluster.
-            if (!NamedCluster || strcmp (token[1]+1, NamedCluster)) return;
-
-            // Skip the cluster name item.
-            count -= 1;
-            live += 1;
-            if (count < 2) {
-                houselog_trace (HOUSE_WARNING, "HousePortal",
-                                "Incomplete cluster peer (%d argument)", count);
-                return;
+                // Skip the cluster name item.
+                count -= 1;
+                live += 1;
+                if (count < 2) {
+                    DEBUG printf ("Incomplete PEER cluster message\n");
+                    houselog_trace (HOUSE_WARNING, "HousePortal",
+                                    "Incomplete cluster peer (%d argument)", count);
+                    return;
+                }
+            } else {
+                // Ignore the anonymous cluster when part of a named one.
+                if (NamedCluster) return;
             }
-        } else if (live) {
-            // Ignore the anonymous cluster when part of a named one.
-            // (This does not apply to static peers.)
-            if (NamedCluster) return;
         }
 
         AddPeers (live, token+live+1, count-1); // Skip the 'PEER' keyword
