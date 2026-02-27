@@ -201,7 +201,7 @@ static void houseconfig_write (const char *text, int length) {
     if (fd >= 0) {
         write (fd, text, length);
         close (fd);
-        houselog_event ("CONFIG", AppName, "SAVED", "TO %s", ConfigFile);
+        houselog_event ("CONFIG", AppName, "SAVED", "AS %s", ConfigFile);
     } else {
         houselog_event ("CONFIG", AppName, "ERROR",
                         "CANNOT WRITE TO %s", ConfigFile);
@@ -338,10 +338,10 @@ const char *houseconfig_update (const char *text, const char *reason) {
     if (ConfigDepotEnabled) {
         if (reason && reason[0])
             houselog_event ("CONFIG", AppName, "SAVE",
-                            "TO DEPOT %s (%s)", ConfigName, reason);
+                            "TO DEPOT AS %s (%s)", ConfigName, reason);
         else
             houselog_event ("CONFIG", AppName, "SAVE",
-                            "TO DEPOT %s", ConfigName);
+                            "TO DEPOT AS %s", ConfigName);
         housedepositor_put ("config", ConfigName, text, length);
     }
 

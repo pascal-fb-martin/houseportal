@@ -264,7 +264,7 @@ static void housedepositor_put_response
    DEBUG ("response to put of %s: %s\n", request->path, (length > 0)?data:"");
 
    if (status != 200) {
-       houselog_trace (HOUSE_FAILURE, request->path, "HTTP code %d", status);
+       houselog_trace (HOUSE_FAILURE, request->path, "HTTP PUT code %d", status);
    }
 
    housedepositor_put_release (request);
@@ -286,7 +286,6 @@ static void housedepositor_put_iterator
                         "cannot create socket for %s, %s", url, error);
         return;
     }
-    DEBUG ("PUT %s : %s\n", url, request->data?request->data:"(file)");
     request->pending += 1;
     if (request->data) {
         echttp_submit (request->data, request->length,
@@ -295,6 +294,8 @@ static void housedepositor_put_iterator
         echttp_transfer (request->fd, request->length);
         echttp_submit (0, 0, housedepositor_put_response, context);
     }
+    houselog_event ("CONFIG", request->path, "SAVING",
+                    "TO DEPOT ON %s AS %s", provider, request->path);
 }
 
 static void housedepositor_put_submit (const char *repository,
@@ -317,7 +318,8 @@ static void housedepositor_put_submit (const char *repository,
     // There might have been no depot service running at this time.
     // In that case, nothing has happened: just get out.
     if (request->pending <= 0) {
-        DEBUG ("No depot service detected during put.\n");
+        houselog_trace (HOUSE_WARNING, request->path,
+                        "No depot service detected while saving");
         housedepositor_put_free (request);
         return;
     }
@@ -393,7 +395,7 @@ static void housedepositor_get_response
     DepotCacheEntry *cache = (DepotCacheEntry *)context;
     cache->refreshing = 0;
     if (status != 200) {
-        houselog_trace (HOUSE_FAILURE, cache->uri, "HTTP code %d", status);
+        houselog_trace (HOUSE_FAILURE, cache->uri, "HTTP GET code %d", status);
         cache->detected = cache->active; // Don't get stuck on this file.
         return;
     }
@@ -473,7 +475,7 @@ static void housedepositor_scan_response
     if (status != 200) {
         if (status != 404)
            houselog_trace (HOUSE_FAILURE, repository,
-                           "HTTP code %d: %s", status, echttp_reason());
+                           "HTTP GET code %d: %s", status, echttp_reason());
         return;
     }
     DEBUG ("response to scan of %s: %s\n", repository, data);
@@ -591,7 +593,7 @@ static void housedepositor_check_response
     }
 
     if (status != 200) {
-        houselog_trace (HOUSE_FAILURE, "check", "HTTP code %d", status);
+        houselog_trace (HOUSE_FAILURE, "check", "HTTP GET code %d", status);
         return;
     }
     DEBUG ("response to check: %s\n", data);
