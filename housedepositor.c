@@ -294,8 +294,8 @@ static void housedepositor_put_iterator
         echttp_transfer (request->fd, request->length);
         echttp_submit (0, 0, housedepositor_put_response, context);
     }
-    houselog_event ("CONFIG", request->path, "SAVING",
-                    "TO DEPOT ON %s AS %s", provider, request->path);
+    houselog_event ("CONFIG", request->path,
+                    "SAVING", "TO DEPOT ON %s", provider);
 }
 
 static void housedepositor_put_submit (const char *repository,
