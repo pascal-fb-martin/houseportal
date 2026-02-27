@@ -119,7 +119,7 @@ struct TraceRecord {
     char   description[128];
 };
 
-#define TRACE_DEPTH 16
+#define TRACE_DEPTH 32
 
 static struct TraceRecord TraceHistory[TRACE_DEPTH];
 static int TraceCursor = 0;
