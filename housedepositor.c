@@ -144,7 +144,7 @@ static char *DepotRepositories[MAX_SOURCE] = {0};
 
 void housedepositor_default (const char *arg) {
     if (echttp_option_match("-group=", arg, &DepotGroup)) return;
-    // FUTURE: handle other future options.
+    // FUTURE: handle other options.
     return;
 }
 
@@ -189,6 +189,7 @@ void housedepositor_subscribe (const char *repository,
     char uri[1024];
     housedepositor_uri (uri, sizeof(uri), repository, name);
     DEBUG ("subscribe to %s\n", uri);
+    houselog_event ("CONFIG", "DEPOT", "SUBSCRIBE", "TO %s", uri);
 
     int i = housedepositor_search(uri);
     if (i >= 0) {
