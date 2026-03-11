@@ -189,7 +189,8 @@ void housedepositor_subscribe (const char *repository,
     char uri[1024];
     housedepositor_uri (uri, sizeof(uri), repository, name);
     DEBUG ("subscribe to %s\n", uri);
-    houselog_event ("CONFIG", "DEPOT", "SUBSCRIBE", "TO %s", uri);
+    houselog_event ("DEPOT", repository, "SUBSCRIBE",
+                    "TO %s", housedepositor_extract_path (uri));
 
     int i = housedepositor_search(uri);
     if (i >= 0) {
@@ -295,8 +296,8 @@ static void housedepositor_put_iterator
         echttp_transfer (request->fd, request->length);
         echttp_submit (0, 0, housedepositor_put_response, context);
     }
-    houselog_event ("CONFIG", request->path,
-                    "SAVING", "TO DEPOT ON %s", provider);
+    houselog_event ("DEPOT", request->path,
+                    "SAVING", "TO %s", provider);
 }
 
 static void housedepositor_put_submit (const char *repository,
