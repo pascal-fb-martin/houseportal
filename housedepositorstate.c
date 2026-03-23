@@ -354,6 +354,9 @@ static const char *housedepositor_state_host(void) {
 
 static int housedepositor_state_format (void) {
 
+    // Do nothing if there is no state to save.
+    if (BackupWorkerCount <= 0) return 0;
+
     int cursor = 0;
     int i;
     if (!BackupOutBuffer) {
