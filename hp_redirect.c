@@ -863,8 +863,7 @@ void hp_redirect_service_json (const char *name, char *buffer, int size) {
     cursor = buffer + length;
 
     if (port == 80) {
-        strncpy (hostaddress, HostName, sizeof(hostaddress));
-        hostaddress[sizeof(hostaddress)-1] = 0;
+        snprintf (hostaddress, sizeof(hostaddress), "%s", HostName);
     } else {
         snprintf (hostaddress, sizeof(hostaddress), "%s:%d", HostName, port);
     }

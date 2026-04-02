@@ -279,12 +279,9 @@ static void housecapture_setfilter (int index, time_t now,
     struct CaptureRecord *filter = CaptureFilter + index;
 
     filter->timestamp.tv_sec = now;
-    if (object) safecpy (filter->object, object, sizeof(filter->object));
-    else filter->object[0] = 0;
-    if (action) safecpy (filter->action, action, sizeof(filter->action));
-    else filter->action[0] = 0;
-    if (data) safecpy (filter->data, data, sizeof(filter->data));
-    else filter->data[0] = 0;
+    safecpy (filter->object, object, sizeof(filter->object));
+    safecpy (filter->action, action, sizeof(filter->action));
+    safecpy (filter->data, data, sizeof(filter->data));
 }
 
 static const char *housecapture_webstart (const char *method, const char *uri,

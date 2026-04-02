@@ -54,13 +54,6 @@
  *
  *    Periodic function that handles the registration exchanges with
  *    the houseportal service.
- *
- * void houseportal_register (int webport, const char **path, int count);
- * void houseportal_register_more (int webport, const char **path, int count);
- * void houseportal_renew (void);
- *
- *    This API is being deprecated. Please use houseportal_declare,
- *    houseportal_declare_more and houseportal_background instead.
  */
 
 #include <unistd.h>
@@ -208,7 +201,7 @@ void houseportal_declare_more (int webport, const char **path, int count) {
     index = HousePortalRegistrationCount;
     if (HousePortalRegistration[index] == 0)
         HousePortalRegistration[index] = malloc(HOUSEPORTALPACKET);
-    strncpy (HousePortalRegistration[index], dest, HOUSEPORTALPACKET);
+    snprintf (HousePortalRegistration[index], HOUSEPORTALPACKET, "%s", dest);
     length = hlen + dlen;
     cursor = HousePortalRegistration[index] + dlen;
 
@@ -223,40 +216,20 @@ void houseportal_declare_more (int webport, const char **path, int count) {
             index += 1;
             if (HousePortalRegistration[index] == 0)
                 HousePortalRegistration[index] = malloc(HOUSEPORTALPACKET);
-            strncpy (HousePortalRegistration[index], dest, HOUSEPORTALPACKET);
+            snprintf (HousePortalRegistration[index], HOUSEPORTALPACKET, "%s", dest);
             length = hlen + dlen;
             cursor = HousePortalRegistration[index] + dlen;
         }
-        strncpy (cursor++, " ", HOUSEPORTALPACKET-length++);
-        strncpy (cursor, path[i], HOUSEPORTALPACKET-length);
-        length += l;
-        cursor += l;
+        snprintf (cursor, HOUSEPORTALPACKET-length, " %s", path[i]);
+        length += l+1;
+        cursor += l+1;
     }
     HousePortalRegistrationLength[index] =
         (int) (cursor - HousePortalRegistration[index]);
     HousePortalRegistrationCount = index+1;
 }
 
-// DEPRECATED: use houseportal_declare instead.
-//
-void houseportal_register (int webport, const char **path, int count) {
-
-    houseportal_declare (webport, path, count);
-    houseportal_renew();
-}
-
-// DEPRECATED: use houseportal_declare_more instead.
-//
-void houseportal_register_more (int webport, const char **path, int count) {
-
-    houseportal_declare_more (webport, path, count);
-    houseportal_renew();
-}
-
-// DEPRECATED: use houseportal_background instead.
-// Will eventually become a static function.
-//
-void houseportal_renew (void) {
+static void houseportal_renew (void) {
 
     int i;
     int blen;

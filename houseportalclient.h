@@ -28,11 +28,6 @@ void houseportal_declare      (int webport, const char **paths, int count);
 void houseportal_declare_more (int webport, const char **paths, int count);
 void houseportal_background   (time_t now);
 
-// DEPRECATED:
-void houseportal_register      (int webport, const char **paths, int count);
-void houseportal_register_more (int webport, const char **paths, int count);
-void houseportal_renew         (void);
-
 const char *houseportal_server (void);
 
 int  hp_udp_client (const char *destination, const char *service);
