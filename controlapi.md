@@ -76,6 +76,7 @@ The main status object has the following fields:
 - `proxy`: the name of the computer that runs the HousePortal service used for this computer. This is typically the same as `host`.
 - `timestamp`: the time when this data was generated.
 - `latest`: the current state of the service. Not present if the service does not support the poll for changes mechanism.
+- `control.history`: an optional boolean that indicates if the history extension is supported. See a description later in this document. Default is `false`.
 - `control.status`: a JSON object that lists each point by name. A point element is itself a JSON object (see below).
 
 Each point object has the following fields:
@@ -109,25 +110,27 @@ POST /(service)/config
 
 Upload and activate a new service configuration. The format of the configuration data is specific to each service.
 
-## Optional sequence of changes extension API
+## Optional history extension API
 
-Some implementation of this control API may support recording sequences of changes. The purpose of this extension is to capture changes that occur faster than the poll period. A service that supports this extension keeps an internal history of the latest changes in memory, which is returned through this API extension. For example if the client polls every 2 seconds, but changes have been detected every 200 milliseconds, this API extension allows the client to get all 10 changes.
+Some implementation of this control API may support recording changes. The purpose of this extension is to capture changes that occur faster than the poll period. A service that supports this extension keeps an internal history of the latest changes in memory, which is returned through this API extension. For example if the client polls every 2 seconds, but changes have been detected every 200 milliseconds, this API extension allows the client to get all 10 changes.
 
-The history is only kept for input points. No change history is provided for controllable points. The history has a fixed depth, typically enough for storing 6 seconds worth of changes.
+A service that supports the history extension advertises it by returning a `control.history` boolean set to `true` in the response to `/(service)/status` requests.
+
+The history is only kept for input points. No history is provided for controllable points. The history has a fixed depth, typically enough for storing 6 seconds worth of changes.
 
 Input points are automatically scanned at a higher sampling rate while this API is actively used. This fast sampling scan rate stops when no request has been made for some time (typically 12 seconds). Since the first request starts the faster scan rate, this first request does not return any sequence of changes.
 
 ```
-GET /(service)/changes[?since=MILLISECONDS][&sync=0|1]
+GET /(service)/history[?since=MILLISECONDS][&sync=0|1]
 ```
 
-Return a JSON array of the recent sequence of input state changes. The history is not saved to disk and the server keeps only a fixed number of state changes, typically 6 seconds worth of history. The client must request new changes at least every 5 seconds or else changes might be lost.
+Return a JSON array of the recent history. The history is not saved to disk and the server keeps only a fixed number of state changes, typically 6 seconds worth of history. The client must request the history at least every 5 seconds or else changes might be lost.
 
 If the `since` option is present, only changes more recent than the specified timestamp are returned. That timestamp is in milliseconds.
 
 If the `sync` option is present and its value is 1, the response also includes the state of all points (not just input) in the same `control.status` object format as returned by the standard status request. This option is intended to keep the sequence of changes data and the status data properly ordered. The client must process the sequence of changes data first, then the status data. (The sequence of changes data represents changes that occurred prior to the current status, while the status data represents the final state of the points at the time of the request.) Future changes requests will include changes subsequent to that status. This way the client will not process the sequence of changes out of order compared to status.
 
-A client requesting both changes and status must use the `/(service)/changes` request instead of `/(service)/status`. The `sync` option must be used on the first request, and may be subsequently used at a longer interval than the poll (i.e. the sync option may be set every N requests only).
+A client requesting both changes and status must use the `/(service)/history` request instead of `/(service)/status`, except for the very first request. The `sync` option may be used at a some interval (e.g. the sync option may be set every N requests only) to keep synchronization with the status of inputs if ever changes were lost.
 
 > [!NOTE]
 > This is similar to how the [DNP 3](https://www.dnp.org/) standard keeps events and static polls synchronized. The main difference is that DNP 3 requires keeping the `since` context on the service side, i.e. on the outstation, while this API makes the client responsible for keeping that context. Keeping the context on the client side makes multi-clients support much simpler.
@@ -137,10 +140,11 @@ The JSON data returned contains the following elements:
 - `host`:                   Name of the host machine this service runs on.
 - `timestamp`:              Time of the response.
 - `control.changes`:        An object that describes the input points that changed, or an empty object when no change history is available.
-- `control.changes.start`:  Time of the oldest state.
-- `control.changes.step`:   Interval between two consecutive values.
-- `control.sequend.end`:    Time of the most recent state (relative to changes.start).
-- `control.changes.data`:   An object that lists every input point that changed. Each input point is an array of sequential values (i.e. a time series) sampled at `control.changes.step` intervals.
+- `control.history.start`:  Time of the oldest state.
+- `control.history.step`:   Interval between two consecutive values.
+- `control.history.end`:    Time of the most recent state (relative to changes.start).
+- `control.history.data`:   An object that lists every changes. Each change is an array of three value: time (delay in milliseconds since `control.history.start`), input index, value.
+- `control.history.names`:   An array that lists every input. This is provided to allow the interpretation of the input indexes in `control.history.data`.
 - `control.status`:         If sync is requested. See the status request.
 
 All time values in the control.changes object are in millisecond units.
