@@ -143,11 +143,11 @@ const char *houseportal_server (void) {
 }
 
 void houseportal_signature (const char *cypher, const char *key) {
-    strncpy (HousePortalSecondaryBuffer,
-             cypher, sizeof(HousePortalSecondaryBuffer));
+    memccpy (HousePortalSecondaryBuffer,
+             cypher, 0, sizeof(HousePortalSecondaryBuffer));
     HousePortalSecondaryBuffer[128] = 0;
-    strncpy (HousePortalTemporaryBuffer,
-             key, sizeof(HousePortalTemporaryBuffer));
+    memccpy (HousePortalTemporaryBuffer,
+             key, 0, sizeof(HousePortalTemporaryBuffer));
     HousePortalTemporaryBuffer[128] = 0;
     HousePortalTemporaryLength = strlen(key) / 16; // Key must be long enough
 }

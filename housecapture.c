@@ -118,6 +118,7 @@
 
 #include "echttp.h"
 #include "echttp_static.h"
+#include "echttp_libc.h"
 
 #include "housestate.h"
 #include "housecapture.h"
@@ -153,12 +154,8 @@ static int CaptureState = -1;
 
 
 static void safecpy (char *t, const char *s, int size) {
-    if (s) {
-        strncpy (t, s, size);
-        t[size-1] = 0;
-    } else {
-        t[0] = 0;
-    }
+    if (s) stpecpy (t, t+size, s);
+    else t[0] = 0;
 }
 
 static void housecapture_stop (void) {

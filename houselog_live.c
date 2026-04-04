@@ -77,6 +77,7 @@
 
 #include "echttp.h"
 #include "echttp_static.h"
+#include "echttp_libc.h"
 
 #include "houselog.h"
 #include "houselog_storage.h"
@@ -127,12 +128,8 @@ static long TraceLatestId = 0;
 static long TraceLastFlushed = 0;
 
 static void safecpy (char *t, const char *s, int size) {
-    if (s) {
-        strncpy (t, s, size);
-        t[size-1] = 0;
-    } else {
-        t[0] = 0;
-    }
+    if (s) stpecpy (t, t+size, s);
+    else t[0] = 0;
 }
 
 static int houselog_getheader (time_t now, char *buffer, int size) {
