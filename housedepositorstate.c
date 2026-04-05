@@ -245,7 +245,7 @@ static void housedepositor_state_listener (const char *name, time_t timestamp,
         BackupOutBuffer = strdup (data);
         BackupOutBufferSize = length;
     } else {
-        snprintf (BackupOutBuffer, BackupOutBufferSize, "%s", data);
+        memccpy (BackupOutBuffer, data, 0, BackupOutBufferSize);
     }
     housedepositor_state_save (length); // Best effort only, ignore errors.
 

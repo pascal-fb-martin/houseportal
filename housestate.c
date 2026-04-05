@@ -126,8 +126,8 @@ int housestate_declare (const char *name) {
 
    // This is a new state ID and there is room for it.
    //
-   snprintf (HouseStates[HouseStatesCount].name, sizeof (HouseStates[0].name),
-             "%s", name);
+   memccpy (HouseStates[HouseStatesCount].name,
+            name, 0, sizeof (HouseStates[0].name));
    HouseStates[HouseStatesCount].child = -1;
    HouseStates[HouseStatesCount].parent = -1;
    HouseStates[HouseStatesCount].next = -1;

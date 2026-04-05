@@ -98,6 +98,7 @@
 
 #include <echttp.h>
 #include <echttp_json.h>
+#include <echttp_libc.h>
 
 #include "houselog.h"
 #include "housediscover.h"
@@ -535,8 +536,8 @@ static void housedepositor_scan_response
             //
             if (DepotCache[cached].detected < timestamp) {
                 DEBUG ("Most recent version found so far\n");
-                snprintf(DepotCache[cached].host, sizeof(DepotCache[0].host),
-                         "%s", tokens[host].value.string);
+                memccpy(DepotCache[cached].host, tokens[host].value.string,
+                        0, sizeof(DepotCache[0].host));
                 DepotCache[cached].detected = timestamp;
                 DepotCache[cached].hostalive = now;
             }
@@ -551,8 +552,8 @@ static void housedepositor_scan_response
         } else if (DepotCache[cached].hostalive < now - 180) {
             // If the chosen server is no longer responding, replace it.
             //
-            snprintf(DepotCache[cached].host, sizeof(DepotCache[0].host),
-                     "%s", tokens[host].value.string);
+            memccpy(DepotCache[cached].host, tokens[host].value.string,
+                    0, sizeof(DepotCache[0].host));
             DepotCache[cached].detected = timestamp;
             DepotCache[cached].hostalive = now;
         }
@@ -650,7 +651,8 @@ static void housedepositor_check_iterator
                 (const char *service, void *context, const char *provider) {
 
     char url[1024];
-    snprintf (url, sizeof(url), "%s/check", provider);
+    char *end = url + sizeof(url);
+    stpecpy (stpecpy (url, end, provider), end, "/check");
 
     const char *error = echttp_client ("GET", url);
     if (error) {

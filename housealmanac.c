@@ -259,14 +259,14 @@ static void housealmanac_update (const char *provider,
    db->sunset = sunset;
    db->sunrise = sunrise;
 
-   snprintf (db->provider, sizeof(db->provider), "%s", provider);
+   memccpy (db->provider, provider, 0, sizeof(db->provider));
 
    // If this almanac server has location info, remember it.
    index = echttp_json_search (tokens, ".location.timezone");
    if (index > 0) {
        const char *value = tokens[index].value.string;
        if (strcmp (value, db->timezone)) {
-           snprintf (db->timezone, sizeof(db->timezone), "%s", value);
+           memccpy (db->timezone, value, 0, sizeof(db->timezone));
        }
    }
    int lat = echttp_json_search (tokens, ".location.lat");
@@ -281,7 +281,7 @@ static void housealmanac_update (const char *provider,
    if (index > 0) {
        const char *value = tokens[index].value.string;
        if (strcmp (value, db->origin)) {
-           snprintf (db->origin, sizeof(db->origin), "%s", value);
+           memccpy (db->origin, value, 0, sizeof(db->origin));
        }
    } else {
        db->origin[0] = 0;
