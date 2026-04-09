@@ -42,7 +42,7 @@
  *                              const char *old, const char *new);
  *
  * void housecontrol_subscribe (const char *gear,
- *                                   ControlTrigger *trigger);
+ *                              ControlTrigger *trigger);
  *
  *    Declare a trigger function to be called when the control's state changes.
  *    This is also called when the control is initially discovered, in which
@@ -196,14 +196,14 @@ static int ControlsActive = 0;
 
 
 static void housecontrol_noop (const char *name,
-                                    long long timestamp,
-                                    const char *old, const char *new) {
+                               long long timestamp,
+                               const char *old, const char *new) {
     // Nothing is done on purpose.
 }
 
 static void housecontrol_trigger (HouseControl *control,
-                                       long long timestamp,
-                                       const char *old, const char *new) {
+                                  long long timestamp,
+                                  const char *old, const char *new) {
 
     if (control->trigger) {
         // The trigger for this control was already identified.
@@ -342,14 +342,14 @@ static ParserToken *housecontrol_prepare (int count) {
 }
 
 static void housecontrol_memorize (HouseControl *control,
-                                        long long timestamp, const char *state) {
+                                   long long timestamp, const char *state) {
        memccpy (control->state, state, 0, sizeof(control->state));
        control->state[sizeof(control->state)-1] = 0; // Terminator
        control->timestamp = timestamp;
 }
 
 static void housecontrol_changes (ControlProvider *provider,
-                                       ParserToken *tokens) {
+                                  ParserToken *tokens) {
 
    int *nameslist = 0;
    int *innerlist = 0;
