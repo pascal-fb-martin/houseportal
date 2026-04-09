@@ -1,3 +1,17 @@
+houseportal (2.12) UNRELEASED; urgency=medium
+
+   * Fix decoding of cluster name in PEER message.
+   * Reconfigure properly when the local configuration file has changed.
+   * More room for trace bursts.
+   * Avoid duplicating name in events.
+   * Show which depot file is being subscribed to.
+   * Do nothing if there is no state to save
+   * Matches the latest history mechanism as implemented.
+   * Replace strncpy with more efficient, safer stpecpy and memccpy
+   * Add a client API for control points
+
+ -- Pascal Martin <pascal.fb.martin@gmail.com>  Tue, 9 Apr 2026 12:00:00 PDT
+
 houseportal (2.11) UNRELEASED; urgency=medium
 
    * Allow separate systems to coexist on the same network (named clusters)
