@@ -47,6 +47,7 @@ LIBOJS= houselog_live.o \
         housedepositor.o \
         housedepositorstate.o \
         housealmanac.o \
+        housecontrol.o \
         housediscover.o
 
 EXPORT_INCLUDE=houselog.h \
@@ -57,11 +58,12 @@ EXPORT_INCLUDE=houselog.h \
                housedepositor.h \
                housedepositorstate.h \
                housealmanac.h \
+               housecontrol.h \
                houselog_sensor.h \
                houselog_storage.h \
                housecapture.h
 
-all: libhouseportal.a houseportal housediscover housedepositor housegetalmanac
+all: libhouseportal.a houseportal housediscover housedepositor housegetalmanac housewatchcontrol
 
 dev: install-dev
 
@@ -88,6 +90,9 @@ housedepositor: housedepositorclient.c libhouseportal.a
 
 housegetalmanac: housegetalmanac.c libhouseportal.a
 	gcc -Os -o housegetalmanac housegetalmanac.c libhouseportal.a -lechttp -lssl -lcrypto -lmagic -lrt
+
+housewatchcontrol: housewatchcontrol.c libhouseportal.a
+	gcc -Os -o housewatchcontrol housewatchcontrol.c libhouseportal.a -lechttp -lssl -lcrypto -lmagic -lrt
 
 # Minimal tar file for installation. ----------------------------
 

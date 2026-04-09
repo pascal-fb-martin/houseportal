@@ -446,6 +446,8 @@ This function must be called a regular intervals for background processing.
 
 #### Capture API
 
+The capture API allows a client to access live I/O input and output data from a service. The data types available are typically different from service to service. This API is meant for debugging and troubleshooting. Typical examples of I/O data available are NMEA messages from a GPS receiver and messages sent to a DCC booster.
+
 The capture log feature is separate from the other logs because it is not subject to consolidation and storage: there is no log file.
 
 The application must include the client header file:
@@ -709,6 +711,97 @@ void housedepositor_periodic (time_t now);
 ```
 
 This background function must be called periodically. It handles the discovery of, and queries to, the depot services.
+
+### Control Client API
+
+The control client API allows an application to interface with control point servers. The client can get the current state of control points, listen to state changes or set control points. The client does not need to know which actual service handles each control point.
+
+This API automatically detects if the control point server implement point history (high speed poll) and automatically use it if high speed sampling was requested.
+
+The application must include the client header file:
+
+```
+#include "housecontrol.h"
+```
+
+```
+typedef void ControlTrigger (const char *name,
+                             long long timestamp,
+                             const char *old, const char *new);
+
+void housecontrol_subscribe (const char *gear, ControlTrigger *trigger);
+```
+
+Listen to state changes for all control points associated with the specified type of gear. It is possible to declare a default trigger by specifying a gear value that is either null or "*". If the application wants to listen to all control points, it just needs to declare a default trigger.
+
+A trigger declared here can be disabled by declaring a null trigger for the same gear.
+
+```
+void housecontrol_sampling (int period);
+```
+
+This function sets a requested sampling period for input points. The period value is in milliseconds. Values above 1000 will be ignored. A sampling period value of zero disables high speed sampling.
+
+The effect of setting a non-zero sampling period is that it will cause this module to use the history extension, i.e history polling, when available.
+
+Note that the effect of changing the sampling period is not immediate.
+
+By default this module uses standard polling, and the effective sampling period is between 1 and 2 seconds.
+
+The exact sampling period request should be considered more like a hint than  a command. The actual period used in practice may not match the requested value:
+
+* not all providers support the history extension required for high speed sampling.
+* even providers that support the history extension may not support the specific sampling period that has been requested.
+
+```
+int housecontrol_ready (void);
+```
+
+Return 1 if at least one control point is known, 0 otherwise. The purpose is to allow the application to wait until at least one control service has been detected.
+
+```
+const char *housecontrol_state (const char *name);
+```
+
+Get the latest known state of a control. States values are typically "on", "off" or "alert", but other values are possible.
+
+This returns 0 if the named control is not known on any server, or "" if the named control is known, but not its value.
+
+```
+void housecontrol_set (const char *name, const char *state,
+                       int pulse, int manual, const char *reason);
+```
+
+Set a control to the specified state for the duration of the pulse. The reason typically indicates what motivated this control. The manual parameter controls both the local generation of an event and the priority of the new state.
+
+If the named control is not known on any server, the request is ignored.
+
+```
+int housecontrol_start (const char *name,
+                        int pulse, int manual, const char *reason);
+```
+
+This function is equivalent to housecontrol_set() with state "on".
+
+```
+void housecontrol_cancel (const char *name, const char *reason);
+```
+
+Immediately stop a control, or all active controls if name is null. To stop a control means to set it to "off".
+
+Not that using a null name only cancels those control initiated by the local application, not all known controls.
+
+```
+void housecontrol_background (time_t now);
+```
+
+The periodic function that detects and polls the control servers.
+
+```
+int housecontrol_status (char *buffer, int size);
+```
+
+Return the known status of control points in JSON format.
 
 ## Debian Packaging
 
