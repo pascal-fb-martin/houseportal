@@ -68,7 +68,7 @@ all: libhouseportal.a houseportal housediscover housedepositor housegetalmanac h
 dev: install-dev
 
 clean:
-	rm -f *.o *.a houseportal housediscover housedepositor housegetalmanac
+	rm -f *.o *.a houseportal housediscover housedepositor housegetalmanac housewatchcontrol
 
 rebuild: clean all
 
@@ -121,6 +121,7 @@ install-runtime: install-preamble
 	$(INSTALL) -m 0755 -s housediscover $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -s housedepositor $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -s housegetalmanac $(DESTDIR)$(prefix)/bin
+	$(INSTALL) -m 0755 -s housewatchcontrol $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -T roof.sh $(DESTDIR)$(prefix)/bin/roof
 	touch $(DESTDIR)/etc/default/housegeneric
 	touch $(DESTDIR)/etc/default/houseportal
@@ -132,6 +133,8 @@ uninstall-app:
 	rm -f $(DESTDIR)$(prefix)/bin/houseportal
 	rm -f $(DESTDIR)$(prefix)/bin/housediscover
 	rm -f $(DESTDIR)$(prefix)/bin/housedepositor
+	rm -f $(DESTDIR)$(prefix)/bin/housegetalmanac
+	rm -f $(DESTDIR)$(prefix)/bin/housewatchcontrol
 	rm -f $(DESTDIR)$(prefix)/bin/roof
 	rm -f $(DESTDIR)$(SHARE)/public/*.html
 
