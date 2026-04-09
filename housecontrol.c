@@ -430,8 +430,7 @@ cleanup:
    if (nameslist) free (nameslist);
 }
 
-static void housecontrol_update (const char *origin,
-                                      char *data, int length) {
+static void housecontrol_update (const char *origin, char *data, int length) {
 
    ControlProvider *provider = housecontrol_search_provider (origin);
    if (!provider) return;
