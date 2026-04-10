@@ -100,6 +100,8 @@
 #include <time.h>
 
 #include "echttp.h"
+#include "echttp_libc.h"
+
 #include "housestate.h"
 
 struct HouseStateContext {
@@ -126,8 +128,8 @@ int housestate_declare (const char *name) {
 
    // This is a new state ID and there is room for it.
    //
-   memccpy (HouseStates[HouseStatesCount].name,
-            name, 0, sizeof (HouseStates[0].name));
+   strtcpy (HouseStates[HouseStatesCount].name,
+            name, sizeof (HouseStates[0].name));
    HouseStates[HouseStatesCount].child = -1;
    HouseStates[HouseStatesCount].parent = -1;
    HouseStates[HouseStatesCount].next = -1;

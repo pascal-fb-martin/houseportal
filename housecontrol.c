@@ -140,6 +140,7 @@
 #include <echttp_hash.h>
 #include <echttp_json.h>
 #include <echttp_encoding.h>
+#include <echttp_libc.h>
 
 #include "houselog.h"
 #include "housediscover.h"
@@ -343,7 +344,7 @@ static ParserToken *housecontrol_prepare (int count) {
 
 static void housecontrol_memorize (HouseControl *control,
                                    long long timestamp, const char *state) {
-       memccpy (control->state, state, 0, sizeof(control->state));
+       strtcpy (control->state, state, sizeof(control->state));
        control->state[sizeof(control->state)-1] = 0; // Terminator
        control->timestamp = timestamp;
 }

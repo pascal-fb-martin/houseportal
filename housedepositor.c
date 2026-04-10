@@ -536,8 +536,8 @@ static void housedepositor_scan_response
             //
             if (DepotCache[cached].detected < timestamp) {
                 DEBUG ("Most recent version found so far\n");
-                memccpy(DepotCache[cached].host, tokens[host].value.string,
-                        0, sizeof(DepotCache[0].host));
+                strtcpy(DepotCache[cached].host,
+                        tokens[host].value.string, sizeof(DepotCache[0].host));
                 DepotCache[cached].detected = timestamp;
                 DepotCache[cached].hostalive = now;
             }
@@ -552,8 +552,8 @@ static void housedepositor_scan_response
         } else if (DepotCache[cached].hostalive < now - 180) {
             // If the chosen server is no longer responding, replace it.
             //
-            memccpy(DepotCache[cached].host, tokens[host].value.string,
-                    0, sizeof(DepotCache[0].host));
+            strtcpy(DepotCache[cached].host,
+                    tokens[host].value.string, sizeof(DepotCache[0].host));
             DepotCache[cached].detected = timestamp;
             DepotCache[cached].hostalive = now;
         }

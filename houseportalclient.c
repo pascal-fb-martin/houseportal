@@ -64,6 +64,7 @@
 
 #include "echttp.h"
 #include "echttp_libc.h"
+
 #include "houseportalclient.h"
 #include "houseportalhmac.h"
 
@@ -202,7 +203,7 @@ void houseportal_declare_more (int webport, const char **path, int count) {
     index = HousePortalRegistrationCount;
     if (HousePortalRegistration[index] == 0)
         HousePortalRegistration[index] = malloc(HOUSEPORTALPACKET);
-    memccpy (HousePortalRegistration[index], dest, 0, HOUSEPORTALPACKET);
+    strtcpy (HousePortalRegistration[index], dest, HOUSEPORTALPACKET);
     length = hlen + dlen;
     cursor = HousePortalRegistration[index] + dlen;
     char *end = HousePortalRegistration[index] + HOUSEPORTALPACKET;
@@ -218,7 +219,7 @@ void houseportal_declare_more (int webport, const char **path, int count) {
             index += 1;
             if (HousePortalRegistration[index] == 0)
                 HousePortalRegistration[index] = malloc(HOUSEPORTALPACKET);
-            memccpy (HousePortalRegistration[index], dest, 0, HOUSEPORTALPACKET);
+            strtcpy (HousePortalRegistration[index], dest, HOUSEPORTALPACKET);
             length = hlen + dlen;
             cursor = HousePortalRegistration[index] + dlen;
             end = HousePortalRegistration[index] + HOUSEPORTALPACKET;

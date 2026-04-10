@@ -91,6 +91,7 @@
 
 #include <echttp.h>
 #include <echttp_json.h>
+#include <echttp_libc.h>
 
 #include "houselog.h"
 #include "housediscover.h"
@@ -259,14 +260,14 @@ static void housealmanac_update (const char *provider,
    db->sunset = sunset;
    db->sunrise = sunrise;
 
-   memccpy (db->provider, provider, 0, sizeof(db->provider));
+   strtcpy (db->provider, provider, sizeof(db->provider));
 
    // If this almanac server has location info, remember it.
    index = echttp_json_search (tokens, ".location.timezone");
    if (index > 0) {
        const char *value = tokens[index].value.string;
        if (strcmp (value, db->timezone)) {
-           memccpy (db->timezone, value, 0, sizeof(db->timezone));
+           strtcpy (db->timezone, value, sizeof(db->timezone));
        }
    }
    int lat = echttp_json_search (tokens, ".location.lat");
@@ -281,7 +282,7 @@ static void housealmanac_update (const char *provider,
    if (index > 0) {
        const char *value = tokens[index].value.string;
        if (strcmp (value, db->origin)) {
-           memccpy (db->origin, value, 0, sizeof(db->origin));
+           strtcpy (db->origin, value, sizeof(db->origin));
        }
    } else {
        db->origin[0] = 0;

@@ -103,6 +103,7 @@
 
 #include <echttp.h>
 #include <echttp_json.h>
+#include <echttp_libc.h>
 
 #include "houselog.h"
 #include "housedepositor.h"
@@ -245,7 +246,7 @@ static void housedepositor_state_listener (const char *name, time_t timestamp,
         BackupOutBuffer = strdup (data);
         BackupOutBufferSize = length;
     } else {
-        memccpy (BackupOutBuffer, data, 0, BackupOutBufferSize);
+        strtcpy (BackupOutBuffer, data, BackupOutBufferSize);
     }
     housedepositor_state_save (length); // Best effort only, ignore errors.
 
