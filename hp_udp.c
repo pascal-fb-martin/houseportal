@@ -75,6 +75,8 @@
 #include <arpa/inet.h>
 #include <ifaddrs.h>
 
+#include "echttp_libc.h"
+
 #include "houseportal.h"
 #include "houselog.h"
 
@@ -186,8 +188,8 @@ static void hp_udp_enumerate (const char *service) {
 
         i = UdpBroadcastCount;
         UdpBroadcast[i].socket = s;
-        snprintf (UdpBroadcast[i].name,
-                  sizeof(UdpBroadcast[0].name), "%s", cursor->ifa_name);
+        strtcpy (UdpBroadcast[i].name,
+                 cursor->ifa_name, sizeof(UdpBroadcast[0].name));
 
         int v = 1;
         if (setsockopt(s, SOL_SOCKET, SO_BROADCAST, &v, sizeof(v)) < 0) {

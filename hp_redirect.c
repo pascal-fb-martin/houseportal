@@ -61,6 +61,8 @@
 #include <time.h>
 #include <stdio.h>
 
+#include "echttp_libc.h"
+
 #include "houseportal.h"
 #include "houselog.h"
 #include "houseportalhmac.h"
@@ -863,7 +865,7 @@ void hp_redirect_service_json (const char *name, char *buffer, int size) {
     cursor = buffer + length;
 
     if (port == 80) {
-        snprintf (hostaddress, sizeof(hostaddress), "%s", HostName);
+        strtcpy (hostaddress, HostName, sizeof(hostaddress));
     } else {
         snprintf (hostaddress, sizeof(hostaddress), "%s:%d", HostName, port);
     }
