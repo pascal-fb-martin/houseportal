@@ -128,7 +128,7 @@ static long TraceLatestId = 0;
 static long TraceLastFlushed = 0;
 
 static void safecpy (char *t, const char *s, int size) {
-    if (s) stpecpy (t, t+size, s);
+    if (s) strtcpy (t, s, size);
     else t[0] = 0;
 }
 
