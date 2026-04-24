@@ -47,12 +47,14 @@
  *    Declare a trigger function to be called when the control's state changes.
  *    This is also called when the control is initially discovered, in which
  *    case the old state is an empty string.
+ *
  *    The trigger can be specific for each type of gear, or be a default
  *    trigger (when gear is null or "*"). That default trigger is used
  *    only when no matching gear-specific trigger was declared.
  *
  *    A trigger declared here can be disabled by declaring a null trigger
- *    for the same gear.
+ *    for the same gear. There can be only one trigger per type of gear at
+ *    any one time.
  *
  *    If the application does not care about the type of gear, it just needs
  *    to declare a default trigger.

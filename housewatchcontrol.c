@@ -18,11 +18,11 @@
  * Boston, MA  02110-1301, USA.
  *
  *
- * housecontrolwatch.c - A utility to monitor control point changes.
+ * housewatchcontrol.c - A utility to monitor control point changes.
  *
  * SYNOPSYS:
  *
- *   housecontrolwatch [-s=N] gear ..
+ *   housewatchcontrol [-s=N] gear ..
  *
  * The tool will display changes of any control points associated with
  * a listed gear.
