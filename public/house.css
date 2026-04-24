@@ -125,7 +125,7 @@ header span {
    color: black;
 }
 
-.housewidetable td input {
+.housewidetable td > input {
    width: 100%;
    box-sizing: border-box;
 }
