@@ -81,6 +81,7 @@
  *      configuration. That item is applied live first, then houseconfig_save()
  *      is called to update the permanent storage (depot service or file).
  *
+ * int         houseconfig_present (int parent, const char *path);
  * const char *houseconfig_string  (int parent, const char *path);
  * int         houseconfig_integer (int parent, const char *path);
  * int         houseconfig_positive (int parent, const char *path);
@@ -376,6 +377,12 @@ int houseconfig_find (int parent, const char *path, int type) {
     i = echttp_json_search(ConfigParsed+parent, path);
     if (i >= 0 && ConfigParsed[parent+i].type == type) return parent+i;
     return -1;
+}
+
+int houseconfig_present (int parent, const char *path) {
+    if (parent < 0 || parent >= ConfigTokenCount) return 0;
+    if (echttp_json_search(ConfigParsed+parent, path) < 0) return 0;
+    return 1;
 }
 
 const char *houseconfig_string (int parent, const char *path) {

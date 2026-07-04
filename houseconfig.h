@@ -34,6 +34,7 @@ const char *houseconfig_save   (const char *text, const char *reason);
 
 int houseconfig_find (int parent, const char *path, int type);
 
+int         houseconfig_present (int parent, const char *path);
 const char *houseconfig_string  (int parent, const char *path);
 int         houseconfig_integer (int parent, const char *path);
 int         houseconfig_positive (int parent, const char *path);
