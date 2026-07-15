@@ -59,6 +59,22 @@
  *    If the application does not care about the type of gear, it just needs
  *    to declare a default trigger.
  *
+ * ControlFlush *housecontrol_flushable (ControlFlush *flush);
+ *
+ *    Declare a function to be called once an update message has been fully
+ *    processed. Multiple control updates are typically received in each
+ *    update message. This flush mechanism allows a client module to perform
+ *    flushes of its own after the situation has become stable.
+ *
+ *    Note that this flush callback has a global scope: there is no flush
+ *    function for specific types of control points. The client must have
+ *    recorded on its own what flush actions it must proceed with, if any.
+ *
+ *    The flush callbacks must be chained: the pointer returned by
+ *    housecontrol_flushable() must be kept by the client and its flush
+ *    callback function must call that next flush function (if not null)
+ *    at the end of its own processing.
+ *
  * void housecontrol_sampling (int period);
  *
  *    This function sets a requested sampling period for input points.
@@ -177,6 +193,8 @@ static HouseTrigger *Triggers = 0;
 static int           TriggersCount = 0;
 static int           TriggersSize = 0;
 
+static ControlFlush *ControlNextFlush = 0;
+
 typedef struct {
     const char *name;
     unsigned int signature;
@@ -291,6 +309,13 @@ void housecontrol_subscribe (const char *gear, ControlTrigger trigger) {
     housecontrol_invalidate_cache ();
 }
 
+ControlFlush *housecontrol_flushable (ControlFlush *flush) {
+
+    ControlFlush *previous = ControlNextFlush;
+    ControlNextFlush = flush;
+    return previous;
+}
+
 static HouseControl *housecontrol_search (const char *name) {
 
     int i;
@@ -394,6 +419,7 @@ static void housecontrol_changes (ControlProvider *provider,
 
 
    int i;
+   int needflush = 0;
    long long timestamp = start;
    for (i = 0; i < n; ++i) {
        ParserToken *inner = tokens + changes + innerlist[i];
@@ -424,9 +450,10 @@ static void housecontrol_changes (ControlProvider *provider,
        }
        DEBUG ("Change for point %s from %s to %s at %lld\n", control->name, old, new, timestamp);
        housecontrol_trigger (control, timestamp, old, new);
-
        housecontrol_memorize (control, timestamp, new);
+       needflush = 1;
    }
+   if (needflush && ControlNextFlush) ControlNextFlush();
 
 cleanup:
    if (innerlist) free (innerlist);
@@ -490,6 +517,8 @@ static void housecontrol_update (const char *origin, char *data, int length) {
        goto cleanup;
    }
 
+   int needflush = 0;
+
    for (i = 0; i < n; ++i) {
        ParserToken *inner = tokens + controls + innerlist[i];
        HouseControl *control = housecontrol_search (inner->key);
@@ -523,9 +552,11 @@ static void housecontrol_update (const char *origin, char *data, int length) {
                DEBUG ("Received point %s with state %s (previous: %s)\n", control->name, state, old);
                housecontrol_trigger (control, timestamp, old, state);
                housecontrol_memorize (control, timestamp, state);
+               needflush = 1;
            }
        }
    }
+   if (needflush && ControlNextFlush) ControlNextFlush();
 
 cleanup:
    free (innerlist);

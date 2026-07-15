@@ -25,7 +25,10 @@ typedef void ControlTrigger (const char *name,
                              long long timestamp,
                              const char *old, const char *new);
 
+typedef void ControlFlush (void);
+
 void housecontrol_subscribe (const char *gear, ControlTrigger *trigger);
+ControlFlush *housecontrol_flushable (ControlFlush *flush);
 
 void housecontrol_sampling (int period);
 

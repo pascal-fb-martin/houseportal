@@ -737,6 +737,20 @@ Listen to state changes for all control points associated with the specified typ
 A trigger declared here can be disabled by declaring a null trigger for the same gear.
 
 ```
+typedef void ControlFlush (void);
+
+ControlFlush *housecontrol_flushable (ControlFlush *flush);
+```
+
+Declare a function to be called once an update message has been fully processed. Multiple control updates are typically received in each update message. This flush mechanism allows a client module to perform flushes of its own after the situation has become stable.
+
+This flush callback has a global scope: there is no flush function for specific types of control points. The client must have recorded on its own what flush actions it must proceed with, if any.
+
+The flush callbacks must be chained: the pointer returned by housecontrol_flushable() must be kept by the client and its flush callback function must call that next flush function (if not null) at the end of its own processing.
+
+To declare a flush callback is optional: if a client module does not need any flush actions, then it can safely ignore this mechanism.
+
+```
 void housecontrol_sampling (int period);
 ```
 
