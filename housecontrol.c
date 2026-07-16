@@ -854,12 +854,10 @@ static void housecontrol_discover (time_t now) {
 
     if (!now) { // This is a manual reset (force a discovery refresh)
         latestdiscovery = 0;
-        return;
     }
-
-    // If any new control service was detected, force a scan now.
+    // Otherwise, if any new control service was detected, force a scan now.
     //
-    if ((latestdiscovery > 0) &&
+    else if ((latestdiscovery > 0) &&
         housediscover_changed ("control", latestdiscovery)) {
         latestdiscovery = 0;
     }
@@ -867,7 +865,7 @@ static void housecontrol_discover (time_t now) {
     // Even if nothing new was detected, still scan every seconds, in case
     // the configuration of a service or the state of a control point changed.
     //
-    if (now <= latestdiscovery) return;
+    if ((latestdiscovery > 0) && (now <= latestdiscovery)) return;
     latestdiscovery = now;
 
     // Use the control servers detection time as a flag indicating an active
