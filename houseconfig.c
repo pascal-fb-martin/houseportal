@@ -85,11 +85,21 @@
  * const char *houseconfig_string  (int parent, const char *path);
  * int         houseconfig_integer (int parent, const char *path);
  * int         houseconfig_positive (int parent, const char *path);
+ * double      houseconfig_real    (int parent, const char *path);
  * int         houseconfig_boolean (int parent, const char *path);
  *
  *    Access individual items starting from the specified parent
  *    (the config root is index 0). If the path is an empty string,
  *    the entry being accessed is the parent itself.
+ *
+ *    The JSON parser distinguishes between integer and real values
+ *    on the fly, so a value like "1" looks like an integer even if
+ *    the field was meant for a real value. Thus houseconfig_real()
+ *    silently converts an integer to a real value.
+ *
+ * int houseconfig_isreal (int parent, const char *path);
+ *
+ *    Indicates if the field is explicitly real vs. integer.
  *
  * int houseconfig_array (int parent, const char *path);
  * int houseconfig_array_length (int array);
@@ -114,6 +124,7 @@
  */
 
 #include <string.h>
+#include <math.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -226,8 +237,10 @@ static const char *houseconfig_load_from_file (void) {
     }
 
     // Do not reload the same (valid) configuration again and again.
-    if ((ConfigTokenCount > 0) && (!strcmp (newconfig, ConfigTextCurrent)))
+    if ((ConfigTokenCount > 0) && (!strcmp (newconfig, ConfigTextCurrent))) {
+        echttp_parser_free (newconfig);
         return 0;
+    }
 
     houselog_event ("CONFIG", AppName, "LOAD", format, name);
     if (ConfigText) echttp_parser_free (ConfigText);
@@ -372,11 +385,11 @@ int houseconfig_active (void) {
 }
 
 int houseconfig_find (int parent, const char *path, int type) {
-    int i;
     if (parent < 0 || parent >= ConfigTokenCount) return -1;
-    i = echttp_json_search(ConfigParsed+parent, path);
-    if (i >= 0 && ConfigParsed[parent+i].type == type) return parent+i;
-    return -1;
+    int i = echttp_json_search(ConfigParsed+parent, path);
+    if (i < 0) return -1;
+    if ((type > 0) && (ConfigParsed[parent+i].type != type)) return -1;
+    return parent+i;
 }
 
 int houseconfig_present (int parent, const char *path) {
@@ -400,6 +413,21 @@ int houseconfig_positive (int parent, const char *path) {
     if (i < 0) return 0;
     if (ConfigParsed[i].value.integer < 0) return 0;
     return ConfigParsed[i].value.integer;
+}
+
+double houseconfig_real (int parent, const char *path) {
+    int i = houseconfig_find(parent, path, -1);
+    if (i >= 0) {
+        if (ConfigParsed[i].type == PARSER_REAL)
+            return ConfigParsed[i].value.real;
+        else if (ConfigParsed[i].type == PARSER_INTEGER)
+            return (double)(ConfigParsed[i].value.integer);
+    }
+    return NAN;
+}
+
+int houseconfig_isreal (int parent, const char *path) {
+    return (houseconfig_find(parent, path, PARSER_REAL) >= 0);
 }
 
 int houseconfig_boolean (int parent, const char *path) {
