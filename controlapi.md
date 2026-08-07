@@ -84,15 +84,17 @@ Each point object has the following fields:
 - `mode`: string "output" (controllable point) or "input". The default mode is "output" if this field is not present.
 - `state`: the current state of the point, "off", "on", "alert" or more.
 - `command`: the most recent control request. This can be different from the current state if the control is pending and not completed. This field is not present for input points and may not be present if its value is the same as the current state (i.e. no control request is pending).
-- `pulse`: the current state's deadline. This is an absolute timestamp, not a duration. This field is not present if the current state is latched.
+- `pulse`: the current state's deadline, in seconds. This is an absolute timestamp, not a duration. This field is not present if the current state is latched.
 - `gear`: the type of physical device attached to this point. That field may be used to handle application specific states. This field is not present if no gear type was set in the service's configuration. Note that some services set the `gear` attribute to "light" and that field cannot be configured.
 - `priority`: indicate the priority level for the current state. A control request with a "low" priority cannot override a current "high" priority state. Low priority is 0, high priority is 1. This field is not present if the service does not support control priority, or may not be present if the priority is low. See the `set` request below for more information.
 
 ```
-GET /(service)/set?point=NAME&state=off|on|clear[&pulse=N][&cause=TEXT]
+GET /(service)/set?point=NAME&state=off|on|clear[&pulse=N[.N]][&cause=TEXT]
 ```
 
-Request the specified control point to transition to the specified state. If the pulse parameter is present, the state is maintained for the specified number of seconds and then reverted to the "off" state when the control expires. If the pulse parameter is not present or its value is 0, the specified state is maintained until the next set request is issued.
+Request the specified control point to transition to the specified state. If the pulse parameter is present, the state is maintained for the specified number of seconds and then reverted to the "off" state when the control expires. If the pulse parameter is not present or its value is 0, the specified state is maintained until the next set request is issued, except if the control is configured with a pulse limit.
+
+A service may ignore the pulse fractional part, or only consider the first 1, 2 or 3 digits from the fractional part: a pulse value lower than 1 should only be used with caution and when appropriate. Any unsupported fractional digits may be ignored or used for rounding, so 0.123999 may be read as either 0.123 or 0.124 if the service consume up to 3 digits. Pulse values below 10 ms are strongly discouraged. It is valid to provide less fractional digits than supported. A service is allowed to maintain the control for a shorter duration than the specified pulse value if this value exceeds a pulse limit configured for the control point.
 
 The `cause` text is reflected in the events that record the point changes. This helps identifying which service requested the control, especially when this is a scheduled control, or a control issued based on some automated logic. In addition, some services use the `cause` parameter to decide on the control request's priority level: if the `cause` parameter is missing or set to "MANUAL", the priority is high; otherwise the priority is low. This priority is typically used to avoid an automated logic fighting with a human's manual control. For example if there is an automatism to turn a light on for a few minutes on specific condition, but a human operator turned the switch on manually, you do not want the automatism to turn the light off on the operator. This is particularly useful for devices such as wall switches, which can be operated directly.
 
