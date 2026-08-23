@@ -383,15 +383,15 @@ static void housecontrol_changes (ControlProvider *provider,
    int *innerlist = 0;
 
    int startidx = echttp_json_search (tokens, ".start");
-   if (startidx < 0) return;
+   if (startidx < 0) goto cleanup;
    long long start = tokens[startidx].value.integer;
 
    int end = echttp_json_search (tokens, ".end");
-   if (end < 0) return;
+   if (end < 0) goto cleanup;
    provider->since = start + tokens[end].value.integer;
 
    int namesidx = echttp_json_search (tokens, ".names");
-   if (namesidx <= 0) return;
+   if (namesidx <= 0) goto cleanup;
    ParserToken *names = tokens + namesidx;
 
    int nn = tokens[namesidx].length;
@@ -405,10 +405,10 @@ static void housecontrol_changes (ControlProvider *provider,
    }
 
    int changes = echttp_json_search (tokens, ".data");
-   if (changes <= 0) return;
+   if (changes <= 0) goto cleanup;
 
    int n = tokens[changes].length;
-   if (n <= 0) return;
+   if (n <= 0) goto cleanup;
 
    innerlist = calloc (n, sizeof(int));
    error = echttp_json_enumerate (tokens+changes, innerlist, n);
