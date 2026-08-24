@@ -142,6 +142,12 @@ static int housediscover_register (const char *name, const char *url) {
             free(urlsaved);
             return 0;
         }
+        // Record one more instance of this service.
+        int byservice = echttp_hash_add (&DiscoveryByService, strdup(name));
+        if (byservice > 0) {
+            DiscoveryUrl[byservice] = urlsaved;
+            DiscoveryFirstDetected[byservice] = now;
+        }
         DEBUG ("registered new service %s at %s\n", name, url);
         houselog_event_local ("DISCOVERY", name, "DETECTED", "AT %s", url);
         isnew = 1;
@@ -154,15 +160,6 @@ static int housediscover_register (const char *name, const char *url) {
         }
     }
     DiscoveryLatest[byurl] = now;
-
-    if (isnew) {
-        // Record one more instance of this service.
-        int byservice = echttp_hash_add (&DiscoveryByService, strdup(name));
-        if (byservice > 0) {
-            DiscoveryUrl[byservice] = strdup(url);
-            DiscoveryFirstDetected[byservice] = now;
-        }
-    }
     return isnew;
 }
 

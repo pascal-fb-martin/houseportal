@@ -168,13 +168,13 @@
 #define DEBUG if (echttp_isdebug()) printf
 
 typedef struct {
-    const char *uri;  // The unique HTTP path identifying this provider
+    char *uri;        // The unique HTTP path identifying this provider
     unsigned int signature;
     int has_history;
     time_t detected;  // When it was reported last by the discovery.
     time_t replied;   // When a response was last received (even status 304)
     long long known;  // Optimization to detect changes. See housestate.c
-    long long since;   // Next history start time.
+    long long since;  // Next history start time.
 } ControlProvider;
 
 static echttp_hash ProvidersCatalog;
@@ -827,7 +827,11 @@ static void housecontrol_scan_server
         ProvidersCount += 1;
     }
     ControlProvider *provider = Providers + i;
-    provider->uri = strdup(uri); // Keep the string.
+    if (!provider->uri) {
+        // Keep the URL for this new record. That string cannot change
+        // since this is the primary key used to find this very record.
+        provider->uri = strdup(uri);
+    }
     provider->detected = time(0);
 
     char url[256];
