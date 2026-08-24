@@ -1,3 +1,18 @@
+houseportal (2.13) UNRELEASED; urgency=medium
+
+   * Fix memory leaks and heap initialization issues.
+   * Add support for subsecond pulse to the control web API (doc).
+   * Add support for real numbers in configuration files.
+   * Allow fast scan using time 0
+   * Add a flush mechanism on control point updates.
+   * Add houseconfig_present() to make handling of optional fields easier.
+   * Purist use of semantic web: nav, main and article.
+   * Do not use 100% width when in a grid.
+   * Replace memccpy(), snprintf() with strtcpy() and friends.
+   * Install missing programs
+
+ -- Pascal Martin <pascal.fb.martin@gmail.com>  Mon, 24 Aug 2026 12:00:00 PDT
+
 houseportal (2.12) UNRELEASED; urgency=medium
 
    * Fix decoding of cluster name in PEER message.
