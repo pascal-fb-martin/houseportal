@@ -821,10 +821,7 @@ static void housecontrol_scan_server
     // Make sure that the array is initialized if the allocation has holes.
     // (It does have at least one as entry 0 is never used.)
     while (ProvidersCount <= i) {
-        Providers[ProvidersCount].uri = 0;
-        Providers[ProvidersCount].detected = 0;
-        Providers[ProvidersCount].has_history = 0;
-        ProvidersCount += 1;
+        Providers[ProvidersCount++] = (ControlProvider){0};
     }
     ControlProvider *provider = Providers + i;
     if (!provider->uri) {
