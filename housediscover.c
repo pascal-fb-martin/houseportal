@@ -72,12 +72,14 @@
 static const char *LocalPortalServer = "localhost";
 static int         LocalPortalPort = 80;
 
-static echttp_hash DiscoveryByUrl; // URL is a unique key.
-static time_t DiscoveryLatest[ECHTTP_MAX_SYMBOL]; // Each time detected
+#define HOUSE_MAX_DISCOVER 1024
 
-static echttp_hash DiscoveryByService; // Service name is not unique.
-static const char *DiscoveryUrl[ECHTTP_MAX_SYMBOL];
-static time_t      DiscoveryFirstDetected[ECHTTP_MAX_SYMBOL];
+static echttp_hash DiscoveryByUrl = {0}; // URL is a unique key.
+static time_t DiscoveryLatest[HOUSE_MAX_DISCOVER]; // Each time detected
+
+static echttp_hash DiscoveryByService = {0}; // Service name is not unique.
+static const char *DiscoveryUrl[HOUSE_MAX_DISCOVER];
+static time_t      DiscoveryFirstDetected[HOUSE_MAX_DISCOVER];
 
 static time_t DiscoveryRequest = 0;
 
@@ -117,6 +119,9 @@ void housediscover_initialize (int argc, const char **argv) {
             continue;
         }
     }
+    echttp_hash_create (&DiscoveryByUrl, HOUSE_MAX_DISCOVER);
+    echttp_hash_create (&DiscoveryByService, HOUSE_MAX_DISCOVER);
+
     DEBUG ("local portal server: %s:%d\n", LocalPortalServer, LocalPortalPort);
 }
 

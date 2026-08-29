@@ -45,8 +45,8 @@
  *                              ControlTrigger *trigger);
  *
  *    Declare a trigger function to be called when the control's state changes.
- *    This is also called when the control is initially discovered, in which
- *    case the old state is an empty string.
+ *    The trigger is also called when the control is initially discovered,
+ *    in which case the old state is an empty string.
  *
  *    The trigger can be specific for each type of gear, or be a default
  *    trigger (when gear is null or "*"). That default trigger is used
@@ -177,7 +177,7 @@ typedef struct {
     long long since;  // Next history start time.
 } ControlProvider;
 
-static echttp_hash ProvidersCatalog;
+static echttp_hash ProvidersCatalog = {0};
 
 static ControlProvider *Providers = 0;
 static int              ProvidersCount = 0;
@@ -215,6 +215,15 @@ static int           ControlsSize = 0;
 static int ControlRequestedSampling = 0;
 static int ControlsActive = 0;
 
+
+static void housecontrol_initialize (void) {
+
+    static int Initialized = 0;
+    if (!Initialized) {
+        echttp_hash_create (&ProvidersCatalog, 1024); // Matches housediscover.c
+        Initialized = 1;
+    }
+}
 
 static void housecontrol_noop (const char *name,
                                long long timestamp,
@@ -275,6 +284,8 @@ static void housecontrol_invalidate_cache (void) {
 
 void housecontrol_subscribe (const char *gear, ControlTrigger trigger) {
 
+    housecontrol_initialize ();
+
     if (!gear) gear = "*";
 
     unsigned int signature = echttp_hash_signature (gear);
@@ -310,6 +321,8 @@ void housecontrol_subscribe (const char *gear, ControlTrigger trigger) {
 }
 
 ControlFlush *housecontrol_flushable (ControlFlush *flush) {
+
+    housecontrol_initialize ();
 
     ControlFlush *previous = ControlNextFlush;
     ControlNextFlush = flush;
@@ -688,6 +701,8 @@ const char *housecontrol_state (const char *name) {
 int housecontrol_set (const char *name, const char *state,
                       int pulse, int manual, const char *reason) {
 
+    housecontrol_initialize ();
+
     time_t now = time(0);
     DEBUG ("%lld: Set %s to %s for %d seconds\n",
            (long long)now, name, state, pulse);
@@ -756,6 +771,8 @@ static void housecontrol_stop (HouseControl *control, const char *reason) {
 
 void housecontrol_cancel (const char *name, const char *reason) {
 
+    housecontrol_initialize ();
+
     int i;
     time_t now = time(0);
 
@@ -793,6 +810,8 @@ void housecontrol_cancel (const char *name, const char *reason) {
 
 static void housecontrol_discovered
                (void *origin, int status, char *data, int length) {
+
+   housecontrol_initialize ();
 
    status = echttp_redirected("GET");
    if (!status) {
@@ -890,6 +909,8 @@ static void housecontrol_discover (time_t now) {
 
 void housecontrol_background (time_t now) {
 
+    housecontrol_initialize ();
+
     if (ControlsActive && now) {
         ControlsActive = 0;
         int i;
@@ -902,6 +923,8 @@ void housecontrol_background (time_t now) {
 }
 
 int housecontrol_status (char *buffer, int size) {
+
+    housecontrol_initialize ();
 
     int i;
     int cursor = 0;
@@ -945,3 +968,4 @@ overflow:
     buffer[0] = 0;
     return 0;
 }
+
