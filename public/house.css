@@ -35,6 +35,14 @@ nav span {
    text-decoration: none;
 }
 
+.housesidetable {
+   font-family:'Metrophobic', sans-serif;
+   text-align: left;
+   width: 55%;
+   display: inline-table;
+   float: right;
+}
+
 .housepanel {
    float: left;
    width: 40%;
