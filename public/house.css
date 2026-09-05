@@ -6,7 +6,7 @@ body {
    grid-template-rows: auto 1fr auto;
    min-height: 100vh;
    margin: 0;
-   background-color: #F5F5F5;
+   background-color: #F8F8F8;
 }
 
 nav {
@@ -139,8 +139,8 @@ nav span {
    box-sizing: border-box;
 }
 
-.houseevent tr:nth-child(even) {
-  background-color: #E0E0E0;
+.housewidetable tr:nth-child(even) {
+  background-color: #F0F0F0;
 }
 
 button:disabled {
