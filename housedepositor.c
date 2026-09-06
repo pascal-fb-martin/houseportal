@@ -94,6 +94,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/stat.h>
 
 #include <echttp.h>
@@ -223,12 +224,13 @@ void housedepositor_subscribe (const char *repository,
 typedef struct {
     char *path;
     int pending;
-    char *data;     // For data in memory upload
-    int fd;         // For file upload.
-    char *filename; // For file upload (redirected).
+    char *data;     // if in-memory data to upload
+    char *filename; // if file to upload
     int length;
     time_t timestamp;
 } HouseDepositorPutContext;
+
+static const HouseDepositorPutContext DepotEmptyContext = {0};
 
 static void housedepositor_put_free (HouseDepositorPutContext *request) {
     if (request->data) free (request->data);
@@ -255,11 +257,12 @@ static void housedepositor_put_response
            echttp_submit (request->data, request->length,
                           housedepositor_put_response, context);
        } else {
-           // Since the current request has been closed, request->fd was
+           // Since the current request has been closed, the file was
            // closed as well. Must reopen.
-           request->fd = open (request->filename, O_RDONLY);
-           echttp_transfer (request->fd, request->length);
+           int fd = open (request->filename, O_RDONLY);
+           echttp_transfer (fd, request->length);
            echttp_submit (0, 0, housedepositor_put_response, context);
+
        }
        return;
    }
@@ -294,11 +297,11 @@ static void housedepositor_put_iterator
         echttp_submit (request->data, request->length,
                        housedepositor_put_response, context);
     } else {
-        echttp_transfer (request->fd, request->length);
+        int fd = open (request->filename, O_RDONLY);
+        echttp_transfer (fd, request->length);
         echttp_submit (0, 0, housedepositor_put_response, context);
     }
-    houselog_event ("DEPOT", request->path,
-                    "SAVING", "TO %s", provider);
+    houselog_event ("DEPOT", request->path, "SAVING", "TO %s", provider);
 }
 
 static void housedepositor_put_submit (const char *repository,
@@ -343,6 +346,7 @@ void housedepositor_put (const char *repository,
     
     HouseDepositorPutContext *request =
         (HouseDepositorPutContext *) malloc (sizeof(HouseDepositorPutContext));
+    *request = DepotEmptyContext;
     
     request->timestamp = time(0);
 
@@ -350,8 +354,6 @@ void housedepositor_put (const char *repository,
      * caller's data. By making a copy, we control that copy's lifespan
      * until all DEPOT requests have completed (or failed).
      */
-    request->fd = 0;
-    request->filename = 0;
     request->data = malloc (size);
     request->length = size;
     memcpy (request->data, data, size);
@@ -365,23 +367,27 @@ void housedepositor_put_file (const char *repository,
 
     HouseDepositorPutContext *request =
         (HouseDepositorPutContext *) malloc (sizeof(HouseDepositorPutContext));
+    *request = DepotEmptyContext;
 
-    request->fd = open (filename, O_RDONLY);
-    if (request->fd < 0) goto abort;
+    // Load the data.
+
+    int fd = open (filename, O_RDONLY);
+    if (fd < 0) goto abort;
 
     struct stat fileinfo;
-    if (fstat(request->fd, &fileinfo) < 0) goto abort;
+    if (fstat(fd, &fileinfo) < 0) goto abort;
     if ((fileinfo.st_mode & S_IFMT) != S_IFREG) goto abort;
 
-    request->data = 0;
-    request->filename = strdup(filename);
+    request->filename = strdup (filename);
     request->length = fileinfo.st_size;
     request->timestamp = fileinfo.st_mtim.tv_sec;
+    close (fd);
 
     housedepositor_put_submit (repository, name, request);
     return;
 
 abort:
+    if (fd >= 0) close (fd);
     free (request);
     return;
 }

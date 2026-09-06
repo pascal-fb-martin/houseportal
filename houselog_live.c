@@ -81,7 +81,6 @@
 
 #include "houselog.h"
 #include "houselog_storage.h"
-#include "housediscover.h"
 
 static const char *LogName = "portal";
 static const char *PortalHost = 0;
