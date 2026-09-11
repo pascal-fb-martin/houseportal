@@ -255,3 +255,9 @@ dialog {
     opacity: 1;
 }
 
+svg {
+    display: block
+    max-width: 100vw;
+    max-height: 100dvh;
+}
+
