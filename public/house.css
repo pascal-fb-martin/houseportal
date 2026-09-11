@@ -28,6 +28,11 @@ nav a {
    text-decoration: none;
 }
 
+nav a:hover {
+   background-color: #3f3f3f;
+   color: #fafafa;
+}
+
 nav span {
    font-family:'Metrophobic', sans-serif;
    font-size: 30px;
@@ -237,5 +242,12 @@ button.controlDisabled {
     border: none;
     color: white;
     background-color: grey;
+}
+
+dialog {
+    border-radius: 7px;
+    border: 2px solid #2f2f2f;
+    background-color: #FFFFFF;
+    opacity: 1;
 }
 
