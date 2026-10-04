@@ -123,14 +123,17 @@ The history is only kept for input points. No history is provided for controllab
 Input points are automatically scanned at a higher sampling rate while this API is actively used. This fast sampling scan rate stops when no request has been made for some time (typically 12 seconds). Since the first request starts the faster scan rate, this first request does not return any sequence of changes.
 
 ```
-GET /(service)/history[?since=MILLISECONDS][&sync=0|1]
+GET /(service)/history[?since=MILLISECONDS][&sync[=0|1]]
 ```
 
 Return a JSON array of the recent history. The history is not saved to disk and the server keeps only a fixed number of state changes, typically 6 seconds worth of history. The client must request the history at least every 5 seconds or else changes might be lost.
 
 If the `since` option is present, only changes more recent than the specified timestamp are returned. That timestamp is in milliseconds.
 
-If the `sync` option is present and its value is 1, the response also includes the state of all points (not just input) in the same `control.status` object format as returned by the standard status request. This option is intended to keep the sequence of changes data and the status data properly ordered. The client must process the sequence of changes data first, then the status data. (The sequence of changes data represents changes that occurred prior to the current status, while the status data represents the final state of the points at the time of the request.) Future changes requests will include changes subsequent to that status. This way the client will not process the sequence of changes out of order compared to status.
+If the `sync` option is present, its value is 1 or it has no value, the response also includes the state of all points (not just input) in the same `control.status` object format as returned by the standard status request. This option is intended to keep the sequence of changes data and the status data properly ordered. The client must process the sequence of changes data first, then the status data. (The sequence of changes data represents changes that occurred prior to the current status, while the status data represents the final state of the points at the time of the request.) Future changes requests will include changes subsequent to that status. This way the client will not process the sequence of changes out of order compared to status.
+
+> [!NOTE]
+> The `sync` parameter is a boolean. The `0|1` values are a legacy support.
 
 A client requesting both changes and status must use the `/(service)/history` request instead of `/(service)/status`, except for the very first request. The `sync` option may be used at a some interval (e.g. the sync option may be set every N requests only) to keep synchronization with the status of inputs if ever changes were lost.
 
