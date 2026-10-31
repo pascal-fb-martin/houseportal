@@ -400,12 +400,17 @@ void housecapture_record_timed (const struct timeval *timestamp,
     if (filter->action[0] && (!strstr (action, filter->action))) return;
 
     char text[sizeof(filter->data)];
-    va_list ap;
-    va_start (ap, format);
-    vsnprintf (text, sizeof(text), format, ap);
-    va_end (ap);
+    if (format) {
+        va_list ap;
+        va_start (ap, format);
+        vsnprintf (text, sizeof(text), format, ap);
+        va_end (ap);
 
-    if (filter->data[0] && (!strstr (text, filter->data))) return;
+        if (filter->data[0] && (!strstr (text, filter->data))) return;
+    } else {
+        if (filter->data[0]) return;
+        text[0] = 0;
+    }
 
     housecapture_new (timestamp, filter->category, object, action, text);
 }
