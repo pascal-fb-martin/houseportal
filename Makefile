@@ -47,6 +47,7 @@ LIBOJS= houselog_live.o \
         housedepositor.o \
         housedepositorstate.o \
         housealmanac.o \
+        houselocation.o \
         housecontrol.o \
         housediscover.o
 
@@ -57,6 +58,7 @@ EXPORT_INCLUDE=houselog.h \
                housediscover.h \
                housedepositor.h \
                housedepositorstate.h \
+               houselocation.h \
                housealmanac.h \
                housecontrol.h \
                houselog_sensor.h \
