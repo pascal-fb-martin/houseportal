@@ -159,6 +159,8 @@ button:disabled {
 
 button.objectaction {
    font-size: 16px;
+   margin-top: 0px;
+   margin-bottom: 0px;
 }
 
 button {
