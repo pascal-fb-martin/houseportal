@@ -514,10 +514,7 @@ static void housecontrol_update (const char *origin, char *data, int length) {
    }
 
    int n = tokens[controls].length;
-   if (n <= 0) {
-       houselog_trace (HOUSE_FAILURE, origin, "empty control data");
-       return;
-   }
+   if (n <= 0) return;
 
    i = echttp_json_search (tokens, ".timestamp");
    if (i < 0) return; // Not normal.
