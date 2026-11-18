@@ -270,7 +270,8 @@ static void housedepositor_put_response
    DEBUG ("response to put of %s: %s\n", request->path, (length > 0)?data:"");
 
    if (status != 200) {
-       houselog_trace (HOUSE_FAILURE, request->path, "HTTP PUT code %d", status);
+       houselog_trace (HOUSE_FAILURE, "PUT",
+                       "%s: HTTP %d %s", request->path, status, echttp_reason());
    }
 
    housedepositor_put_release (request);
@@ -288,8 +289,7 @@ static void housedepositor_put_iterator
               provider, request->path, (long long)(request->timestamp));
     const char *error = echttp_client ("PUT", url);
     if (error) {
-        houselog_trace (HOUSE_FAILURE, service,
-                        "cannot create socket for %s, %s", url, error);
+        houselog_trace (HOUSE_FAILURE, service, "%s: %s", url, error);
         return;
     }
     request->pending += 1;
@@ -404,7 +404,8 @@ static void housedepositor_get_response
     DepotCacheEntry *cache = (DepotCacheEntry *)context;
     cache->refreshing = 0;
     if (status != 200) {
-        houselog_trace (HOUSE_FAILURE, cache->uri, "HTTP GET code %d", status);
+        houselog_trace (HOUSE_FAILURE, "GET",
+                        "%s: HTTP %d %s", cache->uri, status, echttp_reason());
         cache->detected = cache->active; // Don't get stuck on this file.
         return;
     }
@@ -424,8 +425,7 @@ static void housedepositor_get (DepotCacheEntry *cache) {
               
     const char *error = echttp_client ("GET", url);
     if (error) {
-        houselog_trace (HOUSE_FAILURE, cache->uri,
-                        "cannot create socket for %s: %s", url, error);
+        houselog_trace (HOUSE_FAILURE, cache->uri, "%s: %s", url, error);
         return;
     }
     DEBUG ("GET %s\n", url);
@@ -484,7 +484,7 @@ static void housedepositor_scan_response
     if (status != 200) {
         if (status != 404)
            houselog_trace (HOUSE_FAILURE, repository,
-                           "HTTP GET code %d: %s", status, echttp_reason());
+                           "HTTP %d %s", status, echttp_reason());
         return;
     }
     DEBUG ("response to scan of %s: %s\n", repository, data);
@@ -577,8 +577,7 @@ static void housedepositor_scan_iterator
 
     const char *error = echttp_client ("GET", url);
     if (error) {
-        houselog_trace (HOUSE_FAILURE, repository,
-                        "cannot create socket for %s, %s", url, error);
+        houselog_trace (HOUSE_FAILURE, repository, "%s: %s", url, error);
         return;
     }
     DEBUG ("GET %s\n", url);
@@ -602,7 +601,8 @@ static void housedepositor_check_response
     }
 
     if (status != 200) {
-        houselog_trace (HOUSE_FAILURE, "check", "HTTP GET code %d", status);
+        houselog_trace (HOUSE_FAILURE, "check",
+                        "HTTP %d %s", status, echttp_reason());
         return;
     }
     DEBUG ("response to check: %s\n", data);
@@ -662,8 +662,7 @@ static void housedepositor_check_iterator
 
     const char *error = echttp_client ("GET", url);
     if (error) {
-        houselog_trace (HOUSE_FAILURE, "check",
-                        "cannot create socket for %s, %s", url, error);
+        houselog_trace (HOUSE_FAILURE, "check", "%s: %s", url, error);
         return;
     }
     DEBUG ("GET %s \n", url);

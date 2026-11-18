@@ -155,7 +155,8 @@ static void houselocation_discovered
    }
 
    if (status != 200) {
-       houselog_trace (HOUSE_FAILURE, provider, "HTTP error %d", status);
+       houselog_trace (HOUSE_FAILURE, provider,
+                       "HTTP %d %s", status, echttp_reason());
        return;
    }
 
@@ -172,7 +173,7 @@ static void houselocation_scan
     DEBUG ("Attempting query at %s\n", url);
     const char *error = echttp_client ("GET", url);
     if (error) {
-        houselog_trace (HOUSE_FAILURE, provider, "%s", error);
+        houselog_trace (HOUSE_FAILURE, provider, "%s: %s", url, error);
         return;
     }
     echttp_submit (0, 0, houselocation_discovered, (void *)provider);
