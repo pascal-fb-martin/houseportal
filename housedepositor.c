@@ -269,7 +269,7 @@ static void housedepositor_put_response
    
    DEBUG ("response to put of %s: %s\n", request->path, (length > 0)?data:"");
 
-   if (status != 200) {
+   if (!ECHTTP_SUCCESS (status)) {
        houselog_trace (HOUSE_FAILURE, "PUT",
                        "%s: HTTP %d %s", request->path, status, echttp_reason());
    }
@@ -403,7 +403,7 @@ static void housedepositor_get_response
    
     DepotCacheEntry *cache = (DepotCacheEntry *)context;
     cache->refreshing = 0;
-    if (status != 200) {
+    if (!ECHTTP_SUCCESS (status)) {
         houselog_trace (HOUSE_FAILURE, "GET",
                         "%s: HTTP %d %s", cache->uri, status, echttp_reason());
         cache->detected = cache->active; // Don't get stuck on this file.
@@ -481,12 +481,14 @@ static void housedepositor_scan_response
         DepotScanPending = 0; // Better safe than sorry.
     }
     
-    if (status != 200) {
+    if (!ECHTTP_SUCCESS (status)) {
         if (status != 404)
            houselog_trace (HOUSE_FAILURE, repository,
                            "HTTP %d %s", status, echttp_reason());
         return;
     }
+    if (!data || !length) return; // No data to parse
+
     DEBUG ("response to scan of %s: %s\n", repository, data);
 
     ParserToken tokens[MAX_CACHE*4];
@@ -600,11 +602,13 @@ static void housedepositor_check_response
         DepotCheckPending = 0; // Better safe than sorry.
     }
 
-    if (status != 200) {
+    if (!ECHTTP_SUCCESS (status)) {
         houselog_trace (HOUSE_FAILURE, "check",
                         "HTTP %d %s", status, echttp_reason());
         return;
     }
+    if (!data || !length) return; // No data to parse
+
     DEBUG ("response to check: %s\n", data);
 
     ParserToken tokens[16];

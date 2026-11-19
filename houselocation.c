@@ -154,13 +154,13 @@ static void houselocation_discovered
        return;
    }
 
-   if (status != 200) {
+   if (!ECHTTP_SUCCESS(status)) {
        houselog_trace (HOUSE_FAILURE, provider,
                        "HTTP %d %s", status, echttp_reason());
        return;
    }
 
-   houselocation_update (provider, data, length);
+   if (data && length) houselocation_update (provider, data, length);
 }
 
 static void houselocation_scan

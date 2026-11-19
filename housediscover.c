@@ -173,12 +173,12 @@ static void housediscover_service_response
 
     const char *peerurl = (const char *)origin;
 
-    if (status != 200) {
+    if (!ECHTTP_SUCCESS(status)) {
         houselog_trace (HOUSE_FAILURE, "service",
                         "%s: HTTP %d %s", peerurl, status, echttp_reason());
         return;
     }
-    if (!data) return; // Self protection.
+    if (!data || !length) return; // Self protection, no data to parse
 
     int count = housediscover_adjust_tokens (data);
     const char *error = echttp_json_parse (data, DiscoveryTokens, &count);
@@ -275,13 +275,13 @@ static void housediscover_peers_response (void *origin,
     int newportal = 0;
     int i;
 
-    if (status != 200) {
+    if (!ECHTTP_SUCCESS(status)) {
         DEBUG ("HTTP error %d on /portal/peers request\n", status);
         houselog_trace (HOUSE_FAILURE, "peers",
                         "HTTP %d %s", status, echttp_reason());
         return;
     }
-    if (!data) return; // Self protection.
+    if (!data || !length) return; // Self protection, no data to parse
 
     time_t now = time(0);
 

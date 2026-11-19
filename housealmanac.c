@@ -300,12 +300,12 @@ static void housealmanac_discovered
        return;
    }
 
-   if (status != 200) {
+   if (!ECHTTP_SUCCESS(status)) {
        houselog_trace (HOUSE_FAILURE, provider, "HTTP error %d", status);
        return;
    }
 
-   housealmanac_update (provider, data, length);
+   if (data && length) housealmanac_update (provider, data, length);
 }
 
 static void housealmanac_scan_server

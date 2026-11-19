@@ -479,6 +479,8 @@ static void housecontrol_update (const char *action,
    ControlProvider *provider = housecontrol_search_provider (origin);
    if (!provider) return;
 
+   if (!data || !length) return; // No data to parse.
+
    provider->replied = time(0);
 
    int  i;
@@ -614,7 +616,7 @@ static void housecontrol_result
        return;
    }
 
-   if (status != 200) {
+   if (!ECHTTP_SUCCESS(status)) {
        housecontrol_monitor (control, 0);
        if (!housecontrol_rejected (control->uri, status)) return;
 
@@ -818,7 +820,7 @@ static void housecontrol_discovered
        return;
    }
 
-   if (status != 200) {
+   if (!ECHTTP_SUCCESS(status)) {
        if (!housecontrol_rejected ((const char *)origin, status)) return;
        houselog_trace (HOUSE_FAILURE, "scan", "%s: HTTP %d %s",
                        (const char *)origin, status, echttp_reason());
