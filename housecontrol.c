@@ -413,7 +413,7 @@ static void housecontrol_changes (ControlProvider *provider,
    nameslist = calloc (nn, sizeof(int));
    const char *error = echttp_json_enumerate (tokens+namesidx, nameslist, nn);
    if (error) {
-       houselog_trace (HOUSE_FAILURE, ".names", "%s", error);
+       houselog_trace (HOUSE_FAILURE, "names", "Cannot enumerate: %s", error);
        goto cleanup;
    }
 
@@ -426,7 +426,7 @@ static void housecontrol_changes (ControlProvider *provider,
    innerlist = calloc (n, sizeof(int));
    error = echttp_json_enumerate (tokens+changes, innerlist, n);
    if (error) {
-       houselog_trace (HOUSE_FAILURE, ".data", "%s", error);
+       houselog_trace (HOUSE_FAILURE, "data", "Cannot enumerate: %s", error);
        goto cleanup;
    }
 
@@ -439,7 +439,7 @@ static void housecontrol_changes (ControlProvider *provider,
        int event[3];
        error = echttp_json_enumerate (inner, event, 3);
        if (error) {
-           houselog_trace (HOUSE_FAILURE, ".data", "item %d: %s", i, error);
+           houselog_trace (HOUSE_FAILURE, "data", "item %d: %s", i, error);
            goto cleanup;
        }
        timestamp += inner[event[0]].value.integer;
@@ -473,7 +473,8 @@ cleanup:
    if (nameslist) free (nameslist);
 }
 
-static void housecontrol_update (const char *origin, char *data, int length) {
+static void housecontrol_update (const char *action,
+                                 const char *origin, char *data, int length) {
 
    ControlProvider *provider = housecontrol_search_provider (origin);
    if (!provider) return;
@@ -488,11 +489,11 @@ static void housecontrol_update (const char *origin, char *data, int length) {
    const char *error = echttp_json_parse (data, tokens, &count);
    if (error) {
        houselog_trace
-           (HOUSE_FAILURE, origin, "JSON syntax error, %s", error);
+           (HOUSE_FAILURE, action, "%s: JSON syntax error (%s)", origin, error);
        return;
    }
    if (count <= 0) {
-       houselog_trace (HOUSE_FAILURE, origin, "no data");
+       houselog_trace (HOUSE_FAILURE, action, "%s: no data", origin);
        return;
    }
 
@@ -509,7 +510,7 @@ static void housecontrol_update (const char *origin, char *data, int length) {
    int controls = echttp_json_search (tokens, ".control.status");
    if (controls <= 0) {
        if (!provider->has_history)
-           houselog_trace (HOUSE_FAILURE, origin, "no control data");
+           houselog_trace (HOUSE_FAILURE, action, "%s: no control data", origin);
        return;
    }
 
@@ -523,7 +524,7 @@ static void housecontrol_update (const char *origin, char *data, int length) {
    int *innerlist = calloc (n, sizeof(int));
    error = echttp_json_enumerate (tokens+controls, innerlist, n);
    if (error) {
-       houselog_trace (HOUSE_FAILURE, path, "%s", error);
+       houselog_trace (HOUSE_FAILURE, action, "%s: %s", path, error);
        goto cleanup;
    }
 
@@ -618,11 +619,12 @@ static void housecontrol_result
        if (!housecontrol_rejected (control->uri, status)) return;
 
        if (control->status != 'e')
-           houselog_trace (HOUSE_FAILURE, control->name, "HTTP code %d", status);
+           houselog_trace (HOUSE_FAILURE, control->name,
+                           "HTTP code %d %s", status, echttp_reason());
        control->status  = 'e';
        return;
    }
-   housecontrol_update (control->uri, data, length);
+   housecontrol_update ("control", control->uri, data, length);
 }
 
 static const char *housecontrol_printable_period (int h, const char *hlabel,
@@ -728,7 +730,7 @@ int housecontrol_set (const char *name, const char *state,
               housecontrol_cause(reason));
     const char *error = echttp_client ("GET", url);
     if (error) {
-        houselog_trace (HOUSE_FAILURE, name, "cannot create socket for %s, %s", url, error);
+        houselog_trace (HOUSE_FAILURE, name, "%s: %s", url, error);
         return 0;
     }
     DEBUG ("GET %s\n", url);
@@ -758,7 +760,7 @@ static void housecontrol_stop (HouseControl *control, const char *reason) {
               control->uri, encoded, housecontrol_cause(reason));
     const char *error = echttp_client ("GET", url);
     if (error) {
-        houselog_trace (HOUSE_FAILURE, control->name, "cannot create socket for %s, %s", url, error);
+        houselog_trace (HOUSE_FAILURE, control->name, "%s: %s", url, error);
         return;
     }
     DEBUG ("GET %s\n", url);
@@ -818,12 +820,12 @@ static void housecontrol_discovered
 
    if (status != 200) {
        if (!housecontrol_rejected ((const char *)origin, status)) return;
-       houselog_trace (HOUSE_FAILURE, (const char *)origin,
-                       "HTTP error %d", status);
+       houselog_trace (HOUSE_FAILURE, "scan", "%s: HTTP %d %s",
+                       (const char *)origin, status, echttp_reason());
        return;
    }
 
-   housecontrol_update ((const char *)origin, data, length);
+   housecontrol_update ("scan", (const char *)origin, data, length);
 }
 
 static void housecontrol_scan_server
@@ -859,7 +861,7 @@ static void housecontrol_scan_server
     DEBUG ("Attempting poll of provider %d at %s\n", i, url);
     const char *error = echttp_client ("GET", url);
     if (error) {
-        houselog_trace (HOUSE_FAILURE, uri, "%s", error);
+        houselog_trace (HOUSE_FAILURE, "scan", "%s: %s", uri, error);
         return;
     }
     echttp_submit (0, 0, housecontrol_discovered, (void *)uri);
@@ -961,7 +963,7 @@ int housecontrol_status (char *buffer, int size) {
 
 overflow:
     houselog_trace (HOUSE_FAILURE, "STATUS",
-                    "BUFFER TOO SMALL (NEED %d bytes)", cursor);
+                    "Buffer too small (need %d bytes)", cursor);
     buffer[0] = 0;
     return 0;
 }

@@ -142,8 +142,8 @@ static int housediscover_register (const char *name, const char *url) {
         char *urlsaved = strdup(url);
         byurl = echttp_hash_add (&DiscoveryByUrl, urlsaved);
         if (byurl <= 0) {
-            houselog_trace (HOUSE_FAILURE,
-                            "cannot register service %s at %s\n", name, url);
+            houselog_trace (HOUSE_FAILURE, "service",
+                            "cannot register %s as %s\n", name, url);
             free(urlsaved);
             return 0;
         }
@@ -171,8 +171,11 @@ static int housediscover_register (const char *name, const char *url) {
 static void housediscover_service_response
                 (void *origin, int status, char *data, int length) {
 
+    const char *peerurl = (const char *)origin;
+
     if (status != 200) {
-        houselog_trace (HOUSE_FAILURE, "service", "HTTP error %d", status);
+        houselog_trace (HOUSE_FAILURE, "service",
+                        "%s: HTTP %d %s", peerurl, status, echttp_reason());
         return;
     }
     if (!data) return; // Self protection.
@@ -180,34 +183,38 @@ static void housediscover_service_response
     int count = housediscover_adjust_tokens (data);
     const char *error = echttp_json_parse (data, DiscoveryTokens, &count);
     if (error) {
-        houselog_trace (HOUSE_FAILURE, "service", "JSON syntax error, %s", error);
+        houselog_trace (HOUSE_FAILURE, "service",
+                        "%s: JSON syntax error (%s)", peerurl, error);
         return;
     }
     if (count <= 0) {
-        houselog_trace (HOUSE_FAILURE, "service", "no data");
+        houselog_trace (HOUSE_FAILURE, "service", "%s: no data", peerurl);
         return;
     }
 
     int host = echttp_json_search (DiscoveryTokens, ".host");
     int list = echttp_json_search (DiscoveryTokens, ".portal.redirect");
     if (host <= 0 || list <= 0) {
-        houselog_trace (HOUSE_FAILURE, "service", "invalid data format");
+        houselog_trace (HOUSE_FAILURE, "service",
+                        "%s: invalid data format", peerurl);
         return;
     }
+    const char *hostname = DiscoveryTokens[host].value.string;
+
     int n = DiscoveryTokens[list].length;
     if (n == 0) return; // That is a normal case (no service on that server)
     if (n < 0 || n > count) {
-        houselog_trace (HOUSE_FAILURE, "service", "invalid redirect data");
+        houselog_trace (HOUSE_FAILURE, "service",
+                        "%s: invalid redirect data", hostname);
         return;
     }
     error = echttp_json_enumerate (DiscoveryTokens+list,
                                    DiscoveryInnerList, DiscoveryTokensAllocated);
     if (error) {
-        houselog_trace (HOUSE_FAILURE, "service", "%s", error);
+        houselog_trace (HOUSE_FAILURE, "service",
+                        "%s: cannot enumerate services (%s)", hostname, error);
         return;
     }
-
-    char *hostname = DiscoveryTokens[host].value.string;
 
     // Update the list of services.
     //
@@ -217,16 +224,17 @@ static void housediscover_service_response
     for (i = 0; i < n; ++i) {
         ParserToken *inner = DiscoveryTokens + list + DiscoveryInnerList[i];
         if (inner->type != PARSER_OBJECT) {
-            houselog_trace (HOUSE_FAILURE, "peers",
-                            "unexpected type %d", inner->type);
+            houselog_trace (HOUSE_FAILURE, "service",
+                            "%s: redirect[%d] invalid type %d",
+                            hostname, i, inner->type);
             continue;
         }
         int service = echttp_json_search (inner, ".service");
         if (service <= 0) continue; // Not declared as a service.
         int path = echttp_json_search (inner, ".path");
         if (path <= 0) {
-            houselog_trace (HOUSE_FAILURE, hostname,
-                            "invalid redirect (no path)");
+            houselog_trace (HOUSE_FAILURE, "service",
+                            "%s: redirect[%d] undefined path", hostname, i);
             DEBUG ("invalid redirect entry %d (no path) from %s\n",
                    i, hostname);
             continue;
@@ -253,7 +261,7 @@ static int housediscover_peers_iterator (int i, const char *name) {
             DiscoveryLatest[i] = 0;
             return 0;
         }
-        echttp_submit (0, 0, housediscover_service_response, 0);
+        echttp_submit (0, 0, housediscover_service_response, (void *)url);
         DEBUG ("service request %s submitted.\n", url);
     }
     return 0;
@@ -269,7 +277,8 @@ static void housediscover_peers_response (void *origin,
 
     if (status != 200) {
         DEBUG ("HTTP error %d on /portal/peers request\n", status);
-        houselog_trace (HOUSE_FAILURE, "peers", "HTTP error %d", status);
+        houselog_trace (HOUSE_FAILURE, "peers",
+                        "HTTP %d %s", status, echttp_reason());
         return;
     }
     if (!data) return; // Self protection.
@@ -300,7 +309,7 @@ static void housediscover_peers_response (void *origin,
                                    DiscoveryInnerList, DiscoveryTokensAllocated);
     if (error) {
         DEBUG ("no peers array on portal request: %s\n", error);
-        houselog_trace (HOUSE_FAILURE, "peers", "%s", error);
+        houselog_trace (HOUSE_FAILURE, "peers", "Cannot enumerate (%s)", error);
         return;
     }
 
@@ -310,7 +319,7 @@ static void housediscover_peers_response (void *origin,
         ParserToken *inner = DiscoveryTokens + peers + DiscoveryInnerList[i];
         if (inner->type != PARSER_STRING) {
             houselog_trace (HOUSE_FAILURE, "peers",
-                            "unexpected type %d", inner->type);
+                            "peers[%d] invalid type %d", i, inner->type);
             continue;
         }
         char buffer[256];
@@ -351,8 +360,7 @@ void housediscover (time_t now) {
     const char *error = echttp_client ("GET", url);
     if (error) {
         DEBUG ("cannot access %s: %s\n", url, error);
-        houselog_trace (HOUSE_FAILURE, "peers",
-                        "cannot access %s: %s", url, error);
+        houselog_trace (HOUSE_FAILURE, "peers", "%s: %s", url, error);
     } else {
         echttp_submit (0, 0, housediscover_peers_response, 0);
         DEBUG ("request %s submitted\n", url);
