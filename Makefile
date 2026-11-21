@@ -125,6 +125,7 @@ install-runtime: install-preamble
 	$(INSTALL) -m 0755 -s housegetalmanac $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -s housewatchcontrol $(DESTDIR)$(prefix)/bin
 	$(INSTALL) -m 0755 -T roof.sh $(DESTDIR)$(prefix)/bin/roof
+	$(INSTALL) -m 0755 -T houselist.sh $(DESTDIR)$(prefix)/bin/houselist
 	touch $(DESTDIR)/etc/default/housegeneric
 	touch $(DESTDIR)/etc/default/houseportal
 	touch $(DESTDIR)/etc/house/portal.config
@@ -138,6 +139,7 @@ uninstall-app:
 	rm -f $(DESTDIR)$(prefix)/bin/housegetalmanac
 	rm -f $(DESTDIR)$(prefix)/bin/housewatchcontrol
 	rm -f $(DESTDIR)$(prefix)/bin/roof
+	rm -f $(DESTDIR)$(prefix)/bin/houselist
 	rm -f $(DESTDIR)$(SHARE)/public/*.html
 
 purge-app:
